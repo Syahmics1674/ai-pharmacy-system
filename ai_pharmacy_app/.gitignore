@@ -1,3 +1,5 @@
+__pycache__/
+
 # Miscellaneous
 *.class
 *.log
@@ -45,3 +47,4 @@ app.*.map.json
 /android/app/release
 
 ai_pharmacy_backend/firebase_key.json
+
