@@ -32,6 +32,7 @@ migrate_working_dir/
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
+.build/
 /build/
 /coverage/
 
@@ -46,5 +47,7 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# Firebase
+serviceAccountKey.json
 ai_pharmacy_backend/firebase_key.json
 
