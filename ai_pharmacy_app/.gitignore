@@ -51,3 +51,4 @@ app.*.map.json
 serviceAccountKey.json
 ai_pharmacy_backend/firebase_key.json
 
+.DS_Store
