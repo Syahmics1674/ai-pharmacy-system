@@ -1,4 +1,5 @@
 from firebase_config import db
+from datetime import datetime
 
 def get_route_id(clinic_id):
     doc = db.collection("clinics").document(clinic_id).get()
@@ -21,15 +22,41 @@ def get_clinics_in_route(route_id):
     return clinics
 
 def get_suggested_order_date(clinic_id):
-    docs = db.collection("order_suggestions") \
+    docs = db.collection("inventory") \
         .where("clinic_id", "==", clinic_id) \
         .stream()
 
+    highest_priority = None
+    earliest_date = None
+
     for doc in docs:
         data = doc.to_dict()
+        stock = data.get("current_stock", 0)
+
+        if stock < 100:
+            priority = "HIGH"
+        elif stock < 200:
+            priority = "MEDIUM"
+        else:
+            continue
+
+        date = datetime.utcnow() 
+
+        # 🔥 PRIORITY HANDLING
+        if priority == "HIGH":
+            if highest_priority != "HIGH":
+                highest_priority = "HIGH"
+                earliest_date = date
+
+        elif priority == "MEDIUM":
+            if highest_priority not in ["HIGH", "MEDIUM"]:
+                highest_priority = "MEDIUM"
+                earliest_date = date
+
+    if highest_priority:
         return {
-            "date": data.get("suggested_date"),
-            "priority": data.get("priority", "LOW")
+            "date": earliest_date,
+            "priority": highest_priority
         }
 
     return None
@@ -75,12 +102,27 @@ def consolidate_order_date(current_clinic_id):
 
     # 🔥 PRIORITY LOGIC
     if high:
-        return {"date": min(high), "based_on": "HIGH", "details": details}
+        filtered_details = [d for d in details if d["priority"] == "HIGH"]
+        return {
+            "date": min(high),
+            "based_on": "HIGH",
+            "details": filtered_details
+        }
 
     if medium:
-        return {"date": min(medium), "based_on": "MEDIUM", "details": details}
+        filtered_details = [d for d in details if d["priority"] == "MEDIUM"]
+        return {
+            "date": min(medium),
+            "based_on": "MEDIUM",
+            "details": filtered_details
+        }
 
     if low:
-        return {"date": min(low), "based_on": "LOW", "details": details}
+        filtered_details = [d for d in details if d["priority"] == "LOW"]
+        return {
+            "date": min(low),
+            "based_on": "LOW",
+            "details": filtered_details
+        }
 
     return None
