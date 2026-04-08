@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'order_history_page.dart';
 
 void main() {
   runApp(MaterialApp(
@@ -807,35 +808,92 @@ class _OrderPageState extends State<OrderPage> {
   List details = [];
   List generatedOrders = [];
 
-  // 🔥 Generate order
+  // 🔥 GENERATE ORDER
   Future<void> generateOrder() async {
-    setState(() => isLoading = true);
-
+    if (isLoading) return;
     try {
-      final response = await http.get(
-        Uri.parse("$baseUrl/order_suggestions?clinic_id=${widget.clinicId}"));
+      final url = Uri.parse('$baseUrl/generate_order');
+
+      final response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: json.encode({
+          "clinic_id": widget.clinicId,
+          "items": suggestions.map((item) {
+            return {
+              "item_name": item['item_name'],
+              "qty": item['suggested_qty'],
+            };
+          }).toList()
+        }),
+      );
+
+      print("STATUS: ${response.statusCode}");
+      print("BODY: ${response.body}");
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-
         setState(() {
-          generatedOrders = data['order_suggestions'];
+          suggestions = [];   // ✅ CLEAR LIST
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Order generated successfully ✅")),
         );
-      } else {
+      } 
+      else {
         throw Exception("Failed");
       }
 
     } catch (e) {
+      print("ERROR: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Failed to generate order ❌")),
       );
     }
+  }
 
-    setState(() => isLoading = false);
+  // GENERATE ORDER CONFIRMATION
+  void confirmGenerateOrder() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        int totalQty = suggestions.fold(
+          0,
+          (sum, item) => sum + (item['suggested_qty'] as int),
+        );
+        return AlertDialog(
+          title: Text("Confirm Order"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("You are about to order:\n"),
+              
+              ...suggestions.map((item) => Text(
+                "• ${item['item_name']} — ${item['suggested_qty']}"
+              )),
+              Text("Total: $totalQty items"),
+
+              SizedBox(height: 10),
+              Text("Proceed?")
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context); // close dialog
+                generateOrder(); // proceed
+              },
+              child: Text("Confirm"),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Color getPriorityColor(String priority) {
@@ -889,33 +947,6 @@ class _OrderPageState extends State<OrderPage> {
       });
     }
   }
-
-  // GENERATE ORDER CONFIRMATION
-  void confirmGenerateOrder() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text("Confirm Order"),
-          content: Text("Are you sure you want to generate this order?"),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text("Cancel"),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context); // close dialog
-                generateOrder(); // proceed
-              },
-              child: Text("Confirm"),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   // ================= UI =================
 
   @override
@@ -1023,11 +1054,26 @@ class _OrderPageState extends State<OrderPage> {
               ),
             ),
 
+            // VIEW ORDER HISTORY BUTTON
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => OrderHistoryPage(
+                      clinicId: widget.clinicId,
+                    ),
+                  ),
+                );
+              },
+              child: Text("View Order History"),
+            ),
+
             // 🔥 GENERATE BUTTON
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: isLoading ? null : confirmGenerateOrder,
+                onPressed: suggestions.isEmpty ? null : confirmGenerateOrder,
                 icon: Icon(Icons.shopping_cart),
                 label: Text(
                   "Generate Order",

@@ -307,5 +307,53 @@ def stock_out():
         "message": "Stock-out successful"
     })
 
+@app.route('/generate_order', methods=['POST'])
+def generate_order():
+    data = request.json
+
+    clinic_id = data.get("clinic_id")
+    items = data.get("items")
+
+    if not clinic_id or not items:
+        return jsonify({"error": "Missing data"}), 400
+
+    order_data = {
+        "clinic_id": clinic_id,
+        "items": items,
+        "status": "PENDING",
+        "created_at": datetime.utcnow()
+    }
+
+    db.collection("orders").add(order_data)
+
+    return jsonify({
+        "message": "Order generated successfully"
+    })
+
+@app.route('/orders', methods=['GET'])
+def get_orders():
+    clinic_id = request.args.get('clinic_id')
+
+    if not clinic_id:
+        return jsonify({"error": "clinic_id required"}), 400
+
+    docs = db.collection("orders") \
+             .where("clinic_id", "==", clinic_id) \
+             .stream()
+
+    orders = []
+
+    for doc in docs:
+        data = doc.to_dict()
+
+        orders.append({
+            "id": doc.id,
+            "items": data.get("items", []),
+            "status": data.get("status", "PENDING"),
+            "created_at": str(data.get("created_at"))
+        })
+
+    return jsonify({"orders": orders})
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

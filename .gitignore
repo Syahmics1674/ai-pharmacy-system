@@ -1,5 +1,7 @@
 ai_pharmacy_backend/firebase_key.json
 
+*.pyc
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
