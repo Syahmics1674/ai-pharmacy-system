@@ -10,6 +10,8 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -22,7 +24,7 @@ class MyApp extends StatelessWidget {
 class MainScreen extends StatefulWidget {
   final String clinicId;
 
-  const MainScreen({Key? key, required this.clinicId}) : super(key: key);
+  const MainScreen({super.key, required this.clinicId});
 
   @override
   _MainScreenState createState() => _MainScreenState();
@@ -123,7 +125,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     
-    final List<Widget> _pages = [
+    final List<Widget> pages = [
       HomePage(key: homeKey, clinicId: widget.clinicId),
       StockOperationsPage(clinicId: widget.clinicId),
       AIInsightsPage(),
@@ -186,7 +188,7 @@ class _MainScreenState extends State<MainScreen> {
         backgroundColor: Colors.blueAccent,
       ),
 
-      body: _pages[_selectedIndex],
+      body: pages[_selectedIndex],
 
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
@@ -206,6 +208,8 @@ class _MainScreenState extends State<MainScreen> {
 
 // ================= LOGIN PAGE =================
 class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
+
   @override
   _LoginPageState createState() => _LoginPageState();
 }
@@ -316,7 +320,7 @@ class _LoginPageState extends State<LoginPage> {
 class HomePage extends StatefulWidget {
   final String clinicId;
 
-  const HomePage({Key? key, required this.clinicId}) : super(key: key);
+  const HomePage({super.key, required this.clinicId});
 
   @override
   HomePageState createState() => HomePageState();
@@ -495,7 +499,7 @@ class HomePageState extends State<HomePage> {
 class StockOperationsPage extends StatefulWidget {
   final String clinicId;
 
-  const StockOperationsPage({Key? key, required this.clinicId}) : super(key: key);
+  const StockOperationsPage({super.key, required this.clinicId});
 
   @override
   _StockOperationsPageState createState() => _StockOperationsPageState();
@@ -636,7 +640,7 @@ class _StockOperationsPageState extends State<StockOperationsPage> {
             children: [
               DropdownButtonFormField<String>(
                 hint: Text("Select Item"),
-                value: selectedItem,
+                initialValue: selectedItem,
                 items: inventory.map<DropdownMenuItem<String>>((item) {
                   return DropdownMenuItem<String>(
                     value: item['item_name'],
@@ -780,6 +784,8 @@ class _StockOperationsPageState extends State<StockOperationsPage> {
 // ================= AI INSIGHTS PAGE ================= by Wafiy
 
 class AIInsightsPage extends StatelessWidget {
+  const AIInsightsPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Center(child: Text("AI Insights Page"));
@@ -791,7 +797,7 @@ class AIInsightsPage extends StatelessWidget {
 class OrderPage extends StatefulWidget {
   final String clinicId;
 
-  const OrderPage({Key? key, required this.clinicId}) : super(key: key);
+  const OrderPage({super.key, required this.clinicId});
 
   @override
   _OrderPageState createState() => _OrderPageState();
@@ -947,6 +953,33 @@ class _OrderPageState extends State<OrderPage> {
       });
     }
   }
+
+  Future<void> markOrderReceived() async {
+    final url = Uri.parse('$baseUrl/complete_order');
+
+    final response = await http.post(
+      url,
+      headers: {"Content-Type": "application/json"},
+      body: json.encode({
+        "clinic_id": widget.clinicId,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Order marked as received ✅")),
+      );
+
+      // 🔥 REFRESH DATA
+      fetchSuggestions();
+      fetchConsolidation();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed ❌")),
+      );
+    }
+  }
+
   // ================= UI =================
 
   @override
@@ -1089,6 +1122,13 @@ class _OrderPageState extends State<OrderPage> {
             ),
 
             SizedBox(height: 20),
+
+            // MARK AS RECEIVED BUTTON
+              ElevatedButton.icon(
+                onPressed: markOrderReceived,
+                icon: Icon(Icons.check),
+                label: Text("Mark as Received"),
+              ),
 
             // DISPLAY ORDER LIST
             if (generatedOrders.isNotEmpty)

@@ -366,5 +366,58 @@ def get_orders():
 
     return jsonify({"orders": orders})
 
+@app.route('/complete_order', methods=['POST'])
+def complete_order():
+    data = request.json
+    clinic_id = data.get("clinic_id")
+
+    if not clinic_id:
+        return jsonify({"error": "clinic_id required"}), 400
+
+    orders = db.collection("orders") \
+        .where("clinic_id", "==", clinic_id) \
+        .where("status", "==", "PENDING") \
+        .stream()
+
+    for doc in orders:
+        order_data = doc.to_dict()
+        items = order_data.get("items", [])
+
+        # 🔥 UPDATE INVENTORY HERE
+        for item in items:
+            item_name = item.get("item_name")
+            qty = item.get("qty", 0)
+
+            inv_docs = db.collection("inventory") \
+                .where("clinic_id", "==", clinic_id) \
+                .where("item_name", "==", item_name) \
+                .stream()
+
+            for inv_doc in inv_docs:
+                current_stock = inv_doc.to_dict().get("current_stock", 0)
+
+                inv_doc.reference.update({
+                    "current_stock": current_stock + qty
+                })
+                # 📝 LOG STOCK IN
+                db.collection("stock_in_logs").add({
+                    "clinic_id": clinic_id,
+                    "item_name": item_name,
+                    "qty_added": qty,
+                    "timestamp": datetime.utcnow()
+                })
+
+        # ✅ Mark order completed
+        doc.reference.update({
+            "status": "COMPLETED"
+        })
+
+    # 🔁 Reset flag
+    db.collection("clinics").document(clinic_id).update({
+        "has_pending_order": False
+    })
+
+    return jsonify({"message": "Order received & inventory updated"})
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
