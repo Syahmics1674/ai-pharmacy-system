@@ -63,6 +63,13 @@ def get_suggested_order_date(clinic_id):
 
 def consolidate_order_date(current_clinic_id):
 
+    clinic_doc = db.collection("clinics").document(current_clinic_id).get()
+
+    if clinic_doc.exists:
+        if clinic_doc.to_dict().get("has_pending_order"):
+            print("⛔ Order already pending → skip consolidation")
+            return None
+
     route_id = get_route_id(current_clinic_id)
 
     if not route_id:

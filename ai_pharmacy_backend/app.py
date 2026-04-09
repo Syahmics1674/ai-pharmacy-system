@@ -111,6 +111,14 @@ def get_order_suggestions():
 
     if not clinic_id:
         return jsonify({"error": "clinic_id is required"}), 400
+    
+    clinic_doc = db.collection("clinics").document(clinic_id).get()
+
+    if clinic_doc.exists and clinic_doc.to_dict().get("has_pending_order"):
+        return jsonify({
+            "clinic_id": clinic_id,
+            "order_suggestions": []
+        })
 
     docs = db.collection("inventory") \
              .where("clinic_id", "==", clinic_id) \
@@ -325,6 +333,9 @@ def generate_order():
     }
 
     db.collection("orders").add(order_data)
+    db.collection("clinics").document(clinic_id).update({
+        "has_pending_order": True
+    })
 
     return jsonify({
         "message": "Order generated successfully"
