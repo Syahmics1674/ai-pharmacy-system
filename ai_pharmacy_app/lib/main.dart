@@ -1054,11 +1054,6 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
   }
 
   // ---- DESKTOP MASTER DETAIL LAYOUT ----
-=======
-class AIInsightsPage extends StatelessWidget {
-  const AIInsightsPage({super.key});
-
->>>>>>> origin/main
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
