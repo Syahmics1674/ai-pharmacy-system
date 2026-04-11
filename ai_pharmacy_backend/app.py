@@ -71,6 +71,8 @@ def consolidate():
         "clinic_id": clinic_id,
         "consolidated_date": malaysia_time.strftime("%Y-%m-%d"),
         "based_on": result["based_on"],
+        "summary": result.get("summary", {}),
+        "most_urgent_clinic": result.get("most_urgent_clinic"),
         "details": result["details"]
     })
 

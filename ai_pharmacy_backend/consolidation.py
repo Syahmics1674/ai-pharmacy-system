@@ -1,13 +1,15 @@
 from firebase_config import db
 from datetime import datetime
 
+
 def get_route_id(clinic_id):
     doc = db.collection("clinics").document(clinic_id).get()
-    
+
     if doc.exists:
         return doc.to_dict().get("route_id")
-    
+
     return None
+
 
 def get_clinics_in_route(route_id):
     clinics = []
@@ -20,6 +22,16 @@ def get_clinics_in_route(route_id):
         clinics.append(doc.id)
 
     return clinics
+
+
+def get_clinic_name(clinic_id):
+    doc = db.collection("clinics").document(clinic_id).get()
+
+    if doc.exists:
+        return doc.to_dict().get("name", clinic_id)
+
+    return clinic_id
+
 
 def get_suggested_order_date(clinic_id):
     docs = db.collection("inventory") \
@@ -42,7 +54,6 @@ def get_suggested_order_date(clinic_id):
 
         date = datetime.utcnow() 
 
-        # 🔥 PRIORITY HANDLING
         if priority == "HIGH":
             if highest_priority != "HIGH":
                 highest_priority = "HIGH"
@@ -60,6 +71,7 @@ def get_suggested_order_date(clinic_id):
         }
 
     return None
+
 
 def consolidate_order_date(current_clinic_id):
 
@@ -82,54 +94,74 @@ def consolidate_order_date(current_clinic_id):
     high = []
     medium = []
     low = []
-
     details = []
+    summary = {
+        "total_clinics": len(clinic_list),
+        "high_priority_count": 0,
+        "medium_priority_count": 0,
+        "low_priority_count": 0
+    }
+    most_urgent_clinic = None
 
     for clinic in clinic_list:
+        clinic_name = get_clinic_name(clinic)
         suggestion = get_suggested_order_date(clinic)
 
-        if not suggestion or not suggestion["date"]:
-            continue
-
-        date = suggestion["date"]
-        priority = suggestion["priority"]
+        if suggestion and suggestion["date"]:
+            date = suggestion["date"]
+            priority = suggestion["priority"]
+        else:
+            date = None
+            priority = "LOW"
 
         details.append({
-            "clinic": clinic,
-            "date": str(date),
+            "clinic": clinic_name,
+            "clinic_id": clinic,
+            "date": str(date) if date else None,
             "priority": priority
         })
 
         if priority == "HIGH":
+            summary["high_priority_count"] += 1
             high.append(date)
+            if most_urgent_clinic is None or date < most_urgent_clinic["date"]:
+                most_urgent_clinic = {
+                    "clinic": clinic_name,
+                    "date": date
+                }
         elif priority == "MEDIUM":
+            summary["medium_priority_count"] += 1
             medium.append(date)
         else:
-            low.append(date)
+            summary["low_priority_count"] += 1
+            if date:
+                low.append(date)
 
-    # 🔥 PRIORITY LOGIC
     if high:
-        filtered_details = [d for d in details if d["priority"] == "HIGH"]
         return {
             "date": min(high),
             "based_on": "HIGH",
-            "details": filtered_details
+            "summary": summary,
+            "most_urgent_clinic": most_urgent_clinic["clinic"] if most_urgent_clinic else None,
+            "details": details
         }
 
     if medium:
-        filtered_details = [d for d in details if d["priority"] == "MEDIUM"]
         return {
             "date": min(medium),
             "based_on": "MEDIUM",
-            "details": filtered_details
+            "summary": summary,
+            "most_urgent_clinic": None,
+            "details": details
         }
 
     if low:
-        filtered_details = [d for d in details if d["priority"] == "LOW"]
         return {
             "date": min(low),
             "based_on": "LOW",
-            "details": filtered_details
+            "summary": summary,
+            "most_urgent_clinic": None,
+            "details": details
         }
 
     return None
