@@ -376,7 +376,7 @@ def complete_order():
 
     orders = db.collection("orders") \
         .where("clinic_id", "==", clinic_id) \
-        .where("status", "==", "PENDING") \
+        .where("status", "==", "SUBMITTED") \
         .stream()
 
     for doc in orders:
@@ -407,9 +407,9 @@ def complete_order():
                     "timestamp": datetime.utcnow()
                 })
 
-        # ✅ Mark order completed
+        # ✅ Mark order Received
         doc.reference.update({
-            "status": "COMPLETED"
+            "status": "RECEIVED"
         })
 
     # 🔁 Reset flag
@@ -418,6 +418,30 @@ def complete_order():
     })
 
     return jsonify({"message": "Order received & inventory updated"})
+
+@app.route('/update_order_status', methods=['POST'])
+def update_order_status():
+    data = request.json
+
+    order_id = data.get("order_id")
+    new_status = data.get("status")
+
+    if not order_id or not new_status:
+        return jsonify({"error": "Missing data"}), 400
+
+    db.collection("orders").document(order_id).update({
+        "status": new_status
+    })
+
+    if new_status == "SUBMITTED":
+        order = db.collection("orders").document(order_id).get().to_dict()
+        clinic_id = order.get("clinic_id")
+
+        db.collection("clinics").document(clinic_id).update({
+            "has_pending_order": True
+        })
+
+    return jsonify({"message": "Order status updated"})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
