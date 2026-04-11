@@ -4,9 +4,7 @@ import 'dart:convert';
 import 'order_history_page.dart';
 
 void main() {
-  runApp(MaterialApp(
-    home: LoginPage(),
-  ));
+  runApp(MaterialApp(home: LoginPage()));
 }
 
 class MyApp extends StatelessWidget {
@@ -14,10 +12,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'AI Pharmacy',
-      home: LoginPage(),
-    );
+    return MaterialApp(title: 'AI Pharmacy', home: LoginPage());
   }
 }
 
@@ -35,6 +30,7 @@ class _MainScreenState extends State<MainScreen> {
   String clinicName = "";
 
   final homeKey = GlobalKey<HomePageState>();
+  final orderKey = GlobalKey<_OrderPageState>();
 
   void _onItemTapped(int index) {
     setState(() {
@@ -45,11 +41,17 @@ class _MainScreenState extends State<MainScreen> {
     if (index == 0) {
       homeKey.currentState?.refreshAll();
     }
+
+    if (index == 3) {
+      orderKey.currentState?.refreshOrderPage();
+    }
   }
 
   Future<void> fetchClinicName() async {
     final response = await http.get(
-      Uri.parse("http://localhost:5000/clinic_info?clinic_id=${widget.clinicId}")
+      Uri.parse(
+        "http://localhost:5000/clinic_info?clinic_id=${widget.clinicId}",
+      ),
     );
 
     if (response.statusCode == 200) {
@@ -124,19 +126,17 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    
     final List<Widget> pages = [
       HomePage(key: homeKey, clinicId: widget.clinicId),
       StockOperationsPage(clinicId: widget.clinicId),
       AIInsightsPage(),
-      OrderPage(clinicId: widget.clinicId),
+      OrderPage(key: orderKey, clinicId: widget.clinicId),
     ];
-    
+
     return Scaffold(
       appBar: AppBar(
         title: Row(
           children: [
-
             // 🔵 LEFT: Clinic Name
             GestureDetector(
               onTap: () {
@@ -162,10 +162,7 @@ class _MainScreenState extends State<MainScreen> {
                 children: [
                   Text(
                     "AI-Assisted Pharmacy Inventory System",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                   Text(
                     _pageTitles[_selectedIndex],
@@ -196,10 +193,22 @@ class _MainScreenState extends State<MainScreen> {
         selectedItemColor: Colors.blue,
         unselectedItemColor: Colors.grey,
         items: [
-          BottomNavigationBarItem(icon: Icon(Icons.inventory), label: "Inventory"),
-          BottomNavigationBarItem(icon: Icon(Icons.swap_horiz), label: "Operations"),
-          BottomNavigationBarItem(icon: Icon(Icons.insights), label: "AI Insights"),
-          BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: "Orders"),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.inventory),
+            label: "Inventory",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.swap_horiz),
+            label: "Operations",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.insights),
+            label: "AI Insights",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.shopping_cart),
+            label: "Orders",
+          ),
         ],
       ),
     );
@@ -240,9 +249,9 @@ class _LoginPageState extends State<LoginPage> {
         ),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Login failed ❌")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Login failed ❌")));
     }
   }
 
@@ -257,7 +266,6 @@ class _LoginPageState extends State<LoginPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-
               // 🔷 TITLE
               Text(
                 "AI-Assisted Pharmacy Inventory System",
@@ -301,10 +309,7 @@ class _LoginPageState extends State<LoginPage> {
                   style: ElevatedButton.styleFrom(
                     padding: EdgeInsets.symmetric(vertical: 15),
                   ),
-                  child: Text(
-                    "Login",
-                    style: TextStyle(fontSize: 16),
-                  ),
+                  child: Text("Login", style: TextStyle(fontSize: 16)),
                 ),
               ),
             ],
@@ -327,7 +332,6 @@ class HomePage extends StatefulWidget {
 }
 
 class HomePageState extends State<HomePage> {
-
   final String baseUrl = "http://localhost:5000"; // ⚠️ Chrome OK, macOS NOT OK
 
   List inventory = [];
@@ -336,7 +340,6 @@ class HomePageState extends State<HomePage> {
   String? selectedItem;
   bool isLoading = false;
   String clinicName = "";
-  
 
   @override
   void initState() {
@@ -370,7 +373,9 @@ class HomePageState extends State<HomePage> {
   }
 
   Future<void> fetchSuggestions() async {
-    final response = await http.get(Uri.parse("$baseUrl/order_suggestions?clinic_id=${widget.clinicId}"));
+    final response = await http.get(
+      Uri.parse("$baseUrl/order_suggestions?clinic_id=${widget.clinicId}"),
+    );
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -381,7 +386,9 @@ class HomePageState extends State<HomePage> {
   }
 
   Future<void> fetchConsolidation() async {
-    final response = await http.get(Uri.parse("$baseUrl/consolidate?clinic_id=${widget.clinicId}"));
+    final response = await http.get(
+      Uri.parse("$baseUrl/consolidate?clinic_id=${widget.clinicId}"),
+    );
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -406,38 +413,54 @@ class HomePageState extends State<HomePage> {
         padding: const EdgeInsets.all(16),
         child: ListView(
           children: [
-
             // 🔷 INVENTORY CARD
             Card(
               elevation: 3,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Inventory", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    Text(
+                      "Inventory",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     SizedBox(height: 10),
 
-                    ...inventory.map((item) => Card(
-                      color: item['current_stock'] < 100 ? Colors.red[50] : Colors.grey[100],
-                      child: ListTile(
-                        title: Text(item['item_name']),
-                        subtitle: item['current_stock'] < 100
-                          ? Text(
-                            "⚠ Low Stock",
-                            style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-                            )
-                          : null,
-                        trailing: Text(
-                          "Stock: ${item['current_stock']}",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: item['current_stock'] < 100 ? Colors.red : Colors.black,
+                    ...inventory.map(
+                      (item) => Card(
+                        color: item['current_stock'] < 100
+                            ? Colors.red[50]
+                            : Colors.grey[100],
+                        child: ListTile(
+                          title: Text(item['item_name']),
+                          subtitle: item['current_stock'] < 100
+                              ? Text(
+                                  "⚠ Low Stock",
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                )
+                              : null,
+                          trailing: Text(
+                            "Stock: ${item['current_stock']}",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: item['current_stock'] < 100
+                                  ? Colors.red
+                                  : Colors.black,
+                            ),
                           ),
                         ),
                       ),
-                    )),
+                    ),
                   ],
                 ),
               ),
@@ -448,19 +471,31 @@ class HomePageState extends State<HomePage> {
             // 🔷 ORDER SUGGESTIONS
             Card(
               elevation: 3,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Order Suggestions", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    Text(
+                      "Order Suggestions",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     SizedBox(height: 10),
 
-                    ...suggestions.map((item) => ListTile(
-                      title: Text(item['item_name']),
-                      subtitle: Text("Qty: ${item['suggested_qty']} | ${item['priority']}"),
-                    )),
+                    ...suggestions.map(
+                      (item) => ListTile(
+                        title: Text(item['item_name']),
+                        subtitle: Text(
+                          "Qty: ${item['suggested_qty']} | ${item['priority']}",
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -472,7 +507,9 @@ class HomePageState extends State<HomePage> {
             Card(
               elevation: 3,
               color: Colors.blue[50],
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(20),
                 child: Column(
@@ -481,7 +518,10 @@ class HomePageState extends State<HomePage> {
                     SizedBox(height: 8),
                     Text(
                       consolidatedDate,
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
@@ -511,10 +551,10 @@ class _StockOperationsPageState extends State<StockOperationsPage> {
   List inventory = [];
   String? selectedItem;
   TextEditingController qtyController = TextEditingController();
-  
+
   Future<void> stockIn(String item, int qty) async {
     setState(() => isLoading = true);
-    
+
     try {
       final response = await http.post(
         Uri.parse("$baseUrl/stock_in"),
@@ -525,29 +565,27 @@ class _StockOperationsPageState extends State<StockOperationsPage> {
           "quantity_added": qty,
         }),
       );
-      
+
       final data = json.decode(response.body);
-      
+
       if (response.statusCode == 200) {
         // ✅ SUCCESS MESSAGE (HERE, NOT IN BODY)
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Stock-in successful ✅")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Stock-in successful ✅")));
 
         refreshAll();
-
       } else {
         // ❌ BACKEND ERROR
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(data['error'] ?? "Operation failed ❌")),
         );
       }
-
     } catch (e) {
       // ❌ NETWORK ERROR
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Connection error ❌")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Connection error ❌")));
     }
 
     setState(() => isLoading = false);
@@ -555,7 +593,7 @@ class _StockOperationsPageState extends State<StockOperationsPage> {
 
   Future<void> stockOut(String item, int qty) async {
     setState(() => isLoading = true);
-    
+
     try {
       final response = await http.post(
         Uri.parse("$baseUrl/stock_out"),
@@ -566,17 +604,16 @@ class _StockOperationsPageState extends State<StockOperationsPage> {
           "quantity_used": qty,
         }),
       );
-      
+
       final data = json.decode(response.body);
-      
+
       if (response.statusCode == 200) {
         // ✅ SUCCESS
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Stock-out successful ✅")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Stock-out successful ✅")));
 
         refreshAll();
-      
       } else {
         // ❌ ERROR FROM BACKEND
         ScaffoldMessenger.of(context).showSnackBar(
@@ -585,9 +622,9 @@ class _StockOperationsPageState extends State<StockOperationsPage> {
       }
     } catch (e) {
       // ❌ NETWORK ERROR
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Connection error ❌")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Connection error ❌")));
     }
     setState(() => isLoading = false);
   }
@@ -653,7 +690,7 @@ class _StockOperationsPageState extends State<StockOperationsPage> {
                   });
                 },
               ),
-              
+
               TextField(
                 controller: qtyController,
                 decoration: InputDecoration(labelText: "Quantity"),
@@ -693,7 +730,7 @@ class _StockOperationsPageState extends State<StockOperationsPage> {
   void showAddItemDialog() {
     TextEditingController nameController = TextEditingController();
     TextEditingController qtyController = TextEditingController();
-    
+
     showDialog(
       context: context,
       builder: (context) {
@@ -734,7 +771,7 @@ class _StockOperationsPageState extends State<StockOperationsPage> {
           ],
         );
       },
-    );  
+    );
   }
 
   @override
@@ -745,7 +782,6 @@ class _StockOperationsPageState extends State<StockOperationsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-
             // 🔷 STOCK IN
             ElevatedButton(
               onPressed: () => showStockDialog("in"),
@@ -771,9 +807,7 @@ class _StockOperationsPageState extends State<StockOperationsPage> {
             SizedBox(height: 30),
 
             // 🔄 LOADING INDICATOR
-            if (isLoading)
-              Center(child: CircularProgressIndicator()),
-
+            if (isLoading) Center(child: CircularProgressIndicator()),
           ],
         ),
       ),
@@ -804,7 +838,6 @@ class OrderPage extends StatefulWidget {
 }
 
 class _OrderPageState extends State<OrderPage> {
-
   final String baseUrl = "http://localhost:5000";
 
   List suggestions = [];
@@ -813,6 +846,7 @@ class _OrderPageState extends State<OrderPage> {
   String basedOn = "";
   List details = [];
   List generatedOrders = [];
+  Map<String, dynamic>? lastSubmittedOrder;
 
   // 🔥 GENERATE ORDER
   Future<void> generateOrder() async {
@@ -830,7 +864,7 @@ class _OrderPageState extends State<OrderPage> {
               "item_name": item['item_name'],
               "qty": item['suggested_qty'],
             };
-          }).toList()
+          }).toList(),
         }),
       );
 
@@ -838,23 +872,19 @@ class _OrderPageState extends State<OrderPage> {
       print("BODY: ${response.body}");
 
       if (response.statusCode == 200) {
-        setState(() {
-          suggestions = [];   // ✅ CLEAR LIST
-        });
+        await refreshOrderPage();
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Order generated successfully ✅")),
         );
-      } 
-      else {
+      } else {
         throw Exception("Failed");
       }
-
     } catch (e) {
       print("ERROR: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to generate order ❌")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Failed to generate order ❌")));
     }
   }
 
@@ -874,14 +904,15 @@ class _OrderPageState extends State<OrderPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text("You are about to order:\n"),
-              
-              ...suggestions.map((item) => Text(
-                "• ${item['item_name']} — ${item['suggested_qty']}"
-              )),
+
+              ...suggestions.map(
+                (item) =>
+                    Text("• ${item['item_name']} — ${item['suggested_qty']}"),
+              ),
               Text("Total: $totalQty items"),
 
               SizedBox(height: 10),
-              Text("Proceed?")
+              Text("Proceed?"),
             ],
           ),
           actions: [
@@ -918,17 +949,25 @@ class _OrderPageState extends State<OrderPage> {
   @override
   void initState() {
     super.initState();
-    fetchAll();
+    refreshOrderPage();
+  }
+
+  Future<void> refreshOrderPage() async {
+    await Future.wait([
+      fetchSuggestions(),
+      fetchConsolidation(),
+      fetchLastSubmittedOrder(),
+    ]);
   }
 
   Future<void> fetchAll() async {
-    await fetchSuggestions();
-    await fetchConsolidation();
+    await refreshOrderPage();
   }
 
   Future<void> fetchSuggestions() async {
     final response = await http.get(
-      Uri.parse("$baseUrl/order_suggestions?clinic_id=${widget.clinicId}"));
+      Uri.parse("$baseUrl/order_suggestions?clinic_id=${widget.clinicId}"),
+    );
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -941,7 +980,8 @@ class _OrderPageState extends State<OrderPage> {
 
   Future<void> fetchConsolidation() async {
     final response = await http.get(
-      Uri.parse("$baseUrl/consolidate?clinic_id=${widget.clinicId}"));
+      Uri.parse("$baseUrl/consolidate?clinic_id=${widget.clinicId}"),
+    );
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -955,28 +995,71 @@ class _OrderPageState extends State<OrderPage> {
   }
 
   Future<void> markOrderReceived() async {
+    if (lastSubmittedOrder == null) return;
+
     final url = Uri.parse('$baseUrl/complete_order');
 
     final response = await http.post(
       url,
       headers: {"Content-Type": "application/json"},
-      body: json.encode({
-        "clinic_id": widget.clinicId,
-      }),
+      body: json.encode({"clinic_id": widget.clinicId}),
     );
 
     if (response.statusCode == 200) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Order marked as received ✅")),
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Order marked as received ✅")));
+
+      await refreshOrderPage();
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Failed ❌")));
+    }
+  }
+
+  DateTime _parseOrderDate(dynamic value) {
+    if (value == null) return DateTime.fromMillisecondsSinceEpoch(0);
+    return DateTime.tryParse(value.toString()) ??
+        DateTime.fromMillisecondsSinceEpoch(0);
+  }
+
+  Future<void> fetchLastSubmittedOrder() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/orders?clinic_id=${widget.clinicId}'),
       );
 
-      // 🔥 REFRESH DATA
-      fetchSuggestions();
-      fetchConsolidation();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed ❌")),
+      if (response.statusCode != 200) return;
+
+      final data = json.decode(response.body);
+      final List<Map<String, dynamic>> submittedOrders =
+          (data['orders'] as List<dynamic>)
+              .where((order) => order['status'] == "SUBMITTED")
+              .map((order) => Map<String, dynamic>.from(order))
+              .toList();
+
+      submittedOrders.sort(
+        (a, b) => _parseOrderDate(
+          b['created_at'],
+        ).compareTo(_parseOrderDate(a['created_at'])),
       );
+
+      if (!mounted) return;
+
+      setState(() {
+        lastSubmittedOrder = submittedOrders.isNotEmpty
+            ? submittedOrders.first
+            : null;
+      });
+    } catch (e) {
+      print("ERROR fetching last submitted order: $e");
+
+      if (!mounted) return;
+
+      setState(() {
+        lastSubmittedOrder = null;
+      });
     }
   }
 
@@ -989,29 +1072,37 @@ class _OrderPageState extends State<OrderPage> {
         padding: const EdgeInsets.all(16),
         child: ListView(
           children: [
-
             // 🔷 ORDER SUGGESTIONS
             Card(
               elevation: 3,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Suggested Orders",
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    Text(
+                      "Suggested Orders",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     SizedBox(height: 10),
 
-                    ...suggestions.map((item) => ListTile(
-                      leading: Icon(Icons.medication),
-                      title: Text(item['item_name']),
-                      subtitle: Text("Priority: ${item['priority']}"),
-                      trailing: Text(
-                        "Qty: ${item['suggested_qty']}",
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                    ...suggestions.map(
+                      (item) => ListTile(
+                        leading: Icon(Icons.medication),
+                        title: Text(item['item_name']),
+                        subtitle: Text("Priority: ${item['priority']}"),
+                        trailing: Text(
+                          "Qty: ${item['suggested_qty']}",
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                       ),
-                    )),
+                    ),
                   ],
                 ),
               ),
@@ -1023,7 +1114,9 @@ class _OrderPageState extends State<OrderPage> {
             Card(
               elevation: 3,
               color: Colors.blue[50],
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(20),
                 child: Column(
@@ -1032,7 +1125,10 @@ class _OrderPageState extends State<OrderPage> {
                     SizedBox(height: 8),
                     Text(
                       consolidatedDate,
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
@@ -1060,28 +1156,40 @@ class _OrderPageState extends State<OrderPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Clinic Breakdown",
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    Text(
+                      "Clinic Breakdown",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     SizedBox(height: 10),
 
-                    ...details.map((d) => ListTile(
-                          title: Text(d['clinic']),
-                          subtitle: Text("Date: ${d['date']}"),
-                          trailing: Container(
-                            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: getPriorityColor(d['priority']).withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
+                    ...details.map(
+                      (d) => ListTile(
+                        title: Text(d['clinic']),
+                        subtitle: Text("Date: ${d['date']}"),
+                        trailing: Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: getPriorityColor(
                               d['priority'],
-                              style: TextStyle(
-                                color: getPriorityColor(d['priority']),
-                                fontWeight: FontWeight.bold,
-                              ),
+                            ).withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            d['priority'],
+                            style: TextStyle(
+                              color: getPriorityColor(d['priority']),
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                        )),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1093,11 +1201,11 @@ class _OrderPageState extends State<OrderPage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => OrderHistoryPage(
-                      clinicId: widget.clinicId,
-                    ),
+                    builder: (_) => OrderHistoryPage(clinicId: widget.clinicId),
                   ),
-                );
+                ).then((_) {
+                  fetchLastSubmittedOrder(); // 🔥 REFRESH HERE
+                });
               },
               child: Text("View Order History"),
             ),
@@ -1123,7 +1231,32 @@ class _OrderPageState extends State<OrderPage> {
 
             SizedBox(height: 20),
 
+            if (lastSubmittedOrder != null)
+              Card(
+                margin: EdgeInsets.only(bottom: 10),
+                child: Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Last Submitted Order",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      SizedBox(height: 5),
+                      Text("Date: ${lastSubmittedOrder!['created_at']}"),
+                      SizedBox(height: 5),
+
+                      ...lastSubmittedOrder!['items'].map<Widget>((item) {
+                        return Text("• ${item['item_name']} — ${item['qty']}");
+                      }).toList(),
+                    ],
+                  ),
+                ),
+              ),
+
             // MARK AS RECEIVED BUTTON
+            if (lastSubmittedOrder != null)
               ElevatedButton.icon(
                 onPressed: markOrderReceived,
                 icon: Icon(Icons.check),
@@ -1141,30 +1274,32 @@ class _OrderPageState extends State<OrderPage> {
                     children: [
                       Text(
                         "Generated Order (APPL)",
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       SizedBox(height: 10),
 
-                      ...generatedOrders.map((item) => ListTile(
-                            title: Text(item['item_name']),
-                            trailing: Text(
-                              "Qty: ${item['suggested_qty']}",
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          )),
+                      ...generatedOrders.map(
+                        (item) => ListTile(
+                          title: Text(item['item_name']),
+                          trailing: Text(
+                            "Qty: ${item['suggested_qty']}",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
 
             // 🔄 LOADING
-            if (isLoading)
-              Center(child: CircularProgressIndicator()),
-
+            if (isLoading) Center(child: CircularProgressIndicator()),
           ],
         ),
       ),
     );
   }
 }
-
