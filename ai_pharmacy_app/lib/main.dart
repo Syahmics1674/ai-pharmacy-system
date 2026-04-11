@@ -517,7 +517,7 @@ class HomePageState extends State<HomePage> {
                     Text("Next Order Date", style: TextStyle(fontSize: 18)),
                     SizedBox(height: 8),
                     Text(
-                      consolidatedDate,
+                      consolidatedDate.isEmpty ? "-" : consolidatedDate,
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -847,6 +847,13 @@ class _OrderPageState extends State<OrderPage> {
   List details = [];
   List generatedOrders = [];
   Map<String, dynamic>? lastSubmittedOrder;
+  Map<String, dynamic> routeSummary = {
+    "total_clinics": 0,
+    "high_priority_count": 0,
+    "medium_priority_count": 0,
+    "low_priority_count": 0,
+  };
+  String mostUrgentClinic = "";
 
   // 🔥 GENERATE ORDER
   Future<void> generateOrder() async {
@@ -946,6 +953,21 @@ class _OrderPageState extends State<OrderPage> {
     }
   }
 
+  void clearConsolidationState() {
+    setState(() {
+      consolidatedDate = "";
+      basedOn = "";
+      details = [];
+      routeSummary = {
+        "total_clinics": 0,
+        "high_priority_count": 0,
+        "medium_priority_count": 0,
+        "low_priority_count": 0,
+      };
+      mostUrgentClinic = "";
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -979,18 +1001,35 @@ class _OrderPageState extends State<OrderPage> {
   }
 
   Future<void> fetchConsolidation() async {
-    final response = await http.get(
-      Uri.parse("$baseUrl/consolidate?clinic_id=${widget.clinicId}"),
-    );
+    try {
+      final response = await http.get(
+        Uri.parse("$baseUrl/consolidate?clinic_id=${widget.clinicId}"),
+      );
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
 
-      setState(() {
-        consolidatedDate = data['consolidated_date'];
-        basedOn = data['based_on'];
-        details = data['details'];
-      });
+        setState(() {
+          consolidatedDate = data['consolidated_date'] ?? "";
+          basedOn = data['based_on'] ?? "";
+          details = data['details'] ?? [];
+          routeSummary = Map<String, dynamic>.from(
+            data['summary'] ??
+                {
+                  "total_clinics": 0,
+                  "high_priority_count": 0,
+                  "medium_priority_count": 0,
+                  "low_priority_count": 0,
+                },
+          );
+          mostUrgentClinic = data['most_urgent_clinic'] ?? "";
+        });
+      } else {
+        clearConsolidationState();
+      }
+    } catch (e) {
+      print("ERROR fetching consolidation: $e");
+      clearConsolidationState();
     }
   }
 
@@ -1063,6 +1102,37 @@ class _OrderPageState extends State<OrderPage> {
     }
   }
 
+  Widget buildInsightRow({
+    required IconData icon,
+    required Color color,
+    required String label,
+    required String value,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Icon(icon, color: color),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ================= UI =================
 
   @override
@@ -1124,7 +1194,7 @@ class _OrderPageState extends State<OrderPage> {
                     Text("Next Order Date", style: TextStyle(fontSize: 18)),
                     SizedBox(height: 8),
                     Text(
-                      consolidatedDate,
+                      consolidatedDate.isEmpty ? "-" : consolidatedDate,
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -1143,8 +1213,66 @@ class _OrderPageState extends State<OrderPage> {
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(
-                  "Based on: $basedOn priority",
+                  basedOn.isEmpty
+                      ? "Based on: -"
+                      : "Based on: $basedOn priority",
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+
+            SizedBox(height: 16),
+
+            Card(
+              elevation: 3,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Route Insight",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 12),
+                    buildInsightRow(
+                      icon: Icons.groups_rounded,
+                      color: Colors.indigo,
+                      label: "Total clinics",
+                      value: "${routeSummary['total_clinics'] ?? 0}",
+                    ),
+                    buildInsightRow(
+                      icon: Icons.priority_high_rounded,
+                      color: Colors.red,
+                      label: "High priority",
+                      value: "${routeSummary['high_priority_count'] ?? 0}",
+                    ),
+                    buildInsightRow(
+                      icon: Icons.warning_amber_rounded,
+                      color: Colors.orange,
+                      label: "Medium priority",
+                      value: "${routeSummary['medium_priority_count'] ?? 0}",
+                    ),
+                    buildInsightRow(
+                      icon: Icons.check_circle_outline_rounded,
+                      color: Colors.green,
+                      label: "Low priority",
+                      value: "${routeSummary['low_priority_count'] ?? 0}",
+                    ),
+                    Divider(height: 24),
+                    buildInsightRow(
+                      icon: Icons.local_hospital_rounded,
+                      color: Colors.blueAccent,
+                      label: "Most urgent clinic",
+                      value: mostUrgentClinic.isEmpty ? "-" : mostUrgentClinic,
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -1168,7 +1296,7 @@ class _OrderPageState extends State<OrderPage> {
                     ...details.map(
                       (d) => ListTile(
                         title: Text(d['clinic']),
-                        subtitle: Text("Date: ${d['date']}"),
+                        subtitle: Text("Date: ${d['date'] ?? '-'}"),
                         trailing: Container(
                           padding: EdgeInsets.symmetric(
                             horizontal: 10,
@@ -1190,6 +1318,11 @@ class _OrderPageState extends State<OrderPage> {
                         ),
                       ),
                     ),
+                    if (details.isEmpty)
+                      Text(
+                        "No route comparison available right now.",
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
                   ],
                 ),
               ),
