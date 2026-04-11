@@ -73,6 +73,26 @@ def get_suggested_order_date(clinic_id):
     return None
 
 
+def build_recommendation_message(based_on, summary):
+    if based_on == "HIGH":
+        count = summary.get("high_priority_count", 0)
+        return (
+            f"Order immediately. {count} clinics have high-priority shortages."
+        )
+
+    if based_on == "MEDIUM":
+        count = summary.get("medium_priority_count", 0)
+        return (
+            f"Plan to order soon. {count} clinics have moderately low stock."
+        )
+
+    count = summary.get("low_priority_count", 0)
+    return (
+        f"Stock is sufficient. {count} clinics have low-priority stock levels, "
+        f"so no urgent order is needed."
+    )
+
+
 def consolidate_order_date(current_clinic_id):
 
     clinic_doc = db.collection("clinics").document(current_clinic_id).get()
@@ -143,6 +163,7 @@ def consolidate_order_date(current_clinic_id):
             "based_on": "HIGH",
             "summary": summary,
             "most_urgent_clinic": most_urgent_clinic["clinic"] if most_urgent_clinic else None,
+            "recommendation_message": build_recommendation_message("HIGH", summary),
             "details": details
         }
 
@@ -152,6 +173,7 @@ def consolidate_order_date(current_clinic_id):
             "based_on": "MEDIUM",
             "summary": summary,
             "most_urgent_clinic": None,
+            "recommendation_message": build_recommendation_message("MEDIUM", summary),
             "details": details
         }
 
@@ -161,6 +183,7 @@ def consolidate_order_date(current_clinic_id):
             "based_on": "LOW",
             "summary": summary,
             "most_urgent_clinic": None,
+            "recommendation_message": build_recommendation_message("LOW", summary),
             "details": details
         }
 

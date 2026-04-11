@@ -73,6 +73,7 @@ def consolidate():
         "based_on": result["based_on"],
         "summary": result.get("summary", {}),
         "most_urgent_clinic": result.get("most_urgent_clinic"),
+        "recommendation_message": result.get("recommendation_message", ""),
         "details": result["details"]
     })
 

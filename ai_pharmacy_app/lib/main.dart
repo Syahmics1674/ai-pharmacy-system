@@ -337,6 +337,7 @@ class HomePageState extends State<HomePage> {
   List inventory = [];
   List suggestions = [];
   String consolidatedDate = "";
+  String recommendationMessage = "";
   String? selectedItem;
   bool isLoading = false;
   String clinicName = "";
@@ -394,6 +395,7 @@ class HomePageState extends State<HomePage> {
       final data = json.decode(response.body);
       setState(() {
         consolidatedDate = data['consolidated_date'];
+        recommendationMessage = data['recommendation_message'] ?? "";
       });
     }
   }
@@ -527,6 +529,35 @@ class HomePageState extends State<HomePage> {
                 ),
               ),
             ),
+
+            if (recommendationMessage.isNotEmpty) ...[
+              SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.amber[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.amber.shade200),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.blueAccent),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        recommendationMessage,
+                        style: TextStyle(
+                          fontSize: 15,
+                          height: 1.4,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -854,6 +885,7 @@ class _OrderPageState extends State<OrderPage> {
     "low_priority_count": 0,
   };
   String mostUrgentClinic = "";
+  String recommendationMessage = "";
 
   // 🔥 GENERATE ORDER
   Future<void> generateOrder() async {
@@ -965,6 +997,7 @@ class _OrderPageState extends State<OrderPage> {
         "low_priority_count": 0,
       };
       mostUrgentClinic = "";
+      recommendationMessage = "";
     });
   }
 
@@ -1023,6 +1056,7 @@ class _OrderPageState extends State<OrderPage> {
                 },
           );
           mostUrgentClinic = data['most_urgent_clinic'] ?? "";
+          recommendationMessage = data['recommendation_message'] ?? "";
         });
       } else {
         clearConsolidationState();
@@ -1204,6 +1238,35 @@ class _OrderPageState extends State<OrderPage> {
                 ),
               ),
             ),
+
+            if (recommendationMessage.isNotEmpty) ...[
+              SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.amber[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.amber.shade200),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.blueAccent),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        recommendationMessage,
+                        style: TextStyle(
+                          fontSize: 15,
+                          height: 1.4,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
 
             SizedBox(height: 20),
 
