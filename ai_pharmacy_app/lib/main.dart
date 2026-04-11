@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'order_history_page.dart';
 
 void main() {
@@ -886,11 +889,18 @@ class _OrderPageState extends State<OrderPage> {
   };
   String mostUrgentClinic = "";
   String recommendationMessage = "";
+  String clinicDisplayName = "";
+  String generatedOrderDate = "";
 
   // 🔥 GENERATE ORDER
   Future<void> generateOrder() async {
     if (isLoading) return;
     try {
+      final generatedItems = suggestions.map<Map<String, dynamic>>((item) {
+        return {"item_name": item['item_name'], "qty": item['suggested_qty']};
+      }).toList();
+      final orderDate = DateTime.now().toIso8601String().split('T').first;
+
       final url = Uri.parse('$baseUrl/generate_order');
 
       final response = await http.post(
@@ -898,12 +908,7 @@ class _OrderPageState extends State<OrderPage> {
         headers: {"Content-Type": "application/json"},
         body: json.encode({
           "clinic_id": widget.clinicId,
-          "items": suggestions.map((item) {
-            return {
-              "item_name": item['item_name'],
-              "qty": item['suggested_qty'],
-            };
-          }).toList(),
+          "items": generatedItems,
         }),
       );
 
@@ -911,6 +916,11 @@ class _OrderPageState extends State<OrderPage> {
       print("BODY: ${response.body}");
 
       if (response.statusCode == 200) {
+        setState(() {
+          generatedOrders = generatedItems;
+          generatedOrderDate = orderDate;
+        });
+
         await refreshOrderPage();
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1004,7 +1014,28 @@ class _OrderPageState extends State<OrderPage> {
   @override
   void initState() {
     super.initState();
+    fetchClinicName();
     refreshOrderPage();
+  }
+
+  Future<void> fetchClinicName() async {
+    try {
+      final response = await http.get(
+        Uri.parse("$baseUrl/clinic_info?clinic_id=${widget.clinicId}"),
+      );
+
+      if (response.statusCode != 200) return;
+
+      final data = json.decode(response.body);
+
+      if (!mounted) return;
+
+      setState(() {
+        clinicDisplayName = data['clinic_name'] ?? widget.clinicId;
+      });
+    } catch (e) {
+      print("ERROR fetching clinic name: $e");
+    }
   }
 
   Future<void> refreshOrderPage() async {
@@ -1163,6 +1194,92 @@ class _OrderPageState extends State<OrderPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<Uint8List> buildOrderPdf() async {
+    final pdf = pw.Document();
+    final orderDate = generatedOrderDate.isEmpty
+        ? DateTime.now().toIso8601String().split('T').first
+        : generatedOrderDate;
+    final clinicLabel = clinicDisplayName.isEmpty
+        ? widget.clinicId
+        : clinicDisplayName;
+
+    pdf.addPage(
+      pw.Page(
+        build: (context) {
+          return pw.Padding(
+            padding: const pw.EdgeInsets.all(24),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  "AI-Assisted Pharmacy System",
+                  style: pw.TextStyle(
+                    fontSize: 22,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+                pw.SizedBox(height: 24),
+                pw.Text(
+                  "Clinic: $clinicLabel",
+                  style: pw.TextStyle(fontSize: 14),
+                ),
+                pw.SizedBox(height: 8),
+                pw.Text("Date: $orderDate", style: pw.TextStyle(fontSize: 14)),
+                pw.SizedBox(height: 24),
+                pw.Text(
+                  "Items",
+                  style: pw.TextStyle(
+                    fontSize: 16,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+                pw.SizedBox(height: 12),
+                ...generatedOrders.map((item) {
+                  final qty = item['qty'] ?? item['suggested_qty'] ?? 0;
+
+                  return pw.Padding(
+                    padding: const pw.EdgeInsets.only(bottom: 8),
+                    child: pw.Text(
+                      "- ${item['item_name']}: $qty",
+                      style: const pw.TextStyle(fontSize: 13),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+
+    return pdf.save();
+  }
+
+  Future<void> exportOrderAsPdf() async {
+    if (generatedOrders.isEmpty) return;
+
+    final clinicLabel = clinicDisplayName.isEmpty
+        ? widget.clinicId
+        : clinicDisplayName;
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          appBar: AppBar(title: Text("Order PDF Preview")),
+          body: PdfPreview(
+            build: (format) => buildOrderPdf(),
+            pdfFileName:
+                "order_${clinicLabel.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}.pdf",
+            canChangePageFormat: false,
+            canChangeOrientation: false,
+            canDebug: false,
+          ),
+        ),
       ),
     );
   }
@@ -1481,9 +1598,18 @@ class _OrderPageState extends State<OrderPage> {
                         (item) => ListTile(
                           title: Text(item['item_name']),
                           trailing: Text(
-                            "Qty: ${item['suggested_qty']}",
+                            "Qty: ${item['qty'] ?? item['suggested_qty']}",
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
+                        ),
+                      ),
+                      SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: exportOrderAsPdf,
+                          icon: Icon(Icons.picture_as_pdf_outlined),
+                          label: Text("Export as PDF"),
                         ),
                       ),
                     ],
