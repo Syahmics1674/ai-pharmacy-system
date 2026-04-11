@@ -57,6 +57,41 @@ def clinic_info():
         "clinic_name": data.get("name", clinic_id)
     })
 
+@app.route('/consolidate', methods=['GET'])
+def consolidate():
+
+    clinic_id = request.args.get('clinic_id')
+
+    if not clinic_id:
+        return jsonify({"error": "clinic_id is required"}), 400
+
+    result = consolidate_order_date(clinic_id)
+
+    if not result:
+        return jsonify({
+            "consolidated_date": "No urgent orders",
+            "based_on": "None",
+            "summary": {},
+            "most_urgent_clinic": None,
+            "recommendation_message": "No urgent orders detected.",
+            "details": []
+        })
+
+    from datetime import timedelta
+
+    malaysia_time = result["date"] + timedelta(hours=8)
+
+    print("Final Consolidated Date:", malaysia_time)
+
+    return jsonify({
+        "clinic_id": clinic_id,
+        "consolidated_date": malaysia_time.strftime("%Y-%m-%d"),
+        "based_on": result["based_on"],
+        "summary": result.get("summary", {}),
+        "most_urgent_clinic": result.get("most_urgent_clinic"),
+        "recommendation_message": result.get("recommendation_message", ""),
+        "details": result["details"]
+    })
 
 @app.route('/inventory', methods=['GET'])
 def get_inventory():
@@ -95,6 +130,14 @@ def get_order_suggestions():
 
     if not clinic_id:
         return jsonify({"error": "clinic_id is required"}), 400
+    
+    clinic_doc = db.collection("clinics").document(clinic_id).get()
+
+    if clinic_doc.exists and clinic_doc.to_dict().get("has_pending_order"):
+        return jsonify({
+            "clinic_id": clinic_id,
+            "order_suggestions": []
+        })
 
     docs = db.collection("inventory") \
              .where("clinic_id", "==", clinic_id) \
@@ -509,6 +552,135 @@ def pkd_request_order():
     })
 
     return jsonify({"message": "Order sent to PKD!"})
+
+@app.route('/generate_order', methods=['POST'])
+def generate_order():
+    data = request.json
+
+    clinic_id = data.get("clinic_id")
+    items = data.get("items")
+
+    if not clinic_id or not items:
+        return jsonify({"error": "Missing data"}), 400
+
+    order_data = {
+        "clinic_id": clinic_id,
+        "items": items,
+        "status": "PENDING",
+        "created_at": datetime.utcnow()
+    }
+
+    db.collection("orders").add(order_data)
+    db.collection("clinics").document(clinic_id).update({
+        "has_pending_order": True
+    })
+
+    return jsonify({
+        "message": "Order generated successfully"
+    })
+
+@app.route('/orders', methods=['GET'])
+def get_orders():
+    clinic_id = request.args.get('clinic_id')
+
+    if not clinic_id:
+        return jsonify({"error": "clinic_id required"}), 400
+
+    docs = db.collection("orders") \
+             .where("clinic_id", "==", clinic_id) \
+             .stream()
+
+    orders = []
+
+    for doc in docs:
+        data = doc.to_dict()
+
+        orders.append({
+            "id": doc.id,
+            "items": data.get("items", []),
+            "status": data.get("status", "PENDING"),
+            "created_at": str(data.get("created_at"))
+        })
+
+    return jsonify({"orders": orders})
+
+@app.route('/complete_order', methods=['POST'])
+def complete_order():
+    data = request.json
+    clinic_id = data.get("clinic_id")
+
+    if not clinic_id:
+        return jsonify({"error": "clinic_id required"}), 400
+
+    orders = db.collection("orders") \
+        .where("clinic_id", "==", clinic_id) \
+        .where("status", "==", "SUBMITTED") \
+        .stream()
+
+    for doc in orders:
+        order_data = doc.to_dict()
+        items = order_data.get("items", [])
+
+        # 🔥 UPDATE INVENTORY HERE
+        for item in items:
+            item_name = item.get("item_name")
+            qty = item.get("qty", 0)
+
+            inv_docs = db.collection("inventory") \
+                .where("clinic_id", "==", clinic_id) \
+                .where("item_name", "==", item_name) \
+                .stream()
+
+            for inv_doc in inv_docs:
+                current_stock = inv_doc.to_dict().get("current_stock", 0)
+
+                inv_doc.reference.update({
+                    "current_stock": current_stock + qty
+                })
+                # 📝 LOG STOCK IN
+                db.collection("stock_in_logs").add({
+                    "clinic_id": clinic_id,
+                    "item_name": item_name,
+                    "qty_added": qty,
+                    "timestamp": datetime.utcnow()
+                })
+
+        # ✅ Mark order Received
+        doc.reference.update({
+            "status": "RECEIVED"
+        })
+
+    # 🔁 Reset flag
+    db.collection("clinics").document(clinic_id).update({
+        "has_pending_order": False
+    })
+
+    return jsonify({"message": "Order received & inventory updated"})
+
+@app.route('/update_order_status', methods=['POST'])
+def update_order_status():
+    data = request.json
+
+    order_id = data.get("order_id")
+    new_status = data.get("status")
+
+    if not order_id or not new_status:
+        return jsonify({"error": "Missing data"}), 400
+
+    db.collection("orders").document(order_id).update({
+        "status": new_status
+    })
+
+    if new_status == "SUBMITTED":
+        order = db.collection("orders").document(order_id).get().to_dict()
+        clinic_id = order.get("clinic_id")
+
+        db.collection("clinics").document(clinic_id).update({
+            "has_pending_order": True
+        })
+
+    return jsonify({"message": "Order status updated"})
+    return jsonify({"message": "Order status updated"})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
