@@ -8,14 +8,41 @@ import sys
 import os
 
 # Allow import from ai_prediction parent directory
-# Allow import from ai_prediction parent directory
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'ai_prediction')))
-from ai_engine import generate_forecast, detect_anomalies, calculate_smart_inventory
-from weather_service import get_7_day_weather
-from consolidation import consolidate_order_date
+
+AI_FEATURES_AVAILABLE = True
+AI_IMPORT_ERROR = None
+
+try:
+    from ai_engine import generate_forecast, detect_anomalies, calculate_smart_inventory
+except ModuleNotFoundError as exc:
+    AI_FEATURES_AVAILABLE = False
+    AI_IMPORT_ERROR = str(exc)
+    generate_forecast = None
+    detect_anomalies = None
+    calculate_smart_inventory = None
+
+try:
+    from weather_service import get_7_day_weather
+except ModuleNotFoundError:
+    def get_7_day_weather():
+        return {"max_rain_mm": 0.0}
 
 app = Flask(__name__)
 CORS(app)
+
+
+def ai_unavailable_response():
+    if AI_FEATURES_AVAILABLE:
+        return None
+
+    return jsonify({
+        "error": "AI features are unavailable",
+        "details": (
+            "Install the AI dependencies from requirements.txt "
+            f"to enable forecasting endpoints. Missing module: {AI_IMPORT_ERROR}"
+        )
+    }), 503
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -336,6 +363,10 @@ def stock_out():
 
 @app.route('/ai/forecast', methods=['GET'])
 def ai_forecast():
+    unavailable = ai_unavailable_response()
+    if unavailable:
+        return unavailable
+
     clinic_id = request.args.get('clinic_id')
     item_name = request.args.get('item_name')
 
@@ -365,6 +396,10 @@ def ai_forecast():
 
 @app.route('/ai/anomalies', methods=['GET'])
 def ai_anomalies():
+    unavailable = ai_unavailable_response()
+    if unavailable:
+        return unavailable
+
     clinic_id = request.args.get('clinic_id')
 
     if not clinic_id:
@@ -407,6 +442,10 @@ def ai_anomalies():
 
 @app.route('/ai/smart_inventory', methods=['GET'])
 def ai_smart_inventory():
+    unavailable = ai_unavailable_response()
+    if unavailable:
+        return unavailable
+
     clinic_id = request.args.get('clinic_id')
 
     if not clinic_id:
@@ -492,26 +531,6 @@ def ai_smart_inventory():
         "clinic_id": clinic_id,
         "smart_inventory": smart_list
     })
-
-@app.route('/consolidate', methods=['GET'])
-def consolidate_order():
-    clinic_id = request.args.get('clinic_id')
-    if not clinic_id:
-        return jsonify({"error": "Missing clinic_id"}), 400
-        
-    result = consolidate_order_date(clinic_id)
-    if result:
-        return jsonify({
-            "consolidated_date": str(result['date']),
-            "based_on": result['based_on'],
-            "details": result['details']
-        })
-    else:
-        return jsonify({
-            "consolidated_date": "No urgent orders",
-            "based_on": "None",
-            "details": []
-        })
 
 @app.route('/pkd/request_transfer', methods=['POST'])
 def pkd_request_transfer():

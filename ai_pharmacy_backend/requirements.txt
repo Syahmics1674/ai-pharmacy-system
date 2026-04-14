@@ -1,3 +1,6 @@
 flask
 firebase-admin
 flask-cors
+pandas
+numpy
+scikit-learn
