@@ -6,6 +6,8 @@ from datetime import datetime
 from flask_cors import CORS  
 import sys
 import os
+import math
+import requests as ext_requests
 
 # Allow import from ai_prediction parent directory
 # Allow import from ai_prediction parent directory
@@ -16,6 +18,58 @@ from consolidation import consolidate_order_date
 
 app = Flask(__name__)
 CORS(app)
+
+# ============================================================
+# CLINIC NETWORK — Coordinates, Haversine, Weather
+# ============================================================
+
+CLINIC_COORDINATES = {
+    'clinicA': {'lat': 3.1336, 'lng': 101.6869, 'name': 'Kuala Lumpur Health Clinic_A', 'area': 'KL Sentral'},
+    'clinicB': {'lat': 3.1623, 'lng': 101.7024, 'name': 'Kuala Lumpur Health Clinic_B', 'area': 'Chow Kit'},
+    'clinicC': {'lat': 3.1290, 'lng': 101.6740, 'name': 'Kuala Lumpur Health Clinic_C', 'area': 'Bangsar'},
+    'clinicD': {'lat': 3.1569, 'lng': 101.7655, 'name': 'Kuala Lumpur Health Clinic_D', 'area': 'Ampang'},
+    'clinicE': {'lat': 3.0565, 'lng': 101.5850, 'name': 'Kuala Lumpur Health Clinic_E', 'area': 'Subang'},
+}
+
+def haversine_km(lat1, lng1, lat2, lng2):
+    R = 6371
+    dlat = math.radians(lat2 - lat1)
+    dlng = math.radians(lng2 - lng1)
+    a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlng/2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return round(R * c, 1)
+
+def get_clinic_weather(lat, lng):
+    url = (
+        f"https://api.open-meteo.com/v1/forecast"
+        f"?latitude={lat}&longitude={lng}"
+        f"&current=temperature_2m,precipitation,weathercode"
+        f"&timezone=auto"
+    )
+    try:
+        resp = ext_requests.get(url, timeout=5)
+        if resp.status_code == 200:
+            current = resp.json().get('current', {})
+            temp = current.get('temperature_2m')
+            rain = current.get('precipitation', 0)
+            wcode = current.get('weathercode', 0)
+            if wcode == 0:
+                condition = 'Clear Sky'
+            elif wcode <= 3:
+                condition = 'Partly Cloudy'
+            elif wcode <= 67:
+                condition = 'Rainy'
+            elif wcode <= 77:
+                condition = 'Snowy'
+            elif wcode <= 82:
+                condition = 'Heavy Rain'
+            else:
+                condition = 'Thunderstorm'
+            return {'temperature': temp, 'rain_mm': rain, 'condition': condition}
+    except Exception as e:
+        print(f"Clinic weather fetch failed: {e}")
+    return {'temperature': None, 'rain_mm': 0, 'condition': 'Unknown'}
+
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -30,7 +84,11 @@ def login():
     docs = db.collection("users") \
              .where("username", "==", username) \
              .where("password", "==", password) \
-             .stream()
+             .limit(1) \
+             .get()
+
+    if not docs:
+        return jsonify({"error": "Invalid credentials"}), 401
 
     for doc in docs:
         user = doc.to_dict()
@@ -110,8 +168,12 @@ def get_inventory():
     for doc in docs:
         data = doc.to_dict()
         inventory_list.append({
-            "item_name": data.get("item_name"),
-            "current_stock": data.get("current_stock")
+            "item_name":     data.get("item_name"),
+            "current_stock": data.get("current_stock"),
+            "product_code":  data.get("product_code"),
+            "category":      data.get("category"),
+            "unit":          data.get("unit"),
+            "min_order_qty": data.get("min_order_qty"),
         })
     
     clinic_doc = db.collection("clinics").document(clinic_id).get()
@@ -681,6 +743,43 @@ def update_order_status():
 
     return jsonify({"message": "Order status updated"})
     return jsonify({"message": "Order status updated"})
+
+@app.route('/clinic_network', methods=['GET'])
+def clinic_network():
+    clinic_id = request.args.get('clinic_id')
+
+    if not clinic_id or clinic_id not in CLINIC_COORDINATES:
+        return jsonify({"error": "Invalid or missing clinic_id"}), 400
+
+    my_info = CLINIC_COORDINATES[clinic_id]
+
+    result = []
+    for cid, info in CLINIC_COORDINATES.items():
+        is_self = (cid == clinic_id)
+        dist = 0.0 if is_self else haversine_km(
+            my_info['lat'], my_info['lng'],
+            info['lat'], info['lng']
+        )
+        weather = get_clinic_weather(info['lat'], info['lng'])
+        result.append({
+            'clinic_id': cid,
+            'name': info['name'],
+            'area': info['area'],
+            'lat': info['lat'],
+            'lng': info['lng'],
+            'distance_km': dist,
+            'is_self': is_self,
+            'weather': weather
+        })
+
+    # Sort: own clinic first, then by distance
+    result.sort(key=lambda x: (0 if x['is_self'] else 1, x['distance_km']))
+
+    return jsonify({
+        'clinic_id': clinic_id,
+        'my_location': my_info,
+        'clinics': result
+    })
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
