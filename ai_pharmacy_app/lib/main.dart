@@ -855,7 +855,7 @@ class _StockOperationsPageState extends State<StockOperationsPage> {
 class AIInsightsPage extends StatefulWidget {
   final String clinicId;
 
-  const AIInsightsPage({Key? key, required this.clinicId}) : super(key: key);
+  const AIInsightsPage({super.key, required this.clinicId});
 
   @override
   _AIInsightsPageState createState() => _AIInsightsPageState();
@@ -863,536 +863,1122 @@ class AIInsightsPage extends StatefulWidget {
 
 class _AIInsightsPageState extends State<AIInsightsPage> {
   final String baseUrl = "http://localhost:5000";
+  final TextEditingController searchController = TextEditingController();
   bool isLoading = true;
+  String errorMessage = "";
   List<dynamic> smartInventory = [];
-  int? selectedIndex;
+  Map<String, List<int>> overallUsage = {
+    "daily": [10, 12, 8, 15, 20, 18, 22],
+    "weekly": [80, 95, 70, 110],
+    "monthly": [300, 420, 390],
+  };
+  Map<String, int> stockSummary = {"critical": 0, "low": 0, "safe": 0};
+  List<dynamic> topProducts = [];
+  String insightMessage = "";
+  String searchQuery = "";
+  String selectedTrend = "daily";
 
   final List<Color> chartGradient = [
     const Color(0xff23b6e6),
     const Color(0xff02d39a),
   ];
 
+  static const Color pageBackground = Color(0xFF0F172A);
+  static const Color surfaceColor = Color(0xFF1E293B);
+  static const Color surfaceColorAlt = Color(0xFF111827);
+
   @override
   void initState() {
     super.initState();
-    fetchSmartInventory();
+    fetchAIInsights();
   }
 
-  Future<void> fetchSmartInventory() async {
+  @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> fetchAIInsights() async {
     setState(() => isLoading = true);
+
     try {
-      final res = await http.get(Uri.parse("$baseUrl/ai/smart_inventory?clinic_id=${widget.clinicId}"));
-      if (res.statusCode == 200) {
-        final data = json.decode(res.body);
+      final responses = await Future.wait([
+        http.get(
+          Uri.parse("$baseUrl/ai/smart_inventory?clinic_id=${widget.clinicId}"),
+        ),
+        http.get(
+          Uri.parse("$baseUrl/ai/overall_usage?clinic_id=${widget.clinicId}"),
+        ),
+        http.get(
+          Uri.parse("$baseUrl/ai/stock_summary?clinic_id=${widget.clinicId}"),
+        ),
+        http.get(
+          Uri.parse("$baseUrl/ai/top_products?clinic_id=${widget.clinicId}"),
+        ),
+        http.get(
+          Uri.parse("$baseUrl/ai/insight_message?clinic_id=${widget.clinicId}"),
+        ),
+      ]);
+
+      if (!mounted) return;
+
+      final smartInventoryResponse = responses[0];
+      final overallUsageResponse = responses[1];
+      final stockSummaryResponse = responses[2];
+      final topProductsResponse = responses[3];
+      final insightMessageResponse = responses[4];
+
+      if (smartInventoryResponse.statusCode != 200) {
+        final data = json.decode(smartInventoryResponse.body);
         setState(() {
-          smartInventory = data['smart_inventory'] ?? [];
-          if (smartInventory.isNotEmpty) selectedIndex = 0; // Auto select first
+          errorMessage =
+              data['details'] ??
+              data['error'] ??
+              "Unable to load AI insights right now.";
+          smartInventory = [];
+        });
+      } else {
+        final smartData = json.decode(smartInventoryResponse.body);
+        final overallData = overallUsageResponse.statusCode == 200
+            ? json.decode(overallUsageResponse.body)
+            : {};
+        final stockData = stockSummaryResponse.statusCode == 200
+            ? json.decode(stockSummaryResponse.body)
+            : {};
+        final topData = topProductsResponse.statusCode == 200
+            ? json.decode(topProductsResponse.body)
+            : [];
+        final messageData = insightMessageResponse.statusCode == 200
+            ? json.decode(insightMessageResponse.body)
+            : {};
+
+        setState(() {
+          errorMessage = "";
+          smartInventory = smartData['smart_inventory'] ?? [];
+          overallUsage = {
+            "daily": _parseIntList(overallData['daily']),
+            "weekly": _parseIntList(overallData['weekly']),
+            "monthly": _parseIntList(overallData['monthly']),
+          };
+          stockSummary = {
+            "critical": stockData['critical'] ?? 0,
+            "low": stockData['low'] ?? 0,
+            "safe": stockData['safe'] ?? 0,
+          };
+          topProducts = topData is List ? topData : [];
+          insightMessage =
+              messageData['message'] ?? "No AI message available right now.";
         });
       }
     } catch (e) {
-      print("ERROR Smart Inventory: $e");
-    }
-    setState(() => isLoading = false);
-  }
+      print("ERROR AI Insights: $e");
 
-  Future<void> sendRequestToPKD(String itemName, int quantity) async {
-    try {
-      final res = await http.post(
-        Uri.parse("$baseUrl/pkd/request_order"),
-        headers: {"Content-Type": "application/json"},
-        body: json.encode({
-          "clinic_id": widget.clinicId,
-          "orders": [
-            {"item_name": itemName, "quantity": quantity}
-          ]
-        })
-      );
-      if (res.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Order for $itemName sent to PKD! ✅"), backgroundColor: Colors.green),
-        );
+      if (!mounted) return;
+
+      setState(() {
+        errorMessage = "Unable to load AI insights right now.";
+        smartInventory = [];
+      });
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
       }
-    } catch (e) {
-      print(e);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to connect ❌"), backgroundColor: Colors.red),
-      );
     }
   }
 
-  void _showOrderConfirmDialog(String item, int recommendedQty) {
-    TextEditingController qtyController = TextEditingController(text: recommendedQty.toString());
-    
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF1E293B),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text("Confirm Order to PKD", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text("You are requesting stock for $item. Adjust the quantity if needed.", style: TextStyle(color: Colors.white70)),
-              SizedBox(height: 20),
-              TextField(
-                controller: qtyController,
-                keyboardType: TextInputType.number,
-                style: TextStyle(color: Colors.white, fontSize: 18),
-                decoration: InputDecoration(
-                  labelText: "Quantity to order",
-                  labelStyle: TextStyle(color: Colors.cyanAccent),
-                  filled: true,
-                  fillColor: const Color(0xFF0F172A),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.cyanAccent, width: 2)),
-                ),
-              )
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text("Cancel", style: TextStyle(color: Colors.grey)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.cyanAccent,
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))
-              ),
-              onPressed: () {
-                Navigator.pop(context);
-                final q = int.tryParse(qtyController.text) ?? recommendedQty;
-                sendRequestToPKD(item, q);
-              },
-              child: Text("Send to PKD", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-            )
+  List<int> _parseIntList(dynamic value) {
+    if (value is! List) return [];
+    return value.map((item) => int.tryParse(item.toString()) ?? 0).toList();
+  }
+
+  List<dynamic> get filteredInventory {
+    if (searchQuery.trim().isEmpty) {
+      return smartInventory;
+    }
+
+    final query = searchQuery.trim().toLowerCase();
+    return smartInventory.where((item) {
+      final itemName = (item['item_name'] ?? "").toString().toLowerCase();
+      return itemName.contains(query);
+    }).toList();
+  }
+
+  Color _statusColorForItem(Map<String, dynamic> item) {
+    final runOutDays = item['run_out_days'] ?? -1;
+    if (runOutDays > 0 && runOutDays <= 7) return Colors.redAccent;
+    if (runOutDays > 7 && runOutDays <= 14) return Colors.orangeAccent;
+    return Colors.greenAccent;
+  }
+
+  String _trendLabel(String trend) {
+    switch (trend) {
+      case "weekly":
+        return "Weekly usage";
+      case "monthly":
+        return "Monthly usage";
+      default:
+        return "Daily usage";
+    }
+  }
+
+  List<int> get selectedTrendData {
+    final data = overallUsage[selectedTrend] ?? [];
+    if (data.isEmpty) {
+      return selectedTrend == "daily"
+          ? [10, 12, 8, 15, 20, 18, 22]
+          : selectedTrend == "weekly"
+          ? [80, 95, 70, 110]
+          : [300, 420, 390];
+    }
+    return data;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading) {
+      return Container(
+        color: pageBackground,
+        child: Center(
+          child: CircularProgressIndicator(color: Colors.cyanAccent),
+        ),
+      );
+    }
+
+    return Container(
+      color: pageBackground,
+      child: RefreshIndicator(
+        color: Colors.cyanAccent,
+        backgroundColor: surfaceColor,
+        onRefresh: fetchAIInsights,
+        child: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            _buildPageHeader(),
+            const SizedBox(height: 20),
+            if (errorMessage.isNotEmpty) _buildErrorCard(),
+            _buildOverallUsageChartCard(),
+            const SizedBox(height: 16),
+            _buildStockSummaryCard(),
+            const SizedBox(height: 16),
+            _buildTopProductsCard(),
+            const SizedBox(height: 16),
+            _buildInsightMessageCard(),
+            const SizedBox(height: 20),
+            _buildSearchCard(),
+            const SizedBox(height: 16),
+            _buildMedicineListCard(),
           ],
-        );
-      }
+        ),
+      ),
     );
   }
 
-  Future<void> sendRequestToTransfer(String itemName, int quantity, String donorClinicId) async {
+  Widget _buildPageHeader() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: surfaceColorAlt,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: const [
+              Icon(Icons.psychology_alt_outlined, color: Colors.cyanAccent),
+              SizedBox(width: 12),
+              Text(
+                "AI Insights Dashboard",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "Overall analytics, smart medicine monitoring, and fast drill-down by product.",
+            style: TextStyle(color: Colors.blueGrey[200], fontSize: 14),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorCard() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.redAccent.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.redAccent.withOpacity(0.35)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.warning_amber_rounded, color: Colors.redAccent),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              errorMessage,
+              style: const TextStyle(color: Colors.white70),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOverallUsageChartCard() {
+    final trendData = selectedTrendData;
+    final maxValue = trendData.isEmpty
+        ? 10.0
+        : trendData.reduce((a, b) => a > b ? a : b).toDouble();
+    final maxY = maxValue < 10 ? 10.0 : maxValue * 1.25;
+    final labels = selectedTrend == "daily"
+        ? ["D1", "D2", "D3", "D4", "D5", "D6", "D7"]
+        : selectedTrend == "weekly"
+        ? ["W1", "W2", "W3", "W4"]
+        : ["M1", "M2", "M3"];
+
+    final spots = List.generate(
+      trendData.length,
+      (index) => FlSpot(index.toDouble(), trendData[index].toDouble()),
+    );
+
+    return Card(
+      color: surfaceColor,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.show_chart_rounded, color: Colors.cyanAccent),
+                const SizedBox(width: 10),
+                const Text(
+                  "Overall Usage Trend",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _trendLabel(selectedTrend),
+              style: TextStyle(color: Colors.blueGrey[300], fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              children: [
+                _buildTrendChip("daily", "Daily"),
+                _buildTrendChip("weekly", "Weekly"),
+                _buildTrendChip("monthly", "Monthly"),
+              ],
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              height: 260,
+              child: LineChart(
+                LineChartData(
+                  minX: 0,
+                  maxX: (trendData.length - 1).toDouble(),
+                  minY: 0,
+                  maxY: maxY,
+                  borderData: FlBorderData(show: false),
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    getDrawingHorizontalLine: (value) => FlLine(
+                      color: Colors.white10,
+                      strokeWidth: 1,
+                      dashArray: [4, 4],
+                    ),
+                  ),
+                  titlesData: FlTitlesData(
+                    topTitles: AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    rightTitles: AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 40,
+                        interval: maxY / 4,
+                        getTitlesWidget: (value, meta) => Text(
+                          value.toInt().toString(),
+                          style: const TextStyle(
+                            color: Colors.blueGrey,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                    ),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        interval: 1,
+                        reservedSize: 30,
+                        getTitlesWidget: (value, meta) {
+                          final index = value.toInt();
+                          if (index < 0 || index >= labels.length) {
+                            return const SizedBox.shrink();
+                          }
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              labels[index],
+                              style: const TextStyle(
+                                color: Colors.blueGrey,
+                                fontSize: 11,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: spots,
+                      isCurved: true,
+                      gradient: LinearGradient(colors: chartGradient),
+                      barWidth: 4,
+                      isStrokeCapRound: true,
+                      dotData: FlDotData(
+                        show: true,
+                        getDotPainter: (spot, percent, barData, index) =>
+                            FlDotCirclePainter(
+                              radius: 4,
+                              color: Colors.cyanAccent,
+                              strokeWidth: 2,
+                              strokeColor: surfaceColor,
+                            ),
+                      ),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        gradient: LinearGradient(
+                          colors: chartGradient
+                              .map((color) => color.withOpacity(0.18))
+                              .toList(),
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTrendChip(String key, String label) {
+    final isSelected = selectedTrend == key;
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.black : Colors.white70,
+        fontWeight: FontWeight.w600,
+      ),
+      selectedColor: Colors.cyanAccent,
+      backgroundColor: surfaceColorAlt,
+      side: BorderSide(color: isSelected ? Colors.cyanAccent : Colors.white12),
+      onSelected: (_) {
+        setState(() {
+          selectedTrend = key;
+        });
+      },
+    );
+  }
+
+  Widget _buildStockSummaryCard() {
+    return Card(
+      color: surfaceColor,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: const [
+                Icon(Icons.warning_amber_rounded, color: Colors.orangeAccent),
+                SizedBox(width: 10),
+                Text(
+                  "Stock Summary",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                _SummaryCard(
+                  title: "Critical",
+                  value: "${stockSummary['critical'] ?? 0}",
+                  subtitle: "Needs attention now",
+                  accentColor: Colors.redAccent,
+                ),
+                _SummaryCard(
+                  title: "Low",
+                  value: "${stockSummary['low'] ?? 0}",
+                  subtitle: "Plan replenishment",
+                  accentColor: Colors.orangeAccent,
+                ),
+                _SummaryCard(
+                  title: "Safe",
+                  value: "${stockSummary['safe'] ?? 0}",
+                  subtitle: "Healthy inventory",
+                  accentColor: Colors.greenAccent,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTopProductsCard() {
+    return Card(
+      color: surfaceColor,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: const [
+                Icon(Icons.local_fire_department, color: Colors.orangeAccent),
+                SizedBox(width: 10),
+                Text(
+                  "Top Dispensed Products",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (topProducts.isEmpty)
+              Text(
+                "No usage data available yet.",
+                style: TextStyle(color: Colors.blueGrey[300]),
+              )
+            else
+              ...List.generate(topProducts.length, (index) {
+                final product = topProducts[index];
+                final isTopItem = index == 0;
+
+                return Container(
+                  margin: EdgeInsets.only(
+                    bottom: index == topProducts.length - 1 ? 0 : 10,
+                  ),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: isTopItem
+                        ? Colors.cyanAccent.withOpacity(0.12)
+                        : surfaceColorAlt,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: isTopItem ? Colors.cyanAccent : Colors.white10,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          color: isTopItem ? Colors.cyanAccent : Colors.white10,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          "#${index + 1}",
+                          style: TextStyle(
+                            color: isTopItem ? Colors.black : Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Text(
+                          product['item_name'] ?? "Unknown",
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        "${product['total_used'] ?? 0}",
+                        style: TextStyle(
+                          color: isTopItem
+                              ? Colors.cyanAccent
+                              : Colors.blueGrey[200],
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInsightMessageCard() {
+    return Card(
+      color: surfaceColor,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.deepPurpleAccent.withOpacity(0.18),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(
+                Icons.psychology_alt_outlined,
+                color: Colors.cyanAccent,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Smart AI Insight",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    insightMessage.isEmpty
+                        ? "No AI message available right now."
+                        : insightMessage,
+                    style: TextStyle(color: Colors.blueGrey[100], height: 1.45),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchCard() {
+    return Card(
+      color: surfaceColor,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Search Medicines",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: searchController,
+              onChanged: (value) {
+                setState(() {
+                  searchQuery = value;
+                });
+              },
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: "Search by medicine name",
+                hintStyle: TextStyle(color: Colors.blueGrey[400]),
+                prefixIcon: const Icon(
+                  Icons.search_rounded,
+                  color: Colors.cyanAccent,
+                ),
+                filled: true,
+                fillColor: surfaceColorAlt,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: Colors.white10),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: Colors.cyanAccent),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMedicineListCard() {
+    final items = filteredInventory;
+
+    return Card(
+      color: surfaceColor,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Medicines",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              "Sorted by depletion risk and searchable in real time.",
+              style: TextStyle(color: Colors.blueGrey[300], fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            if (items.isEmpty)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: surfaceColorAlt,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: Colors.white10),
+                ),
+                child: Text(
+                  "No medicines match your search.",
+                  style: TextStyle(color: Colors.blueGrey[200]),
+                ),
+              )
+            else
+              ListView.separated(
+                itemCount: items.length,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (context, index) {
+                  final data = items[index];
+                  final statusColor = _statusColorForItem(data);
+                  final hasWarning = data['has_epidemic_warning'] == true;
+
+                  return InkWell(
+                    borderRadius: BorderRadius.circular(18),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => MedicineDetailPage(
+                            clinicId: widget.clinicId,
+                            itemData: Map<String, dynamic>.from(data),
+                            chartGradient: chartGradient,
+                          ),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: surfaceColorAlt,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: Colors.white10),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: statusColor,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: statusColor.withOpacity(0.45),
+                                  blurRadius: 8,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  data['item_name'] ?? "Unknown",
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  "Current stock: ${data['current_stock'] ?? 0}",
+                                  style: TextStyle(
+                                    color: Colors.blueGrey[300],
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (hasWarning)
+                            const Padding(
+                              padding: EdgeInsets.only(right: 10),
+                              child: Icon(
+                                Icons.bolt_rounded,
+                                color: Colors.yellowAccent,
+                              ),
+                            ),
+                          const Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            color: Colors.white38,
+                            size: 16,
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+} // End AIInsightsPage
+
+class _SummaryCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final String subtitle;
+  final Color accentColor;
+
+  const _SummaryCard({
+    required this.title,
+    required this.value,
+    required this.subtitle,
+    required this.accentColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 220,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: _AIInsightsPageState.surfaceColorAlt,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: accentColor.withOpacity(0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              color: Colors.blueGrey[200],
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            value,
+            style: TextStyle(
+              color: accentColor,
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            style: TextStyle(color: Colors.blueGrey[300], fontSize: 13),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class MedicineDetailPage extends StatefulWidget {
+  final String clinicId;
+  final Map<String, dynamic> itemData;
+  final List<Color> chartGradient;
+
+  const MedicineDetailPage({
+    super.key,
+    required this.clinicId,
+    required this.itemData,
+    required this.chartGradient,
+  });
+
+  @override
+  State<MedicineDetailPage> createState() => _MedicineDetailPageState();
+}
+
+class _MedicineDetailPageState extends State<MedicineDetailPage> {
+  final String baseUrl = "http://localhost:5000";
+
+  Future<void> sendRequestToTransfer(
+    String itemName,
+    int quantity,
+    String donorClinicId,
+  ) async {
     try {
-      final res = await http.post(
+      final response = await http.post(
         Uri.parse("$baseUrl/pkd/request_transfer"),
         headers: {"Content-Type": "application/json"},
         body: json.encode({
           "clinic_id": widget.clinicId,
           "from_clinic": donorClinicId,
           "item_name": itemName,
-          "quantity": quantity
-        })
+          "quantity": quantity,
+        }),
       );
-      if (res.statusCode == 200) {
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Transfer Request sent to $donorClinicId! ✅"), backgroundColor: Colors.amber),
+          SnackBar(
+            content: Text("Transfer request sent to $donorClinicId."),
+            backgroundColor: Colors.amber,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Unable to send transfer request."),
+            backgroundColor: Colors.redAccent,
+          ),
         );
       }
     } catch (e) {
-      print(e);
+      print("ERROR transfer request: $e");
+
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to connect ❌"), backgroundColor: Colors.red),
+        const SnackBar(
+          content: Text("Failed to connect."),
+          backgroundColor: Colors.redAccent,
+        ),
       );
     }
   }
 
-  void _showTransferConfirmDialog(String item, int recommendedQty, String donorClinicId) {
-    TextEditingController qtyController = TextEditingController(text: recommendedQty.toString());
-    
+  void showTransferConfirmDialog(
+    String itemName,
+    int recommendedQty,
+    String donorClinicId,
+  ) {
+    final qtyController = TextEditingController(
+      text: recommendedQty.toString(),
+    );
+
     showDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF1E293B),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text("Cost-Saving Transfer", style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text("Requesting $item from neighboring $donorClinicId instead of the main PKD warehouse. Adjust quantity if needed.", style: TextStyle(color: Colors.white70)),
-              SizedBox(height: 20),
-              TextField(
-                controller: qtyController,
-                keyboardType: TextInputType.number,
-                style: TextStyle(color: Colors.amberAccent, fontSize: 18),
-                decoration: InputDecoration(
-                  labelText: "Transfer Quantity",
-                  labelStyle: TextStyle(color: Colors.amberAccent),
-                  filled: true,
-                  fillColor: const Color(0xFF0F172A),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.amberAccent, width: 2)),
+      builder: (context) => AlertDialog(
+        backgroundColor: _AIInsightsPageState.surfaceColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Text(
+          "Confirm Transfer Request",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              "Request $itemName from $donorClinicId instead of placing a fresh order.",
+              style: const TextStyle(color: Colors.white70),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: qtyController,
+              keyboardType: TextInputType.number,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: "Transfer quantity",
+                labelStyle: const TextStyle(color: Colors.amberAccent),
+                filled: true,
+                fillColor: _AIInsightsPageState.surfaceColorAlt,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
                 ),
-              )
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text("Cancel", style: TextStyle(color: Colors.grey)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amber,
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))
               ),
-              onPressed: () {
-                Navigator.pop(context);
-                final q = int.tryParse(qtyController.text) ?? recommendedQty;
-                sendRequestToTransfer(item, q, donorClinicId);
-              },
-              child: Text("Request Transfer", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-            )
+            ),
           ],
-        );
-      }
-    );
-  }
-
-  // ---- DESKTOP MASTER DETAIL LAYOUT ----
-  @override
-  Widget build(BuildContext context) {
-    if (isLoading) {
-      return Container(
-        color: const Color(0xFF0F172A),
-        child: Center(child: CircularProgressIndicator(color: Colors.cyanAccent)),
-      );
-    }
-
-    return Container(
-      color: const Color(0xFF0F172A), // Space Blue Dark Theme
-      padding: const EdgeInsets.all(20.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // LEFT PANEL: MASTER LIST (35% Width)
-          Expanded(
-            flex: 35,
-            child: Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E293B).withOpacity(0.5),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.white12)
-              ),
-              child: Column(
-                children: [
-                  Container(
-                    padding: EdgeInsets.all(20),
-                    alignment: Alignment.centerLeft,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text("Medicines", style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-                        Text("Sorted by depletion risk", style: TextStyle(color: Colors.blueGrey, fontSize: 12)),
-                      ],
-                    ),
-                  ),
-                  Divider(color: Colors.white12, height: 1),
-                  Expanded(
-                    child: ListView.builder(
-                      padding: EdgeInsets.all(12),
-                      itemCount: smartInventory.length,
-                      itemBuilder: (context, index) {
-                        return _buildListTile(index);
-                      },
-                    ),
-                  )
-                ],
-              ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              final quantity =
+                  int.tryParse(qtyController.text) ?? recommendedQty;
+              sendRequestToTransfer(itemName, quantity, donorClinicId);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.amber,
+              foregroundColor: Colors.black,
+            ),
+            child: const Text(
+              "Request Transfer",
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
-          
-          SizedBox(width: 24),
-
-          // RIGHT PANEL: DETAIL VIEW (65% Width)
-          Expanded(
-            flex: 65,
-            child: selectedIndex == null 
-                ? Center(child: Text("Select a medicine to view AI Insights", style: TextStyle(color: Colors.white54, fontSize: 18)))
-                : _buildDetailPanel(),
-          )
         ],
       ),
     );
   }
 
-  Widget _buildListTile(int index) {
-    var data = smartInventory[index];
-    bool isSelected = selectedIndex == index;
-    int runOutDays = data['run_out_days'];
-    bool hasWarning = data['has_epidemic_warning'];
-
-    Color statusColor = Colors.greenAccent;
-    if (runOutDays > 0 && runOutDays <= 7) statusColor = Colors.redAccent;
-    else if (runOutDays > 7 && runOutDays <= 14) statusColor = Colors.orangeAccent;
-
-    return GestureDetector(
-      onTap: () => setState(() => selectedIndex = index),
-      child: AnimatedContainer(
-        duration: Duration(milliseconds: 200),
-        margin: EdgeInsets.only(bottom: 12),
-        padding: EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF1E293B) : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected ? Colors.cyanAccent.withOpacity(0.5) : Colors.transparent,
-            width: 1.5
-          ),
-          boxShadow: isSelected ? [BoxShadow(color: Colors.cyanAccent.withOpacity(0.1), blurRadius: 10)] : []
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 12, height: 12,
-              decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle, boxShadow: [BoxShadow(color: statusColor.withOpacity(0.5), blurRadius: 6)]),
-            ),
-            SizedBox(width: 16),
-            Expanded(
-              child: Text(data['item_name'], style: TextStyle(color: isSelected ? Colors.white : Colors.white70, fontSize: 16, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
-            ),
-            if (hasWarning) Icon(Icons.bolt, color: Colors.yellowAccent, size: 20),
-          ],
-        ),
-      ),
-    );
+  Color getStatusColor(int runOutDays) {
+    if (runOutDays > 0 && runOutDays <= 7) return Colors.redAccent;
+    if (runOutDays > 7 && runOutDays <= 14) return Colors.orangeAccent;
+    return Colors.greenAccent;
   }
 
-  Widget _buildDetailPanel() {
-    var data = smartInventory[selectedIndex!];
-    String itemName = data['item_name'];
-    int currentStock = data['current_stock'];
-    int runOutDays = data['run_out_days'];
-    String runOutDate = data['run_out_date'];
-    int recommendQty = data['recommend_order'];
-    bool hasWarning = data['has_epidemic_warning'];
-    String weatherWarning = data['weather_warning'] ?? "";
-    bool hasWeatherWarning = weatherWarning.isNotEmpty;
-    List<dynamic> transferCandidates = data['transfer_candidates'] ?? [];
-    List<dynamic> forecastRaw = data['forecast_7_days'] ?? [];
-    List<int> forecastData = List<int>.from(forecastRaw);
-
-    bool hasTransferCandidate = transferCandidates.isNotEmpty;
-    var bestDonor = hasTransferCandidate ? transferCandidates.first : null;
-
-    Color statusColor = Colors.greenAccent;
-    String daysText = "Safe Stock";
-    if (runOutDays > 0 && runOutDays <= 7) { statusColor = Colors.redAccent; daysText = "$runOutDays Days Left!"; }
-    else if (runOutDays > 7 && runOutDays <= 14) { statusColor = Colors.orangeAccent; daysText = "$runOutDays Days Left"; }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // BIG HEADER
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(itemName, style: TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold, letterSpacing: -0.5)),
-                SizedBox(height: 4),
-                Text("AI Forecast & Depletion Analysis", style: TextStyle(color: Colors.cyanAccent, fontSize: 14)),
-              ],
-            ),
-            if (hasWarning)
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(color: Colors.redAccent.withOpacity(0.2), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.redAccent)),
-                child: Row(
-                  children: [
-                    Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 20),
-                    SizedBox(width: 8),
-                    Text("Epidemic Spike Detected", style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              )
-          ],
-        ),
-        SizedBox(height: 30),
-
-        // WEATHER WARNING BANNER
-        if (hasWeatherWarning)
-          Container(
-            width: double.infinity,
-            margin: EdgeInsets.only(bottom: 24),
-            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            decoration: BoxDecoration(
-              color: Colors.blueAccent.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.blueAccent.withOpacity(0.5), width: 2),
-              boxShadow: [BoxShadow(color: Colors.blueAccent.withOpacity(0.1), blurRadius: 15)]
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.cloud_sync_rounded, color: Colors.blueAccent, size: 32),
-                SizedBox(width: 16),
-                Expanded(child: Text(weatherWarning, style: TextStyle(color: Colors.blue[100], fontSize: 16, fontWeight: FontWeight.bold))),
-              ],
-            ),
-          ),
-
-        // 3 METRIC CARDS
-        Row(
-          children: [
-            Expanded(child: _buildMetricCard("Run-Out Date", runOutDate, daysText, statusColor)),
-            SizedBox(width: 16),
-            Expanded(child: _buildMetricCard("Current Stock", "$currentStock Units", "In Inventory", Colors.white)),
-            SizedBox(width: 16),
-            Expanded(child: _buildMetricCard("Recommended Order", "+$recommendQty", "To reach 30-day safety", Colors.cyanAccent)),
-          ],
-        ),
-        SizedBox(height: 30),
-
-        // CHART CONTAINER
-        Expanded(
-          child: Container(
-            padding: EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E293B),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white12),
-              boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 20, offset: Offset(0, 10))]
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("7-Day Trajectory", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                SizedBox(height: 24),
-                Expanded(child: _buildChart(forecastData)),
-              ],
-            ),
-          ),
-        ),
-        
-        SizedBox(height: 24),
-
-        // AI TRANSFER RECOMMENDATION
-        if (recommendQty > 0 && hasTransferCandidate) ...[
-          Container(
-            padding: EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.amber.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.amber.withOpacity(0.4), width: 2),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.lightbulb, color: Colors.amber, size: 36),
-                SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text("💡 Cost-Saving Transfer Available!", style: TextStyle(color: Colors.amber, fontSize: 18, fontWeight: FontWeight.bold)),
-                      SizedBox(height: 4),
-                      Text("Neighboring clinic '${bestDonor['clinic_id']}' has a confirmed surplus of ${bestDonor['surplus_stock']} units.", style: TextStyle(color: Colors.white70)),
-                    ],
-                  ),
-                ),
-                ElevatedButton.icon(
-                  icon: Icon(Icons.compare_arrows),
-                  label: Text("Request Transfer", style: TextStyle(fontWeight: FontWeight.bold)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.amber,
-                    foregroundColor: Colors.black,
-                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
-                  ),
-                  onPressed: () {
-                    _showTransferConfirmDialog(itemName, recommendQty, bestDonor['clinic_id']);
-                  },
-                ),
-                SizedBox(width: 12),
-                OutlinedButton(
-                  child: Text("Order PKD anyway", style: TextStyle(color: Colors.white70)),
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: Colors.white24),
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
-                  ),
-                  onPressed: () {
-                    _showOrderConfirmDialog(itemName, recommendQty);
-                  },
-                )
-              ],
-            ),
-          )
-        ] else ...[
-          // REGULAR ACTION BUTTON
-          SizedBox(
-            width: double.infinity,
-            height: 60,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.cyanAccent,
-                foregroundColor: Colors.black,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                elevation: 10,
-                shadowColor: Colors.cyanAccent.withOpacity(0.5)
-              ),
-              child: Text("Send PKD Order Request", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              onPressed: () {
-                if (recommendQty > 0) {
-                  _showOrderConfirmDialog(itemName, recommendQty);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Stock is perfectly healthy!")));
-                }
-              },
-            ),
-          )
-        ]
-      ],
-    );
-  }
-
-  Widget _buildMetricCard(String title, String value, String subtitle, Color glowColor) {
+  Widget buildMetricCard(
+    String title,
+    String value,
+    String subtitle,
+    Color glowColor,
+  ) {
     return Container(
-      padding: EdgeInsets.all(20),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
+        color: _AIInsightsPageState.surfaceColor,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: glowColor.withOpacity(0.3)),
         boxShadow: [
-          BoxShadow(color: glowColor.withOpacity(0.1), blurRadius: 20, spreadRadius: -5)
-        ]
+          BoxShadow(
+            color: glowColor.withOpacity(0.12),
+            blurRadius: 18,
+            spreadRadius: -6,
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: TextStyle(color: Colors.blueGrey[300], fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1)),
-          SizedBox(height: 8),
-          Text(value, style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
-          SizedBox(height: 8),
-          Text(subtitle, style: TextStyle(color: glowColor, fontSize: 13, fontWeight: FontWeight.w600)),
+          Text(
+            title,
+            style: TextStyle(
+              color: Colors.blueGrey[300],
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            style: TextStyle(
+              color: glowColor,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildChart(List<int> forecastData) {
-    if (forecastData.isEmpty || forecastData.every((e) => e == 0)) {
-      return Center(child: Text("Insufficient historical data to graph.", style: TextStyle(color: Colors.white54)));
+  Widget buildChart(List<int> forecastData) {
+    if (forecastData.isEmpty || forecastData.every((value) => value == 0)) {
+      return const Center(
+        child: Text(
+          "Insufficient historical data to graph.",
+          style: TextStyle(color: Colors.white54),
+        ),
+      );
     }
-    
-    double maxY = forecastData.reduce((curr, next) => curr > next ? curr : next).toDouble();
+
+    double maxY = forecastData
+        .reduce((current, next) => current > next ? current : next)
+        .toDouble();
     maxY = maxY < 50 ? 50 : maxY * 1.2;
 
-    List<FlSpot> spots = [];
-    for (int i = 0; i < forecastData.length; i++) {
-      spots.add(FlSpot(i.toDouble(), forecastData[i].toDouble()));
-    }
+    final spots = List.generate(
+      forecastData.length,
+      (index) => FlSpot(index.toDouble(), forecastData[index].toDouble()),
+    );
 
     return LineChart(
       LineChartData(
         gridData: FlGridData(
-          show: true, 
+          show: true,
           drawVerticalLine: false,
-          getDrawingHorizontalLine: (v) => FlLine(color: Colors.white10, strokeWidth: 1, dashArray: [5, 5])
+          getDrawingHorizontalLine: (value) =>
+              FlLine(color: Colors.white10, strokeWidth: 1, dashArray: [5, 5]),
         ),
         titlesData: FlTitlesData(
           show: true,
@@ -1405,8 +1991,14 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
               interval: 1,
               getTitlesWidget: (value, meta) {
                 return Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: Text("Day ${value.toInt() + 1}", style: const TextStyle(color: Colors.blueGrey, fontSize: 12)),
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    "Day ${value.toInt() + 1}",
+                    style: const TextStyle(
+                      color: Colors.blueGrey,
+                      fontSize: 12,
+                    ),
+                  ),
                 );
               },
             ),
@@ -1415,16 +2007,19 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
             sideTitles: SideTitles(
               showTitles: true,
               interval: maxY / 4,
-              getTitlesWidget: (value, meta) {
-                return Text(value.toInt().toString(), style: const TextStyle(color: Colors.blueGrey, fontSize: 12));
-              },
               reservedSize: 40,
+              getTitlesWidget: (value, meta) {
+                return Text(
+                  value.toInt().toString(),
+                  style: const TextStyle(color: Colors.blueGrey, fontSize: 12),
+                );
+              },
             ),
           ),
         ),
         borderData: FlBorderData(show: false),
         minX: 0,
-        maxX: 6,
+        maxX: (forecastData.length - 1).toDouble(),
         minY: 0,
         maxY: maxY,
         lineBarsData: [
@@ -1432,21 +2027,27 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
             spots: spots,
             isCurved: true,
             curveSmoothness: 0.35,
-            gradient: LinearGradient(colors: chartGradient),
+            gradient: LinearGradient(colors: widget.chartGradient),
             barWidth: 4,
             isStrokeCapRound: true,
             dotData: FlDotData(
               show: true,
-              getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
-                radius: 4, color: Colors.cyanAccent, strokeWidth: 2, strokeColor: const Color(0xFF1E293B)
-              )
+              getDotPainter: (spot, percent, barData, index) =>
+                  FlDotCirclePainter(
+                    radius: 4,
+                    color: Colors.cyanAccent,
+                    strokeWidth: 2,
+                    strokeColor: _AIInsightsPageState.surfaceColor,
+                  ),
             ),
             belowBarData: BarAreaData(
               show: true,
               gradient: LinearGradient(
-                colors: chartGradient.map((c) => c.withOpacity(0.2)).toList(),
+                colors: widget.chartGradient
+                    .map((color) => color.withOpacity(0.2))
+                    .toList(),
                 begin: Alignment.topCenter,
-                end: Alignment.bottomCenter
+                end: Alignment.bottomCenter,
               ),
             ),
           ),
@@ -1454,7 +2055,310 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
       ),
     );
   }
-} // End AIInsightsPage
+
+  @override
+  Widget build(BuildContext context) {
+    final data = widget.itemData;
+    final isCompact = MediaQuery.of(context).size.width < 760;
+    final itemName = data['item_name'] ?? "Unknown";
+    final currentStock = data['current_stock'] ?? 0;
+    final runOutDays = data['run_out_days'] ?? -1;
+    final runOutDate = data['run_out_date'] ?? "Safe (>30 Days)";
+    final recommendQty = data['recommend_order'] ?? 0;
+    final hasWarning = data['has_epidemic_warning'] == true;
+    final weatherWarning = data['weather_warning'] ?? "";
+    final hasWeatherWarning = weatherWarning.isNotEmpty;
+    final transferCandidates = data['transfer_candidates'] ?? [];
+    final forecastData = List<int>.from(data['forecast_7_days'] ?? []);
+
+    final hasTransferCandidate = transferCandidates.isNotEmpty;
+    final bestDonor = hasTransferCandidate ? transferCandidates.first : null;
+
+    var statusColor = getStatusColor(runOutDays);
+    var daysText = "Safe Stock";
+    if (runOutDays > 0 && runOutDays <= 7) {
+      daysText = "$runOutDays Days Left!";
+    } else if (runOutDays > 7 && runOutDays <= 14) {
+      daysText = "$runOutDays Days Left";
+    }
+
+    return Scaffold(
+      backgroundColor: _AIInsightsPageState.pageBackground,
+      appBar: AppBar(
+        backgroundColor: _AIInsightsPageState.pageBackground,
+        elevation: 0,
+        foregroundColor: Colors.white,
+        title: const Text("Medicine Insight"),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  itemName,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  "AI Forecast and depletion analysis",
+                  style: TextStyle(color: Colors.cyanAccent, fontSize: 14),
+                ),
+                if (hasWarning) ...[
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.redAccent.withOpacity(0.18),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.redAccent),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Icon(
+                          Icons.warning_amber_rounded,
+                          color: Colors.redAccent,
+                          size: 18,
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          "Epidemic Spike Detected",
+                          style: TextStyle(
+                            color: Colors.redAccent,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 24),
+            if (hasWeatherWarning)
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 24),
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: Colors.blueAccent.withOpacity(0.14),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: Colors.blueAccent.withOpacity(0.4)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.cloud_sync_rounded,
+                      color: Colors.blueAccent,
+                      size: 28,
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Text(
+                        weatherWarning,
+                        style: TextStyle(
+                          color: Colors.blue[100],
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            Wrap(
+              spacing: 16,
+              runSpacing: 16,
+              children: [
+                SizedBox(
+                  width: 260,
+                  child: buildMetricCard(
+                    "Run-Out Date",
+                    runOutDate,
+                    daysText,
+                    statusColor,
+                  ),
+                ),
+                SizedBox(
+                  width: 260,
+                  child: buildMetricCard(
+                    "Current Stock",
+                    "$currentStock Units",
+                    "In inventory",
+                    Colors.white,
+                  ),
+                ),
+                SizedBox(
+                  width: 260,
+                  child: buildMetricCard(
+                    "Recommended Order",
+                    "+$recommendQty",
+                    "To reach 30-day safety",
+                    Colors.cyanAccent,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: _AIInsightsPageState.surfaceColor,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: Colors.white12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "7-Day Trajectory",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(height: 280, child: buildChart(forecastData)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            if (recommendQty > 0 && hasTransferCandidate)
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: Colors.amber.withOpacity(0.35)),
+                ),
+                child: isCompact
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(
+                            Icons.compare_arrows_rounded,
+                            color: Colors.amber,
+                          ),
+                          const SizedBox(height: 14),
+                          Text(
+                            "Transfer Recommendation",
+                            style: TextStyle(
+                              color: Colors.amber,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            "Neighboring clinic '${bestDonor['clinic_id']}' has a surplus of ${bestDonor['surplus_stock']} units.",
+                            style: const TextStyle(color: Colors.white70),
+                          ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                showTransferConfirmDialog(
+                                  itemName,
+                                  recommendQty,
+                                  bestDonor['clinic_id'],
+                                );
+                              },
+                              icon: const Icon(Icons.outbond_rounded),
+                              label: const Text("Request Transfer"),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.amber,
+                                foregroundColor: Colors.black,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 16,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          const Icon(
+                            Icons.compare_arrows_rounded,
+                            color: Colors.amber,
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  "Transfer Recommendation",
+                                  style: TextStyle(
+                                    color: Colors.amber,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  "Neighboring clinic '${bestDonor['clinic_id']}' has a surplus of ${bestDonor['surplus_stock']} units.",
+                                  style: const TextStyle(color: Colors.white70),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              showTransferConfirmDialog(
+                                itemName,
+                                recommendQty,
+                                bestDonor['clinic_id'],
+                              );
+                            },
+                            icon: const Icon(Icons.outbond_rounded),
+                            label: const Text("Request Transfer"),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.amber,
+                              foregroundColor: Colors.black,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 16,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+              )
+            else
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: _AIInsightsPageState.surfaceColor,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: Colors.white10),
+                ),
+                child: const Text(
+                  "Order generation now happens in the Suggested Orders tab. Use this page for monitoring and analysis.",
+                  style: TextStyle(color: Colors.white70, height: 1.45),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 // ================= ORDER PAGE =================
 

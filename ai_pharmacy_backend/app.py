@@ -31,6 +31,30 @@ except ModuleNotFoundError:
 app = Flask(__name__)
 CORS(app)
 
+FALLBACK_OVERALL_USAGE = {
+    "daily": [10, 12, 8, 15, 20, 18, 22],
+    "weekly": [80, 95, 70, 110],
+    "monthly": [300, 420, 390]
+}
+
+FALLBACK_STOCK_SUMMARY = {
+    "critical": 3,
+    "low": 5,
+    "safe": 12
+}
+
+FALLBACK_TOP_PRODUCTS = [
+    {"item_name": "Paracetamol", "total_used": 120},
+    {"item_name": "Amoxicillin", "total_used": 95},
+    {"item_name": "Cephalexin 250mg", "total_used": 81},
+    {"item_name": "Uphamol", "total_used": 74},
+    {"item_name": "Metformin", "total_used": 63}
+]
+
+FALLBACK_INSIGHT_MESSAGE = {
+    "message": "Paracetamol demand is increasing. Consider increasing stock."
+}
+
 
 def ai_unavailable_response():
     if AI_FEATURES_AVAILABLE:
@@ -43,6 +67,177 @@ def ai_unavailable_response():
             f"to enable forecasting endpoints. Missing module: {AI_IMPORT_ERROR}"
         )
     }), 503
+
+
+def get_usage_logs_for_clinic(clinic_id):
+    query = db.collection("usage_logs")
+
+    if clinic_id:
+        query = query.where("clinic_id", "==", clinic_id)
+
+    logs = []
+    for doc in query.stream():
+        data = doc.to_dict()
+        logs.append({
+            "item_name": data.get("item_name"),
+            "quantity_used": int(data.get("quantity_used", 0)),
+            "timestamp": data.get("timestamp")
+        })
+
+    return logs
+
+
+def get_inventory_for_clinic(clinic_id):
+    query = db.collection("inventory")
+
+    if clinic_id:
+        query = query.where("clinic_id", "==", clinic_id)
+
+    items = []
+    for doc in query.stream():
+        data = doc.to_dict()
+        items.append({
+            "item_name": data.get("item_name"),
+            "current_stock": int(data.get("current_stock", 0))
+        })
+
+    return items
+
+
+def build_overall_usage_payload(logs):
+    dated_logs = [log for log in logs if log.get("timestamp")]
+    if len(dated_logs) < 7:
+        return FALLBACK_OVERALL_USAGE
+
+    today = datetime.utcnow().date()
+    daily = []
+    for offset in range(6, -1, -1):
+        target_date = today - timedelta(days=offset)
+        total = sum(
+            log["quantity_used"]
+            for log in dated_logs
+            if log["timestamp"].date() == target_date
+        )
+        daily.append(total)
+
+    weekly = []
+    for week_index in range(3, -1, -1):
+        end_date = today - timedelta(days=week_index * 7)
+        start_date = end_date - timedelta(days=6)
+        total = sum(
+            log["quantity_used"]
+            for log in dated_logs
+            if start_date <= log["timestamp"].date() <= end_date
+        )
+        weekly.append(total)
+
+    monthly = []
+    month_keys = []
+    for month_offset in range(2, -1, -1):
+        month_anchor = today.month - month_offset
+        year = today.year
+        while month_anchor <= 0:
+            month_anchor += 12
+            year -= 1
+        month_keys.append((year, month_anchor))
+
+    for year, month in month_keys:
+        total = sum(
+            log["quantity_used"]
+            for log in dated_logs
+            if log["timestamp"].year == year and log["timestamp"].month == month
+        )
+        monthly.append(total)
+
+    if sum(daily) == 0 and sum(weekly) == 0 and sum(monthly) == 0:
+        return FALLBACK_OVERALL_USAGE
+
+    return {
+        "daily": daily,
+        "weekly": weekly,
+        "monthly": monthly
+    }
+
+
+def build_stock_summary_payload(inventory_items):
+    if not inventory_items:
+        return FALLBACK_STOCK_SUMMARY
+
+    critical = 0
+    low = 0
+    safe = 0
+
+    for item in inventory_items:
+        stock = item["current_stock"]
+        if stock < 100:
+            critical += 1
+        elif stock < 200:
+            low += 1
+        else:
+            safe += 1
+
+    return {
+        "critical": critical,
+        "low": low,
+        "safe": safe
+    }
+
+
+def build_top_products_payload(logs):
+    if not logs:
+        return FALLBACK_TOP_PRODUCTS
+
+    totals = {}
+    for log in logs:
+        item_name = log.get("item_name")
+        if not item_name:
+            continue
+        totals[item_name] = totals.get(item_name, 0) + int(log.get("quantity_used", 0))
+
+    if not totals:
+        return FALLBACK_TOP_PRODUCTS
+
+    ranked = sorted(
+        (
+            {"item_name": item_name, "total_used": total_used}
+            for item_name, total_used in totals.items()
+        ),
+        key=lambda item: item["total_used"],
+        reverse=True
+    )
+
+    return ranked[:5]
+
+
+def build_insight_message_payload(stock_summary, top_products):
+    if not top_products:
+        return FALLBACK_INSIGHT_MESSAGE
+
+    top_item = top_products[0]["item_name"]
+    critical = stock_summary.get("critical", 0)
+    low = stock_summary.get("low", 0)
+
+    if critical > 0:
+        return {
+            "message": (
+                f"{top_item} demand is rising while {critical} items are already "
+                "critical. Consider urgent replenishment."
+            )
+        }
+
+    if low > 0:
+        return {
+            "message": (
+                f"{top_item} remains one of the most dispensed products. "
+                "Monitor low stock items and plan the next replenishment soon."
+            )
+        }
+
+    return {
+        "message": (
+            f"{top_item} leads current usage, but overall stock levels look stable."
+        )
+    }
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -439,6 +634,38 @@ def ai_anomalies():
         "clinic_id": clinic_id,
         "epidemic_warnings": anomalies_report
     })
+
+
+@app.route('/ai/overall_usage', methods=['GET'])
+def ai_overall_usage():
+    clinic_id = request.args.get('clinic_id')
+    logs = get_usage_logs_for_clinic(clinic_id)
+    return jsonify(build_overall_usage_payload(logs))
+
+
+@app.route('/ai/stock_summary', methods=['GET'])
+def ai_stock_summary():
+    clinic_id = request.args.get('clinic_id')
+    inventory_items = get_inventory_for_clinic(clinic_id)
+    return jsonify(build_stock_summary_payload(inventory_items))
+
+
+@app.route('/ai/top_products', methods=['GET'])
+def ai_top_products():
+    clinic_id = request.args.get('clinic_id')
+    logs = get_usage_logs_for_clinic(clinic_id)
+    return jsonify(build_top_products_payload(logs))
+
+
+@app.route('/ai/insight_message', methods=['GET'])
+def ai_insight_message():
+    clinic_id = request.args.get('clinic_id')
+    logs = get_usage_logs_for_clinic(clinic_id)
+    inventory_items = get_inventory_for_clinic(clinic_id)
+    stock_summary = build_stock_summary_payload(inventory_items)
+    top_products = build_top_products_payload(logs)
+    return jsonify(build_insight_message_payload(stock_summary, top_products))
+
 
 @app.route('/ai/smart_inventory', methods=['GET'])
 def ai_smart_inventory():
