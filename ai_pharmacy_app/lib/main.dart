@@ -6,6 +6,41 @@ import 'dart:convert';
 import 'package:fl_chart/fl_chart.dart';
 import 'dart:typed_data';
 import 'order_history_page.dart';
+import 'pkd_dashboard_page.dart';
+
+String medicineIdOf(dynamic item) {
+  if (item is Map) {
+    return (item['medicine_id'] ?? '').toString();
+  }
+  return '';
+}
+
+String itemNameOf(dynamic item) {
+  if (item is Map) {
+    return (item['item_name'] ?? item['name'] ?? 'Unknown Medicine').toString();
+  }
+  return 'Unknown Medicine';
+}
+
+String itemCategoryOf(dynamic item) {
+  if (item is Map) {
+    return (item['category'] ?? 'Uncategorized').toString();
+  }
+  return 'Uncategorized';
+}
+
+int itemQuantityOf(dynamic item, {List<String> keys = const ['qty']}) {
+  if (item is! Map) return 0;
+
+  for (final key in keys) {
+    final value = item[key];
+    if (value is int) return value;
+    if (value != null) {
+      return int.tryParse(value.toString()) ?? 0;
+    }
+  }
+  return 0;
+}
 
 void main() {
   runApp(MaterialApp(home: LoginPage()));
@@ -229,33 +264,88 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final String baseUrl = "http://localhost:5000";
+  final List<String> loginRoles = ["Clinic", "PKD"];
 
   TextEditingController userController = TextEditingController();
   TextEditingController passController = TextEditingController();
+  bool isLoading = false;
+  bool isPasswordVisible = false;
+  String selectedRole = "Clinic";
 
   Future<void> login() async {
-    final response = await http.post(
-      Uri.parse("$baseUrl/login"),
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({
-        "username": userController.text,
-        "password": passController.text,
-      }),
-    );
+    final userId = userController.text.trim();
+    final password = passController.text;
 
-    final data = json.decode(response.body);
-
-    if (response.statusCode == 200) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => MainScreen(clinicId: data['clinic_id']),
-        ),
+    if (userId.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Please enter user ID and password")),
       );
-    } else {
+      return;
+    }
+
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final response = await http.post(
+        Uri.parse("$baseUrl/login"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"user_id": userId, "password": password}),
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        isLoading = false;
+      });
+
+      final data = json.decode(response.body) as Map<String, dynamic>;
+
+      if (response.statusCode == 200 && data["success"] == true) {
+        final role = (data["role"] ?? "").toString().toLowerCase();
+        final expectedRole = selectedRole.toLowerCase();
+
+        if (role != expectedRole) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text("Incorrect role selected")));
+          return;
+        }
+
+        if (role == "pkd") {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => PKDDashboardPage(
+                district: (data["district"] ?? "").toString(),
+              ),
+            ),
+          );
+          return;
+        }
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) =>
+                MainScreen(clinicId: (data["clinic_id"] ?? "").toString()),
+          ),
+        );
+      } else {
+        final errorMessage = (data["error"] ?? "Login failed").toString();
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("$errorMessage ❌")));
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        isLoading = false;
+      });
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text("Login failed ❌")));
+      ).showSnackBar(SnackBar(content: Text("Unable to connect to backend ❌")));
     }
   }
 
@@ -274,15 +364,47 @@ class _LoginPageState extends State<LoginPage> {
               Text(
                 "AI-Assisted Pharmacy Inventory System",
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
               ),
 
               SizedBox(height: 30),
 
+              DropdownButtonFormField<String>(
+                initialValue: selectedRole,
+                decoration: InputDecoration(
+                  labelText: "Role",
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.badge_outlined),
+                ),
+                items: loginRoles
+                    .map(
+                      (role) => DropdownMenuItem<String>(
+                        value: role,
+                        child: Text(role),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() {
+                    selectedRole = value;
+                  });
+                },
+              ),
+
+              SizedBox(height: 15),
+
               // 🔷 USERNAME
               TextField(
                 controller: userController,
+                textInputAction: TextInputAction.next,
                 decoration: InputDecoration(
-                  labelText: "Username",
+                  labelText: selectedRole == "PKD"
+                      ? "PKD User ID"
+                      : "Clinic User ID",
+                  hintText: selectedRole == "PKD"
+                      ? "pkd_kapit"
+                      : "clinic_bangkit",
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.person),
                 ),
@@ -293,13 +415,25 @@ class _LoginPageState extends State<LoginPage> {
               // 🔷 PASSWORD
               TextField(
                 controller: passController,
-                obscureText: true,
+                obscureText: !isPasswordVisible,
                 textInputAction: TextInputAction.done,
                 onSubmitted: (_) => login(),
                 decoration: InputDecoration(
                   labelText: "Password",
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.lock),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      isPasswordVisible
+                          ? Icons.visibility
+                          : Icons.visibility_off,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        isPasswordVisible = !isPasswordVisible;
+                      });
+                    },
+                  ),
                 ),
               ),
 
@@ -309,11 +443,17 @@ class _LoginPageState extends State<LoginPage> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: login,
+                  onPressed: isLoading ? null : login,
                   style: ElevatedButton.styleFrom(
                     padding: EdgeInsets.symmetric(vertical: 15),
                   ),
-                  child: Text("Login", style: TextStyle(fontSize: 16)),
+                  child: isLoading
+                      ? SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text("Login", style: TextStyle(fontSize: 16)),
                 ),
               ),
             ],
@@ -445,16 +585,22 @@ class HomePageState extends State<HomePage> {
                             ? Colors.red[50]
                             : Colors.grey[100],
                         child: ListTile(
-                          title: Text(item['item_name']),
-                          subtitle: item['current_stock'] < 100
-                              ? Text(
+                          title: Text(itemNameOf(item)),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(itemCategoryOf(item)),
+                              if (item['current_stock'] < 100)
+                                Text(
                                   "⚠ Low Stock",
                                   style: TextStyle(
                                     color: Colors.red,
                                     fontWeight: FontWeight.bold,
                                   ),
-                                )
-                              : null,
+                                ),
+                            ],
+                          ),
                           trailing: Text(
                             "Stock: ${item['current_stock']}",
                             style: TextStyle(
@@ -496,7 +642,7 @@ class HomePageState extends State<HomePage> {
 
                     ...suggestions.map(
                       (item) => ListTile(
-                        title: Text(item['item_name']),
+                        title: Text(itemNameOf(item)),
                         subtitle: Text(
                           "Qty: ${item['suggested_qty']} | ${item['priority']}",
                         ),
@@ -587,7 +733,21 @@ class _StockOperationsPageState extends State<StockOperationsPage> {
   String? selectedItem;
   TextEditingController qtyController = TextEditingController();
 
-  Future<void> stockIn(String item, int qty) async {
+  Map<String, dynamic>? findInventoryItem(String? itemKey) {
+    if (itemKey == null) return null;
+
+    for (final dynamic entry in inventory) {
+      final key = medicineIdOf(entry).isNotEmpty
+          ? medicineIdOf(entry)
+          : itemNameOf(entry);
+      if (key == itemKey) {
+        return Map<String, dynamic>.from(entry as Map);
+      }
+    }
+    return null;
+  }
+
+  Future<void> stockIn(Map<String, dynamic> item, int qty) async {
     setState(() => isLoading = true);
 
     try {
@@ -596,7 +756,8 @@ class _StockOperationsPageState extends State<StockOperationsPage> {
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "clinic_id": widget.clinicId,
-          "item_name": item,
+          "medicine_id": medicineIdOf(item),
+          "item_name": itemNameOf(item),
           "quantity_added": qty,
         }),
       );
@@ -626,7 +787,7 @@ class _StockOperationsPageState extends State<StockOperationsPage> {
     setState(() => isLoading = false);
   }
 
-  Future<void> stockOut(String item, int qty) async {
+  Future<void> stockOut(Map<String, dynamic> item, int qty) async {
     setState(() => isLoading = true);
 
     try {
@@ -635,7 +796,8 @@ class _StockOperationsPageState extends State<StockOperationsPage> {
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "clinic_id": widget.clinicId,
-          "item_name": item,
+          "medicine_id": medicineIdOf(item),
+          "item_name": itemNameOf(item),
           "quantity_used": qty,
         }),
       );
@@ -715,8 +877,10 @@ class _StockOperationsPageState extends State<StockOperationsPage> {
                 initialValue: selectedItem,
                 items: inventory.map<DropdownMenuItem<String>>((item) {
                   return DropdownMenuItem<String>(
-                    value: item['item_name'],
-                    child: Text(item['item_name']),
+                    value: medicineIdOf(item).isNotEmpty
+                        ? medicineIdOf(item)
+                        : itemNameOf(item),
+                    child: Text(itemNameOf(item)),
                   );
                 }).toList(),
                 onChanged: (value) {
@@ -740,7 +904,7 @@ class _StockOperationsPageState extends State<StockOperationsPage> {
             ),
             ElevatedButton(
               onPressed: () {
-                final item = selectedItem;
+                final item = findInventoryItem(selectedItem);
                 final qty = int.tryParse(qtyController.text) ?? 0;
 
                 if (item == null || qty <= 0) return;
@@ -797,7 +961,10 @@ class _StockOperationsPageState extends State<StockOperationsPage> {
 
                 if (name.isEmpty || qty <= 0) return;
 
-                await stockIn(name, qty); // reuse existing API
+                await stockIn({
+                  "item_name": name,
+                  "medicine_id": "",
+                }, qty); // reuse existing API
 
                 Navigator.pop(context);
               },
@@ -881,7 +1048,9 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
   Future<void> fetchSmartInventory() async {
     setState(() => isLoading = true);
     try {
-      final res = await http.get(Uri.parse("$baseUrl/ai/smart_inventory?clinic_id=${widget.clinicId}"));
+      final res = await http.get(
+        Uri.parse("$baseUrl/ai/smart_inventory?clinic_id=${widget.clinicId}"),
+      );
       if (res.statusCode == 200) {
         final data = json.decode(res.body);
         setState(() {
@@ -895,7 +1064,11 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
     setState(() => isLoading = false);
   }
 
-  Future<void> sendRequestToPKD(String itemName, int quantity) async {
+  Future<void> sendRequestToPKD(
+    String itemName,
+    int quantity, {
+    String medicineId = '',
+  }) async {
     try {
       final res = await http.post(
         Uri.parse("$baseUrl/pkd/request_order"),
@@ -903,37 +1076,57 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
         body: json.encode({
           "clinic_id": widget.clinicId,
           "orders": [
-            {"item_name": itemName, "quantity": quantity}
-          ]
-        })
+            {
+              "medicine_id": medicineId,
+              "item_name": itemName,
+              "quantity": quantity,
+            },
+          ],
+        }),
       );
       if (res.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Order for $itemName sent to PKD! ✅"), backgroundColor: Colors.green),
+          SnackBar(
+            content: Text("Order for $itemName sent to PKD! ✅"),
+            backgroundColor: Colors.green,
+          ),
         );
       }
     } catch (e) {
       print(e);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to connect ❌"), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text("Failed to connect ❌"),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
 
   void _showOrderConfirmDialog(String item, int recommendedQty) {
-    TextEditingController qtyController = TextEditingController(text: recommendedQty.toString());
-    
+    TextEditingController qtyController = TextEditingController(
+      text: recommendedQty.toString(),
+    );
+
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
           backgroundColor: const Color(0xFF1E293B),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text("Confirm Order to PKD", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            "Confirm Order to PKD",
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text("You are requesting stock for $item. Adjust the quantity if needed.", style: TextStyle(color: Colors.white70)),
+              Text(
+                "You are requesting stock for $item. Adjust the quantity if needed.",
+                style: TextStyle(color: Colors.white70),
+              ),
               SizedBox(height: 20),
               TextField(
                 controller: qtyController,
@@ -944,10 +1137,16 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                   labelStyle: TextStyle(color: Colors.cyanAccent),
                   filled: true,
                   fillColor: const Color(0xFF0F172A),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.cyanAccent, width: 2)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.cyanAccent, width: 2),
+                  ),
                 ),
-              )
+              ),
             ],
           ),
           actions: [
@@ -959,22 +1158,40 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.cyanAccent,
                 padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               onPressed: () {
                 Navigator.pop(context);
                 final q = int.tryParse(qtyController.text) ?? recommendedQty;
-                sendRequestToPKD(item, q);
+                final selectedData = smartInventory[selectedIndex!];
+                sendRequestToPKD(
+                  item,
+                  q,
+                  medicineId: medicineIdOf(selectedData),
+                );
               },
-              child: Text("Send to PKD", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-            )
+              child: Text(
+                "Send to PKD",
+                style: TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
           ],
         );
-      }
+      },
     );
   }
 
-  Future<void> sendRequestToTransfer(String itemName, int quantity, String donorClinicId) async {
+  Future<void> sendRequestToTransfer(
+    String itemName,
+    int quantity,
+    String donorClinicId, {
+    String medicineId = '',
+  }) async {
     try {
       final res = await http.post(
         Uri.parse("$baseUrl/pkd/request_transfer"),
@@ -982,37 +1199,58 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
         body: json.encode({
           "clinic_id": widget.clinicId,
           "from_clinic": donorClinicId,
+          "medicine_id": medicineId,
           "item_name": itemName,
-          "quantity": quantity
-        })
+          "quantity": quantity,
+        }),
       );
       if (res.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Transfer Request sent to $donorClinicId! ✅"), backgroundColor: Colors.amber),
+          SnackBar(
+            content: Text("Transfer Request sent to $donorClinicId! ✅"),
+            backgroundColor: Colors.amber,
+          ),
         );
       }
     } catch (e) {
       print(e);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to connect ❌"), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text("Failed to connect ❌"),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
 
-  void _showTransferConfirmDialog(String item, int recommendedQty, String donorClinicId) {
-    TextEditingController qtyController = TextEditingController(text: recommendedQty.toString());
-    
+  void _showTransferConfirmDialog(
+    String item,
+    int recommendedQty,
+    String donorClinicId,
+  ) {
+    TextEditingController qtyController = TextEditingController(
+      text: recommendedQty.toString(),
+    );
+
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
           backgroundColor: const Color(0xFF1E293B),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text("Cost-Saving Transfer", style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            "Cost-Saving Transfer",
+            style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text("Requesting $item from neighboring $donorClinicId instead of the main PKD warehouse. Adjust quantity if needed.", style: TextStyle(color: Colors.white70)),
+              Text(
+                "Requesting $item from neighboring $donorClinicId instead of the main PKD warehouse. Adjust quantity if needed.",
+                style: TextStyle(color: Colors.white70),
+              ),
               SizedBox(height: 20),
               TextField(
                 controller: qtyController,
@@ -1023,10 +1261,16 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                   labelStyle: TextStyle(color: Colors.amberAccent),
                   filled: true,
                   fillColor: const Color(0xFF0F172A),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.amberAccent, width: 2)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.amberAccent, width: 2),
+                  ),
                 ),
-              )
+              ),
             ],
           ),
           actions: [
@@ -1038,18 +1282,32 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.amber,
                 padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               onPressed: () {
                 Navigator.pop(context);
                 final q = int.tryParse(qtyController.text) ?? recommendedQty;
-                sendRequestToTransfer(item, q, donorClinicId);
+                final selectedData = smartInventory[selectedIndex!];
+                sendRequestToTransfer(
+                  item,
+                  q,
+                  donorClinicId,
+                  medicineId: medicineIdOf(selectedData),
+                );
               },
-              child: Text("Request Transfer", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-            )
+              child: Text(
+                "Request Transfer",
+                style: TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
           ],
         );
-      }
+      },
     );
   }
 
@@ -1059,7 +1317,9 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
     if (isLoading) {
       return Container(
         color: const Color(0xFF0F172A),
-        child: Center(child: CircularProgressIndicator(color: Colors.cyanAccent)),
+        child: Center(
+          child: CircularProgressIndicator(color: Colors.cyanAccent),
+        ),
       );
     }
 
@@ -1076,7 +1336,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
               decoration: BoxDecoration(
                 color: const Color(0xFF1E293B).withOpacity(0.5),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.white12)
+                border: Border.all(color: Colors.white12),
               ),
               child: Column(
                 children: [
@@ -1086,8 +1346,21 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text("Medicines", style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-                        Text("Sorted by depletion risk", style: TextStyle(color: Colors.blueGrey, fontSize: 12)),
+                        Text(
+                          "Medicines",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          "Sorted by depletion risk",
+                          style: TextStyle(
+                            color: Colors.blueGrey,
+                            fontSize: 12,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -1100,21 +1373,26 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                         return _buildListTile(index);
                       },
                     ),
-                  )
+                  ),
                 ],
               ),
             ),
           ),
-          
+
           SizedBox(width: 24),
 
           // RIGHT PANEL: DETAIL VIEW (65% Width)
           Expanded(
             flex: 65,
-            child: selectedIndex == null 
-                ? Center(child: Text("Select a medicine to view AI Insights", style: TextStyle(color: Colors.white54, fontSize: 18)))
+            child: selectedIndex == null
+                ? Center(
+                    child: Text(
+                      "Select a medicine to view AI Insights",
+                      style: TextStyle(color: Colors.white54, fontSize: 18),
+                    ),
+                  )
                 : _buildDetailPanel(),
-          )
+          ),
         ],
       ),
     );
@@ -1127,8 +1405,10 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
     bool hasWarning = data['has_epidemic_warning'];
 
     Color statusColor = Colors.greenAccent;
-    if (runOutDays > 0 && runOutDays <= 7) statusColor = Colors.redAccent;
-    else if (runOutDays > 7 && runOutDays <= 14) statusColor = Colors.orangeAccent;
+    if (runOutDays > 0 && runOutDays <= 7)
+      statusColor = Colors.redAccent;
+    else if (runOutDays > 7 && runOutDays <= 14)
+      statusColor = Colors.orangeAccent;
 
     return GestureDetector(
       onTap: () => setState(() => selectedIndex = index),
@@ -1140,22 +1420,46 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
           color: isSelected ? const Color(0xFF1E293B) : Colors.transparent,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? Colors.cyanAccent.withOpacity(0.5) : Colors.transparent,
-            width: 1.5
+            color: isSelected
+                ? Colors.cyanAccent.withOpacity(0.5)
+                : Colors.transparent,
+            width: 1.5,
           ),
-          boxShadow: isSelected ? [BoxShadow(color: Colors.cyanAccent.withOpacity(0.1), blurRadius: 10)] : []
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: Colors.cyanAccent.withOpacity(0.1),
+                    blurRadius: 10,
+                  ),
+                ]
+              : [],
         ),
         child: Row(
           children: [
             Container(
-              width: 12, height: 12,
-              decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle, boxShadow: [BoxShadow(color: statusColor.withOpacity(0.5), blurRadius: 6)]),
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color: statusColor,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(color: statusColor.withOpacity(0.5), blurRadius: 6),
+                ],
+              ),
             ),
             SizedBox(width: 16),
             Expanded(
-              child: Text(data['item_name'], style: TextStyle(color: isSelected ? Colors.white : Colors.white70, fontSize: 16, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+              child: Text(
+                itemNameOf(data),
+                style: TextStyle(
+                  color: isSelected ? Colors.white : Colors.white70,
+                  fontSize: 16,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
             ),
-            if (hasWarning) Icon(Icons.bolt, color: Colors.yellowAccent, size: 20),
+            if (hasWarning)
+              Icon(Icons.bolt, color: Colors.yellowAccent, size: 20),
           ],
         ),
       ),
@@ -1164,7 +1468,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
 
   Widget _buildDetailPanel() {
     var data = smartInventory[selectedIndex!];
-    String itemName = data['item_name'];
+    String itemName = itemNameOf(data);
     int currentStock = data['current_stock'];
     int runOutDays = data['run_out_days'];
     String runOutDate = data['run_out_date'];
@@ -1181,8 +1485,13 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
 
     Color statusColor = Colors.greenAccent;
     String daysText = "Safe Stock";
-    if (runOutDays > 0 && runOutDays <= 7) { statusColor = Colors.redAccent; daysText = "$runOutDays Days Left!"; }
-    else if (runOutDays > 7 && runOutDays <= 14) { statusColor = Colors.orangeAccent; daysText = "$runOutDays Days Left"; }
+    if (runOutDays > 0 && runOutDays <= 7) {
+      statusColor = Colors.redAccent;
+      daysText = "$runOutDays Days Left!";
+    } else if (runOutDays > 7 && runOutDays <= 14) {
+      statusColor = Colors.orangeAccent;
+      daysText = "$runOutDays Days Left";
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1194,23 +1503,48 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(itemName, style: TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold, letterSpacing: -0.5)),
+                Text(
+                  itemName,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 36,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: -0.5,
+                  ),
+                ),
                 SizedBox(height: 4),
-                Text("AI Forecast & Depletion Analysis", style: TextStyle(color: Colors.cyanAccent, fontSize: 14)),
+                Text(
+                  "AI Forecast & Depletion Analysis",
+                  style: TextStyle(color: Colors.cyanAccent, fontSize: 14),
+                ),
               ],
             ),
             if (hasWarning)
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(color: Colors.redAccent.withOpacity(0.2), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.redAccent)),
+                decoration: BoxDecoration(
+                  color: Colors.redAccent.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.redAccent),
+                ),
                 child: Row(
                   children: [
-                    Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 20),
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      color: Colors.redAccent,
+                      size: 20,
+                    ),
                     SizedBox(width: 8),
-                    Text("Epidemic Spike Detected", style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                    Text(
+                      "Epidemic Spike Detected",
+                      style: TextStyle(
+                        color: Colors.redAccent,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ],
                 ),
-              )
+              ),
           ],
         ),
         SizedBox(height: 30),
@@ -1224,14 +1558,35 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
             decoration: BoxDecoration(
               color: Colors.blueAccent.withOpacity(0.15),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.blueAccent.withOpacity(0.5), width: 2),
-              boxShadow: [BoxShadow(color: Colors.blueAccent.withOpacity(0.1), blurRadius: 15)]
+              border: Border.all(
+                color: Colors.blueAccent.withOpacity(0.5),
+                width: 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.blueAccent.withOpacity(0.1),
+                  blurRadius: 15,
+                ),
+              ],
             ),
             child: Row(
               children: [
-                Icon(Icons.cloud_sync_rounded, color: Colors.blueAccent, size: 32),
+                Icon(
+                  Icons.cloud_sync_rounded,
+                  color: Colors.blueAccent,
+                  size: 32,
+                ),
                 SizedBox(width: 16),
-                Expanded(child: Text(weatherWarning, style: TextStyle(color: Colors.blue[100], fontSize: 16, fontWeight: FontWeight.bold))),
+                Expanded(
+                  child: Text(
+                    weatherWarning,
+                    style: TextStyle(
+                      color: Colors.blue[100],
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -1239,11 +1594,32 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
         // 3 METRIC CARDS
         Row(
           children: [
-            Expanded(child: _buildMetricCard("Run-Out Date", runOutDate, daysText, statusColor)),
+            Expanded(
+              child: _buildMetricCard(
+                "Run-Out Date",
+                runOutDate,
+                daysText,
+                statusColor,
+              ),
+            ),
             SizedBox(width: 16),
-            Expanded(child: _buildMetricCard("Current Stock", "$currentStock Units", "In Inventory", Colors.white)),
+            Expanded(
+              child: _buildMetricCard(
+                "Current Stock",
+                "$currentStock Units",
+                "In Inventory",
+                Colors.white,
+              ),
+            ),
             SizedBox(width: 16),
-            Expanded(child: _buildMetricCard("Recommended Order", "+$recommendQty", "To reach 30-day safety", Colors.cyanAccent)),
+            Expanded(
+              child: _buildMetricCard(
+                "Recommended Order",
+                "+$recommendQty",
+                "To reach 30-day safety",
+                Colors.cyanAccent,
+              ),
+            ),
           ],
         ),
         SizedBox(height: 30),
@@ -1256,19 +1632,32 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
               color: const Color(0xFF1E293B),
               borderRadius: BorderRadius.circular(24),
               border: Border.all(color: Colors.white12),
-              boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 20, offset: Offset(0, 10))]
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 20,
+                  offset: Offset(0, 10),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("7-Day Trajectory", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(
+                  "7-Day Trajectory",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 SizedBox(height: 24),
                 Expanded(child: _buildChart(forecastData)),
               ],
             ),
           ),
         ),
-        
+
         SizedBox(height: 24),
 
         // AI TRANSFER RECOMMENDATION
@@ -1278,7 +1667,10 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
             decoration: BoxDecoration(
               color: Colors.amber.withOpacity(0.1),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.amber.withOpacity(0.4), width: 2),
+              border: Border.all(
+                color: Colors.amber.withOpacity(0.4),
+                width: 2,
+              ),
             ),
             child: Row(
               children: [
@@ -1288,40 +1680,64 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text("💡 Cost-Saving Transfer Available!", style: TextStyle(color: Colors.amber, fontSize: 18, fontWeight: FontWeight.bold)),
+                      Text(
+                        "💡 Cost-Saving Transfer Available!",
+                        style: TextStyle(
+                          color: Colors.amber,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       SizedBox(height: 4),
-                      Text("Neighboring clinic '${bestDonor['clinic_id']}' has a confirmed surplus of ${bestDonor['surplus_stock']} units.", style: TextStyle(color: Colors.white70)),
+                      Text(
+                        "Neighboring clinic '${bestDonor['clinic_id']}' has a confirmed surplus of ${bestDonor['surplus_stock']} units.",
+                        style: TextStyle(color: Colors.white70),
+                      ),
                     ],
                   ),
                 ),
                 ElevatedButton.icon(
                   icon: Icon(Icons.compare_arrows),
-                  label: Text("Request Transfer", style: TextStyle(fontWeight: FontWeight.bold)),
+                  label: Text(
+                    "Request Transfer",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.amber,
                     foregroundColor: Colors.black,
                     padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   onPressed: () {
-                    _showTransferConfirmDialog(itemName, recommendQty, bestDonor['clinic_id']);
+                    _showTransferConfirmDialog(
+                      itemName,
+                      recommendQty,
+                      bestDonor['clinic_id'],
+                    );
                   },
                 ),
                 SizedBox(width: 12),
                 OutlinedButton(
-                  child: Text("Order PKD anyway", style: TextStyle(color: Colors.white70)),
+                  child: Text(
+                    "Order PKD anyway",
+                    style: TextStyle(color: Colors.white70),
+                  ),
                   style: OutlinedButton.styleFrom(
                     side: BorderSide(color: Colors.white24),
                     padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   onPressed: () {
                     _showOrderConfirmDialog(itemName, recommendQty);
                   },
-                )
+                ),
               ],
             ),
-          )
+          ),
         ] else ...[
           // REGULAR ACTION BUTTON
           SizedBox(
@@ -1331,26 +1747,38 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.cyanAccent,
                 foregroundColor: Colors.black,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 elevation: 10,
-                shadowColor: Colors.cyanAccent.withOpacity(0.5)
+                shadowColor: Colors.cyanAccent.withOpacity(0.5),
               ),
-              child: Text("Send PKD Order Request", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              child: Text(
+                "Send PKD Order Request",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
               onPressed: () {
                 if (recommendQty > 0) {
                   _showOrderConfirmDialog(itemName, recommendQty);
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Stock is perfectly healthy!")));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("Stock is perfectly healthy!")),
+                  );
                 }
               },
             ),
-          )
-        ]
+          ),
+        ],
       ],
     );
   }
 
-  Widget _buildMetricCard(String title, String value, String subtitle, Color glowColor) {
+  Widget _buildMetricCard(
+    String title,
+    String value,
+    String subtitle,
+    Color glowColor,
+  ) {
     return Container(
       padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -1358,17 +1786,43 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: glowColor.withOpacity(0.3)),
         boxShadow: [
-          BoxShadow(color: glowColor.withOpacity(0.1), blurRadius: 20, spreadRadius: -5)
-        ]
+          BoxShadow(
+            color: glowColor.withOpacity(0.1),
+            blurRadius: 20,
+            spreadRadius: -5,
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: TextStyle(color: Colors.blueGrey[300], fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1)),
+          Text(
+            title,
+            style: TextStyle(
+              color: Colors.blueGrey[300],
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1,
+            ),
+          ),
           SizedBox(height: 8),
-          Text(value, style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
+          Text(
+            value,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           SizedBox(height: 8),
-          Text(subtitle, style: TextStyle(color: glowColor, fontSize: 13, fontWeight: FontWeight.w600)),
+          Text(
+            subtitle,
+            style: TextStyle(
+              color: glowColor,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );
@@ -1376,10 +1830,17 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
 
   Widget _buildChart(List<int> forecastData) {
     if (forecastData.isEmpty || forecastData.every((e) => e == 0)) {
-      return Center(child: Text("Insufficient historical data to graph.", style: TextStyle(color: Colors.white54)));
+      return Center(
+        child: Text(
+          "Insufficient historical data to graph.",
+          style: TextStyle(color: Colors.white54),
+        ),
+      );
     }
-    
-    double maxY = forecastData.reduce((curr, next) => curr > next ? curr : next).toDouble();
+
+    double maxY = forecastData
+        .reduce((curr, next) => curr > next ? curr : next)
+        .toDouble();
     maxY = maxY < 50 ? 50 : maxY * 1.2;
 
     List<FlSpot> spots = [];
@@ -1390,9 +1851,10 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
     return LineChart(
       LineChartData(
         gridData: FlGridData(
-          show: true, 
+          show: true,
           drawVerticalLine: false,
-          getDrawingHorizontalLine: (v) => FlLine(color: Colors.white10, strokeWidth: 1, dashArray: [5, 5])
+          getDrawingHorizontalLine: (v) =>
+              FlLine(color: Colors.white10, strokeWidth: 1, dashArray: [5, 5]),
         ),
         titlesData: FlTitlesData(
           show: true,
@@ -1406,7 +1868,13 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
               getTitlesWidget: (value, meta) {
                 return Padding(
                   padding: const EdgeInsets.only(top: 8.0),
-                  child: Text("Day ${value.toInt() + 1}", style: const TextStyle(color: Colors.blueGrey, fontSize: 12)),
+                  child: Text(
+                    "Day ${value.toInt() + 1}",
+                    style: const TextStyle(
+                      color: Colors.blueGrey,
+                      fontSize: 12,
+                    ),
+                  ),
                 );
               },
             ),
@@ -1416,7 +1884,10 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
               showTitles: true,
               interval: maxY / 4,
               getTitlesWidget: (value, meta) {
-                return Text(value.toInt().toString(), style: const TextStyle(color: Colors.blueGrey, fontSize: 12));
+                return Text(
+                  value.toInt().toString(),
+                  style: const TextStyle(color: Colors.blueGrey, fontSize: 12),
+                );
               },
               reservedSize: 40,
             ),
@@ -1437,16 +1908,20 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
             isStrokeCapRound: true,
             dotData: FlDotData(
               show: true,
-              getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
-                radius: 4, color: Colors.cyanAccent, strokeWidth: 2, strokeColor: const Color(0xFF1E293B)
-              )
+              getDotPainter: (spot, percent, barData, index) =>
+                  FlDotCirclePainter(
+                    radius: 4,
+                    color: Colors.cyanAccent,
+                    strokeWidth: 2,
+                    strokeColor: const Color(0xFF1E293B),
+                  ),
             ),
             belowBarData: BarAreaData(
               show: true,
               gradient: LinearGradient(
                 colors: chartGradient.map((c) => c.withOpacity(0.2)).toList(),
                 begin: Alignment.topCenter,
-                end: Alignment.bottomCenter
+                end: Alignment.bottomCenter,
               ),
             ),
           ),
@@ -1493,7 +1968,12 @@ class _OrderPageState extends State<OrderPage> {
     if (isLoading) return;
     try {
       final generatedItems = suggestions.map<Map<String, dynamic>>((item) {
-        return {"item_name": item['item_name'], "qty": item['suggested_qty']};
+        return {
+          "medicine_id": medicineIdOf(item),
+          "item_name": itemNameOf(item),
+          "qty": item['suggested_qty'],
+          "suggested_qty": item['suggested_qty'],
+        };
       }).toList();
       final orderDate = DateTime.now().toIso8601String().split('T').first;
 
@@ -1552,7 +2032,7 @@ class _OrderPageState extends State<OrderPage> {
 
               ...suggestions.map(
                 (item) =>
-                    Text("• ${item['item_name']} — ${item['suggested_qty']}"),
+                    Text("• ${itemNameOf(item)} — ${item['suggested_qty']}"),
               ),
               Text("Total: $totalQty items"),
 
@@ -1840,7 +2320,7 @@ class _OrderPageState extends State<OrderPage> {
                   return pw.Padding(
                     padding: const pw.EdgeInsets.only(bottom: 8),
                     child: pw.Text(
-                      "- ${item['item_name']}: $qty",
+                      "- ${itemNameOf(item)}: $qty",
                       style: const pw.TextStyle(fontSize: 13),
                     ),
                   );
@@ -1912,7 +2392,7 @@ class _OrderPageState extends State<OrderPage> {
                     ...suggestions.map(
                       (item) => ListTile(
                         leading: Icon(Icons.medication),
-                        title: Text(item['item_name']),
+                        title: Text(itemNameOf(item)),
                         subtitle: Text("Priority: ${item['priority']}"),
                         trailing: Text(
                           "Qty: ${item['suggested_qty']}",
@@ -2157,7 +2637,9 @@ class _OrderPageState extends State<OrderPage> {
                       SizedBox(height: 5),
 
                       ...lastSubmittedOrder!['items'].map<Widget>((item) {
-                        return Text("• ${item['item_name']} — ${item['qty']}");
+                        return Text(
+                          "• ${itemNameOf(item)} — ${itemQuantityOf(item, keys: ['qty', 'suggested_qty'])}",
+                        );
                       }).toList(),
                     ],
                   ),
@@ -2192,7 +2674,7 @@ class _OrderPageState extends State<OrderPage> {
 
                       ...generatedOrders.map(
                         (item) => ListTile(
-                          title: Text(item['item_name']),
+                          title: Text(itemNameOf(item)),
                           trailing: Text(
                             "Qty: ${item['qty'] ?? item['suggested_qty']}",
                             style: TextStyle(fontWeight: FontWeight.bold),

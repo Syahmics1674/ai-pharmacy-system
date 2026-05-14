@@ -2,6 +2,20 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
+String orderItemNameOf(dynamic item) {
+  if (item is Map) {
+    return (item['item_name'] ?? item['name'] ?? 'Unknown Medicine').toString();
+  }
+  return 'Unknown Medicine';
+}
+
+int orderItemQtyOf(dynamic item) {
+  if (item is! Map) return 0;
+  final value = item['qty'] ?? item['suggested_qty'] ?? item['quantity'] ?? 0;
+  if (value is int) return value;
+  return int.tryParse(value.toString()) ?? 0;
+}
+
 class OrderHistoryPage extends StatefulWidget {
   final String clinicId;
 
@@ -124,7 +138,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
 
                         ...order['items'].map<Widget>((item) {
                           return Text(
-                            "• ${item['item_name']} — ${item['qty']}",
+                            "• ${orderItemNameOf(item)} — ${orderItemQtyOf(item)}",
                           );
                         }).toList(),
 

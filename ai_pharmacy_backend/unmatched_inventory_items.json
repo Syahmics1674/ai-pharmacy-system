@@ -1,0 +1,5457 @@
+[
+  {
+    "document_id": "0Uj48xWhs7ls2MYXzCdn",
+    "clinic_id": "clinicC",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "0ianRXIDMrmX0AM41stq",
+    "clinic_id": "clinicC",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "2H7i0r5vh6A5uRdtAfU9",
+    "clinic_id": "clinicE",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "2W1k17DqOmv8ZGEEVMp3",
+    "clinic_id": "clinicC",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "3HQhPuN01jox29R8pADv",
+    "clinic_id": "clinicD",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "5zR13AgAMhbnalpM6914",
+    "clinic_id": "clinicE",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "80z8E1dAiN7cdZrGehGv",
+    "clinic_id": "clinicD",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "8hzaYfL1WnKgaTy9dSAi",
+    "clinic_id": "clinicA",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "9hLT4DbdrLx4OXRgvq4N",
+    "clinic_id": "clinicD",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "9t0A7cPS1716yjs3zn4j",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "Avj1Suvk8wH8Xwqjv8UF",
+    "clinic_id": "clinicC",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "BP1xdJIcSNt2YlChxSQh",
+    "clinic_id": "clinicC",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "DY6LQEoB40bH29CgGrNC",
+    "clinic_id": "clinicD",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "EMZGcdPsTn2D3gLQw4k1",
+    "clinic_id": "clinicD",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "EajNBEFIqHT3tmtAxa5i",
+    "clinic_id": "clinicA",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "Ew22Tz0yX3zsJVcMlUNf",
+    "clinic_id": "clinicA",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "Hu24un6wKt5EXHhjhj6q",
+    "clinic_id": "clinicC",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "IOeDqmlPUGgs2Am9AvXr",
+    "clinic_id": "clinicE",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "J3vG0n5tWycK1KO7Yglz",
+    "clinic_id": "clinicC",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "JLwdyniovVZBByBB0FDm",
+    "clinic_id": "clinicA",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "JiLp757vjXCFqNfgexhK",
+    "clinic_id": "clinicA",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "Jo3O3IEfHRo2uVtwmvA3",
+    "clinic_id": "clinicD",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "Jz0LUCE7iIHQmf4sdww0",
+    "clinic_id": "clinicA",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "KLhsvt50EwOLWfcFO5gk",
+    "clinic_id": "clinicD",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "LgJhJmTMKK72h3w4R95B",
+    "clinic_id": "clinicE",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "OGRb7T7tEqwLCBPBlykF",
+    "clinic_id": "clinicC",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "PPAK75fhf8JqB6z39Wvq",
+    "clinic_id": "clinicC",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "QTJhe8xIZXNJ5NX4dUck",
+    "clinic_id": "clinicC",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "RHSmIHOYxatxvssyv1Fc",
+    "clinic_id": "clinicE",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "ScQ5FRv29sFZ4bteXSq7",
+    "clinic_id": "clinicC",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "T1oXiBuqcnr8MW9Mcy1h",
+    "clinic_id": "clinicB",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "WGKX81IFvFWSDKOf4Pre",
+    "clinic_id": "clinicA",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "WuqiJVuShC0mQr7bZLTB",
+    "clinic_id": "clinicB",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "XR4EUFvj5ltjbVoB8E9W",
+    "clinic_id": "clinicB",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "XvahdVQbkO6JxT7d3Gww",
+    "clinic_id": "clinicA",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "Z9iHv1qcFHd52mKYvEfN",
+    "clinic_id": "clinicE",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "Ze3l9M2sXCR9B90LV5nf",
+    "clinic_id": "clinicD",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "aFr1esL3dCPRjkD4Zycv",
+    "clinic_id": "clinicE",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "ad0hjucWd6go2GGYktJd",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "b1cAU1rOdp2SlZFAym7Y",
+    "clinic_id": "clinicD",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "bbpYmiMpXH5IhJiG2D30",
+    "clinic_id": "clinicB",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "bqqIHDmjkrITJjxAdXdd",
+    "clinic_id": "clinicB",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "cfkiQ4rmjTGFXI4ZGeFx",
+    "clinic_id": "clinicB",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "crMq5uzjtJboFjJQit2Y",
+    "clinic_id": "clinicB",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "dz8xTGVkEALuoqHPm97Z",
+    "clinic_id": "clinicA",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "e1qqknjMyaOYeI327tfT",
+    "clinic_id": "clinicC",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "e3yRu2jcyzY0xnt634tO",
+    "clinic_id": "clinicA",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "eTg9dKN0Se42vNrLHSLh",
+    "clinic_id": "clinicD",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "f4nw0eqp0BwkWLKQp0OB",
+    "clinic_id": "clinicE",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "fVaLyioD2tACkbiBTenm",
+    "clinic_id": "clinicE",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "hSrrvczxqjBVNJ3Dk6zu",
+    "clinic_id": "clinicD",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "hfu9fNd9E1aHW9oNOaK9",
+    "clinic_id": "clinicD",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "i2k9Oxp8Bo2WnwLAPxJL",
+    "clinic_id": "clinicB",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "jBdln8o3ifkphc0SFPK9",
+    "clinic_id": "clinicD",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "kUE5IANSxrA16PiR6gfr",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "mWnPmIqu3lRBcK1lKDMd",
+    "clinic_id": "clinicC",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "n9BDQPxtJaDaG5SBjS0C",
+    "clinic_id": "clinicB",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "nejQvjDwBVPfwPe05zbL",
+    "clinic_id": "clinicE",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "nxcDH3I7jx8bG2De7ZgA",
+    "clinic_id": "clinicE",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "pA3kTtjgcRt6rkQ4AuLI",
+    "clinic_id": "clinicC",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "pSNIg75J6K3nBxicIes7",
+    "clinic_id": "clinicA",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "q8sBCIEOGmxdKBRktLfl",
+    "clinic_id": "clinicE",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "r8tH81n3VKcpWiSCTEDe",
+    "clinic_id": "clinicD",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "ssKhg01ZNvZVDmpbHIwJ",
+    "clinic_id": "clinicE",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "uDQpdRQLKYFWU7Csb7hy",
+    "clinic_id": "clinicB",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "upXgBJ3skvECcYnqEcrk",
+    "clinic_id": "clinicB",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "vlcehcBFlGVWIqWmdZ2I",
+    "clinic_id": "clinicE",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "wFVl3vNBgSEHU1ebOS8D",
+    "clinic_id": "clinicC",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "xMvISn6kSrEduV2Leo5n",
+    "clinic_id": "clinicB",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "xzT06YX2VVPwwTnXFoTt",
+    "clinic_id": "clinicA",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "yTTHquePfULbbrDs4b6q",
+    "clinic_id": "clinicB",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "ylzTs7ctNAYKl48GQ34D",
+    "clinic_id": "clinicD",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "z7Wrui6TLxKbB671OHjL",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "zmIAw3eROIbcF3vBXTpZ",
+    "clinic_id": "clinicA",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "zpL6lltzBm3DyZk1I1dY",
+    "clinic_id": "clinicE",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "q0Lia5K43q9nbU9jlJU6",
+    "clinic_id": "clinicE",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "q0vi7dM1F4plwmlVa8BN",
+    "clinic_id": "clinicB",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "q10bfnXfPxCzQMERIzjT",
+    "clinic_id": "clinicD",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "q142uIMN4DHYiWFGLNXz",
+    "clinic_id": "clinicD",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "q1VNqkLyqU1J4SoCD8st",
+    "clinic_id": "clinicE",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "q1gMeD414m8D7rWG00JQ",
+    "clinic_id": "clinicA",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "q1kEsiw7YvsDGiOaORLS",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "q3DdfsAAP1dGUZ4gaw59",
+    "clinic_id": "clinicD",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "q3XjCmoUf0Em84uJaqYV",
+    "clinic_id": "clinicB",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "q45oksVq8yuK9M0XCJkr",
+    "clinic_id": "clinicD",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "q4xDUOP73AH3HwABDDm3",
+    "clinic_id": "clinicC",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "q6RT1qdZRJcyPCcmRw3G",
+    "clinic_id": "clinicC",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "q6Ukxcl07gHFgdyadKUk",
+    "clinic_id": "clinicB",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "q7qpJU8iAtY3puUHPFQq",
+    "clinic_id": "clinicB",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "q9XO4T64cVc2afOGSDos",
+    "clinic_id": "clinicD",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "q9tMCMOu0ugbL8m3whW3",
+    "clinic_id": "clinicE",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "qA4BDboA5pJwhu4k0Gqf",
+    "clinic_id": "clinicA",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "qAPuYadktZRRhLyoOzwg",
+    "clinic_id": "clinicC",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "qAkX4IFt6FxXkWIczBkT",
+    "clinic_id": "clinicA",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "qAvrxH3XFBXuQtM7GJzH",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "qC0IQRnXkC4ZJqx1I03y",
+    "clinic_id": "clinicB",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "qE44lMCrPlqjqzX0a2UN",
+    "clinic_id": "clinicD",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "qEQ6JLHEdnoUAbn6mlUS",
+    "clinic_id": "clinicE",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "qFNZkQeQLNQU3c5jLzmy",
+    "clinic_id": "clinicD",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "qFW82fG81lVTBAmYoQvw",
+    "clinic_id": "clinicB",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "qFpAymU3mI6WvVA4nkJC",
+    "clinic_id": "clinicB",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "qH8Dj9pH2PwQbmExFgBv",
+    "clinic_id": "clinicC",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "qHNuHIAj05PQlWvod25k",
+    "clinic_id": "clinicC",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "qHlTAGiNyNu1g76dpySL",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "qJKmjJDbYMC5S1Eef2km",
+    "clinic_id": "clinicE",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "qJU30I5Ww9mRAOXXHDC7",
+    "clinic_id": "clinicE",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "qJfJROqEiKGzUjveNkS5",
+    "clinic_id": "clinicC",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "qKUUKnofVRdCCkj4Kisl",
+    "clinic_id": "clinicE",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "qMw29gBK7hJRuiMv7P4Y",
+    "clinic_id": "clinicD",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "qNWGJ5jG8vX6hN22leRt",
+    "clinic_id": "clinicD",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "qOzI1UaOQOjs8bvCdrKE",
+    "clinic_id": "clinicE",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "qPPN8xIt5FgTySVKfRcr",
+    "clinic_id": "clinicD",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "qPTXFr6FDGNiCGnqpFFu",
+    "clinic_id": "clinicD",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "qPcO3nZGJQBvnP1FXrnj",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "qRJdAiWkNQfegM5mm6FC",
+    "clinic_id": "clinicB",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "qRPkCmOdgeMXIjSpxEn5",
+    "clinic_id": "clinicA",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "qRWzhV4eBQkdJrwGf1c3",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "qSRi5r82bR6N28K1Xwfk",
+    "clinic_id": "clinicC",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "qSatURxc5FK9njbQJgob",
+    "clinic_id": "clinicA",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "qSreYh5fjVLa2AIxrtke",
+    "clinic_id": "clinicA",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "qTLv0j1fr25xOywEkKpB",
+    "clinic_id": "clinicD",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "qVTj9EZAOOElOxXGAIXa",
+    "clinic_id": "clinicC",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "qXPaVvBbY3vqmBFwrkJT",
+    "clinic_id": "clinicB",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "qYRgaVgHma64oVbSnnjs",
+    "clinic_id": "clinicD",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "qZe6hl1M6B6fMVOUFz4e",
+    "clinic_id": "clinicB",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "qaIMJqIEVtYMrB2KMPXr",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "qaMp3zxf6GrNFJWDl6fL",
+    "clinic_id": "clinicA",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "qboqg06O5Lf3bDtRR1DS",
+    "clinic_id": "clinicD",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "qcmzzpKOZ93idx87nVKC",
+    "clinic_id": "clinicA",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "qdQn4frCKfDjvGaO75bf",
+    "clinic_id": "clinicD",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "qdjm36GCm92y4KCyoILl",
+    "clinic_id": "clinicE",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "qf4iTYoEab70vFR0PURF",
+    "clinic_id": "clinicE",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "qf8kuYYBmGw4DYMYmPAL",
+    "clinic_id": "clinicD",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "qhDAmFnmZ1UsPbnyy55f",
+    "clinic_id": "clinicA",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "qhML8VPN3nANRMaW5jtp",
+    "clinic_id": "clinicA",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "qhmBlLGzZc3V73SLeOs7",
+    "clinic_id": "clinicD",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "qj3vIrwcJLPF4xwrsWCe",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "qjjpRUYoAGlC3RWkgNeI",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "qljBionfGJPqp7PtnOIS",
+    "clinic_id": "clinicA",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "qmo1IqilYNC2locqVKdP",
+    "clinic_id": "clinicC",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "qnvIiM5k05uBcJFcDZAj",
+    "clinic_id": "clinicA",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "qo2AFzSwX6GC13fuOfRB",
+    "clinic_id": "clinicC",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "qoUChjFGiVmoBwnim1XO",
+    "clinic_id": "clinicC",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "qoqGDL9AtBHh457zHYHR",
+    "clinic_id": "clinicC",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "qsPnuqydIEMDPfpYwgMw",
+    "clinic_id": "clinicA",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "qsQ6C0sFaDUEubbQpCvR",
+    "clinic_id": "clinicD",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "quaE2zXecfQvQCsYdIY6",
+    "clinic_id": "clinicD",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "queSYgcZtgYJs1kD0oTM",
+    "clinic_id": "clinicB",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "qwMbgsKnazRGwzt6xN7x",
+    "clinic_id": "clinicB",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "qxSN0asEQWhxNY1D1wiO",
+    "clinic_id": "clinicC",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "qyg5OmTMKY4woYHnwrJ3",
+    "clinic_id": "clinicA",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "qzNoAr41RSXfS4CBTW7j",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "qzQQDlrbDP1IKLCHyRmB",
+    "clinic_id": "clinicE",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "qzihFkFW6gSiTiUzjIjv",
+    "clinic_id": "clinicA",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "r1YgAD2HMMxJgbNbmfAR",
+    "clinic_id": "clinicD",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "r1zO6RfOKXyLI7lOGMKB",
+    "clinic_id": "clinicB",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "r23yVRLduWNO6swp1Xrk",
+    "clinic_id": "clinicE",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "r2sd8oRjM5WKzSzqKzFg",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "r3BRItD8drIaxGBLZWZy",
+    "clinic_id": "clinicE",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "r3VCFhWFAHI04fOwHEbw",
+    "clinic_id": "clinicA",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "r3iJ6VUgM81sX2ob0cOG",
+    "clinic_id": "clinicE",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "r3p9uAIlczLuFWm2EyKu",
+    "clinic_id": "clinicA",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "r4aWdevWLqASw3fEN0jp",
+    "clinic_id": "clinicA",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "r53b0SM6nt9HYgcdol2g",
+    "clinic_id": "clinicD",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "r5Vrqev4YxAbi8aRZwHs",
+    "clinic_id": "clinicD",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "r5fd7n3V5mdmLITJzrk7",
+    "clinic_id": "clinicA",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "r6gqXk1WM763w8BVuwoK",
+    "clinic_id": "clinicD",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "r7JlFNoBk7Xz1GPqmCmQ",
+    "clinic_id": "clinicE",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "r7JsUJtZtrjnwea9xrcZ",
+    "clinic_id": "clinicA",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "r7tOio3s1bltMxGST1Ra",
+    "clinic_id": "clinicC",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "r9KbADcGXvPhO1BWwDgw",
+    "clinic_id": "clinicE",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "r9QYLZgkOsJK0jv2jPPc",
+    "clinic_id": "clinicA",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "rBvQJBrtcVtbh510H5zc",
+    "clinic_id": "clinicD",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "rC4YqSRufud8Ktq5FSlk",
+    "clinic_id": "clinicC",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "rC77kJZLxjLwVxzkQWg9",
+    "clinic_id": "clinicC",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "rCQ5v36yewjAOuJAy5fK",
+    "clinic_id": "clinicB",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "rDQOn5gbMVgHNyKjnwGW",
+    "clinic_id": "clinicB",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "rDgXGDr8XYD5D8klE1Ag",
+    "clinic_id": "clinicD",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "rDxdolPN9HvUOwuuEOhk",
+    "clinic_id": "clinicB",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "rERnKsTuXq3dNKiZ264P",
+    "clinic_id": "clinicB",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "rEwiDdjSzUe1sFOEPCvS",
+    "clinic_id": "clinicA",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "rFBCeE7zAjUv9dVlF8F0",
+    "clinic_id": "clinicC",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "rGIkuMwtEhMfEsODsHsj",
+    "clinic_id": "clinicA",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "rGJnswFpUedr7FTJSpWJ",
+    "clinic_id": "clinicC",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "rGUqlP0dAkoPCkQBdVs6",
+    "clinic_id": "clinicD",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "rH2eXQqAR71aL33Y4pVn",
+    "clinic_id": "clinicA",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "rH3DzpqTUjUCCdx7zSxT",
+    "clinic_id": "clinicA",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "rHPribAnaxImpE1DsfnW",
+    "clinic_id": "clinicD",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "rHZMrV92OiNti7ikhfG0",
+    "clinic_id": "clinicB",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "rI5ZYcNKtFxOmXewP21i",
+    "clinic_id": "clinicD",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "rJC8PbZXIhfwKHn5YPGw",
+    "clinic_id": "clinicB",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "rJFMApEXpVhWfKapHq1z",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "rLjNsn6uzkL6C1RHxNGm",
+    "clinic_id": "clinicE",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "rMOACfcTFJVoLqqZxRXH",
+    "clinic_id": "clinicE",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "rN1DGMKnsIWOtfvlD2uf",
+    "clinic_id": "clinicD",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "rN6XFjwlhs1jjz4TtWuQ",
+    "clinic_id": "clinicB",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "rNTIGQiO4TpKDmxkkATO",
+    "clinic_id": "clinicC",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "rNZm5mdObRM7YZo5KuM9",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "rRWl2BwzjxoNh50qduK7",
+    "clinic_id": "clinicD",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "rSgnEeYWFpDiWj78mm6L",
+    "clinic_id": "clinicB",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "rWEDyVMIx0GdonCaGt96",
+    "clinic_id": "clinicB",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "rWybYMPba5PzOUyTddxR",
+    "clinic_id": "clinicA",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "rXXrTIlt7Ej9QYFBHkkh",
+    "clinic_id": "clinicB",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "rXYYrofHKoeTEzSOy4YZ",
+    "clinic_id": "clinicE",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "rXqCgxhOTZzQv1iZk4tU",
+    "clinic_id": "clinicC",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "rY1OIYE4KRTYHQiwckw1",
+    "clinic_id": "clinicE",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "rYDbo1hNmwnXLp2HBMlv",
+    "clinic_id": "clinicA",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "rYVcLRJ0mNIWXPsLuAQe",
+    "clinic_id": "clinicC",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "rYswwRg0VNhBRX38TpnG",
+    "clinic_id": "clinicD",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "rZ298mHGw826WvuAofUx",
+    "clinic_id": "clinicB",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "rZ4tOmmXT74PDidnbmKy",
+    "clinic_id": "clinicD",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "ra9tQOU6SGDsAanaaOkQ",
+    "clinic_id": "clinicE",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "raJvj6byQfqkGrbKDnX1",
+    "clinic_id": "clinicB",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "rbE267ADFFvGA5RYGQHo",
+    "clinic_id": "clinicA",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "rcEMXzzXqOFiHeUucCGn",
+    "clinic_id": "clinicD",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "rcgSu8uJ3gAE5Pc27IRN",
+    "clinic_id": "clinicE",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "rdFGOhxmgStbnuAdBQqJ",
+    "clinic_id": "clinicA",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "rdb3ltDaGvEJIufCvyFd",
+    "clinic_id": "clinicC",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "reH6ne3lhBybIehPdIjg",
+    "clinic_id": "clinicB",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "reToZ8HuveVWDhP8IPcu",
+    "clinic_id": "clinicE",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "rfUAI5yWUXrlSuNZ2yKu",
+    "clinic_id": "clinicB",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "rgMnJ1vPPhQ2Ll72OlHm",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "rgfs17VYgrPePBGrnt4e",
+    "clinic_id": "clinicD",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "rgtfrvGmrVRT3AkKXWFH",
+    "clinic_id": "clinicC",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "rgyDKk3SVetaKDzeKUhO",
+    "clinic_id": "clinicC",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "rh7XycUUb9wRT7sC03KL",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "rikpb4cibw7xjHRk0nuR",
+    "clinic_id": "clinicE",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "riqxvcY98aNfMeLWFtJM",
+    "clinic_id": "clinicB",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "rjiPRRslD1qXtckklgRo",
+    "clinic_id": "clinicB",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "rkuVHaVFCZ8YJti0JwuL",
+    "clinic_id": "clinicC",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "rlX4u5DJbP6t0ADctPqc",
+    "clinic_id": "clinicE",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "rlqC57wUCtwwTuuOa9Xx",
+    "clinic_id": "clinicA",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "rlzNBUjN5R9BjqkLP9ig",
+    "clinic_id": "clinicA",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "rmStZ6K2srB01w9AKY9v",
+    "clinic_id": "clinicC",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "rmh1tpkcAcbACKtVZY3f",
+    "clinic_id": "clinicE",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "rnVwhOfhI7R6otmQOPrn",
+    "clinic_id": "clinicD",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "rqVHczoYjm66u5dvzzU6",
+    "clinic_id": "clinicA",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "rqzaNkgI7j5o8YIVOuMo",
+    "clinic_id": "clinicC",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "rrO9O1tT1f9vN5K3x5kN",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "rsd8wTjBdHFEXCYs1dbC",
+    "clinic_id": "clinicB",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "rshx76z2m3fcOG9wKPev",
+    "clinic_id": "clinicD",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "rsk39oP5gAASOfDho65a",
+    "clinic_id": "clinicD",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "rt9D69VnZioJVnzkF4zF",
+    "clinic_id": "clinicC",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "rtet7EdSOrK3iBh67hCq",
+    "clinic_id": "clinicB",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "ru74V0BjRfWOCT1jXfXm",
+    "clinic_id": "clinicA",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "ruMLvgpBAufjz7XhMljY",
+    "clinic_id": "clinicD",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "ruNeX9KK7DMdZwBQn7r8",
+    "clinic_id": "clinicA",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "rvW3eWkNZgH3JBUIFuS6",
+    "clinic_id": "clinicE",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "rxAexcnZesV2M5rhurf0",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "s0sMbV03LcJn6CRos4Tn",
+    "clinic_id": "clinicA",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "s0vRkB6JKQ10xHviXr1v",
+    "clinic_id": "clinicC",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "s40WW0znITK4RL5QuNcr",
+    "clinic_id": "clinicE",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "s4uOAtsi1w48U6BmTjZp",
+    "clinic_id": "clinicA",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "s5XtJFt3E7HmB5nXqj3M",
+    "clinic_id": "clinicC",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "s5xnzPLr8440Noss7JRI",
+    "clinic_id": "clinicE",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "s6Bk9vwlcYgnASRfUbM6",
+    "clinic_id": "clinicE",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "s76NtQooUEmWalMGXduZ",
+    "clinic_id": "clinicE",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "s7udIGxa59KDycMAUEd2",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "s80MoWSA2yNQZAml9LBS",
+    "clinic_id": "clinicC",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "s80V4jgIllznTQ8qK8WY",
+    "clinic_id": "clinicD",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "s817ocbY3iC6Z59eEpfi",
+    "clinic_id": "clinicA",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "s8mXfj1YvwFg5KRfHikr",
+    "clinic_id": "clinicD",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "s9ZmvRolrKJX34KztGNx",
+    "clinic_id": "clinicB",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "s9ydZ4as13ScSpUUSSqk",
+    "clinic_id": "clinicB",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "sBITErHsXHeShEet19SN",
+    "clinic_id": "clinicE",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "sBMG7i6SluRh5grvSKGu",
+    "clinic_id": "clinicE",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "sBUZw2TxvU53mQy3OdfU",
+    "clinic_id": "clinicD",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "sCVjz0eBpmwROTnQ1SLN",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "sEe30ctJ9Ew819dROweV",
+    "clinic_id": "clinicB",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "sF14oDlvKNe2iZftyYmL",
+    "clinic_id": "clinicB",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "sFz8j8q09Wt2xLoGqge1",
+    "clinic_id": "clinicB",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "sGDPSStO0llnmAo2wIi8",
+    "clinic_id": "clinicD",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "sHYeubEjOseTLYHkCQDN",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "sICuKWv9c2tNdESqgIv3",
+    "clinic_id": "clinicC",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "sIcV6S5aVByANn8EG6L4",
+    "clinic_id": "clinicC",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "sJ4hlrCmHYBe6Neh1gWF",
+    "clinic_id": "clinicB",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "sJlj37UVYVEvqbRJAfBe",
+    "clinic_id": "clinicE",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "sL7x8lXysaY0mwuin6SW",
+    "clinic_id": "clinicC",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "sLZ3XhrvjEtNmcZq98Ul",
+    "clinic_id": "clinicC",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "sMSyzKdoVrSmFWSftGLh",
+    "clinic_id": "clinicA",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "sNRa6LxtagxItTBLCn22",
+    "clinic_id": "clinicC",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "sOAtx1yfsgtl8WsuU313",
+    "clinic_id": "clinicD",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "sOIfimlhHG8dWGXjCVNN",
+    "clinic_id": "clinicD",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "sORedK3DpBAL3ordTzYs",
+    "clinic_id": "clinicB",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "sOhn9x6tyggKWJcCGUEo",
+    "clinic_id": "clinicD",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "sP7DL99TowicAWCbFxjh",
+    "clinic_id": "clinicA",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "sPRtYQtjxcKkAg2aoCjl",
+    "clinic_id": "clinicA",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "sPt1fePGyv2FthEsdBCH",
+    "clinic_id": "clinicE",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "sQ52accHR23CC1pFZwWy",
+    "clinic_id": "clinicC",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "sQAzkiaB8XbrMFc3DHe4",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "sRFIeHQwmAsi6LpwposS",
+    "clinic_id": "clinicE",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "sSIdyLUtMRp8qjHrHkrk",
+    "clinic_id": "clinicE",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "sT6BECYSD1A97LDRzhRP",
+    "clinic_id": "clinicE",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "sTBgjxHgY4DALIVthhzW",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "sTGE9RmHGaGWmJcsQS5p",
+    "clinic_id": "clinicE",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "sUNZ3fUswKQazQNJtUNY",
+    "clinic_id": "clinicD",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "sUlkrxb9FSIBjlcXqvO2",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "sVL53o84E7srBxt8Mxq0",
+    "clinic_id": "clinicE",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "sW9YdYZqFQpB80ZkYn6G",
+    "clinic_id": "clinicC",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "sWFArnSn52224NH6h2iH",
+    "clinic_id": "clinicE",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "sWo6VEoOheYlJZLWwbLO",
+    "clinic_id": "clinicE",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "sX8wpd3qvjMktpOqHVuY",
+    "clinic_id": "clinicE",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "sXLE77y6oNlTHaExVtMs",
+    "clinic_id": "clinicA",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "sXxuzyKi5eydhrArJnlf",
+    "clinic_id": "clinicC",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "sYKzzqlSSBbzKQoHPgqJ",
+    "clinic_id": "clinicC",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "sb6Uk6qiJ74vbtFAfJih",
+    "clinic_id": "clinicE",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "sboYkQuUBDba9Zs9H5Vp",
+    "clinic_id": "clinicB",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "sbtLTIWEh5xCU0JShvuE",
+    "clinic_id": "clinicE",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "sbx45XsVZsxJrgR7z3ef",
+    "clinic_id": "clinicA",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "scp1SM9oNYMKboQvwVKG",
+    "clinic_id": "clinicA",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "sdSeMvEhYAkThYHjBqab",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "se0xNEFK1itzAlbknsT7",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "sf2Kwk5tCeHoWBumvFRa",
+    "clinic_id": "clinicC",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "sgUA4WbPSzxTb4ft3y4q",
+    "clinic_id": "clinicE",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "sgVjvXBmshDXdjNNQ34D",
+    "clinic_id": "clinicE",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "sgfad4vNp0PU4oaE2TRg",
+    "clinic_id": "clinicA",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "sgo5WpRyUuN4bZOsJmwy",
+    "clinic_id": "clinicC",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "sijAfGMHkeMe6ls6PIpy",
+    "clinic_id": "clinicE",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "sj7GdmirDU0PYPLBHqtk",
+    "clinic_id": "clinicE",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "sjPhpq2p55lcEwVyGTVd",
+    "clinic_id": "clinicE",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "sjmVr93v5bvygvocHqfi",
+    "clinic_id": "clinicA",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "sjyjsrAu3tUgxEUu5hS6",
+    "clinic_id": "clinicA",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "skDU3EKKnSTlJUr89qgV",
+    "clinic_id": "clinicB",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "skfD0a2MY7mvKrVk9EtL",
+    "clinic_id": "clinicB",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "skfyUGPGurGLqNBZcU8r",
+    "clinic_id": "clinicA",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "slZjO3k6kOmYHL3MefQn",
+    "clinic_id": "clinicC",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "smXOQN9g70R3ARN7dGbn",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "soWynul28O3qNcSGrt8w",
+    "clinic_id": "clinicE",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "soakNUljXGyESsLINhJG",
+    "clinic_id": "clinicA",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "spMMK8v2I3Mu6UdKutlK",
+    "clinic_id": "clinicD",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "sqYz7a29qFs3vGcunbEP",
+    "clinic_id": "clinicE",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "srQAh9NuwytNHLmxLlKu",
+    "clinic_id": "clinicB",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "srWKVoiJ78WFfK2wm4XL",
+    "clinic_id": "clinicD",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "srynGEPw2ZvCgsoNREBw",
+    "clinic_id": "clinicD",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "ssJLOAuhkZKInRI8OlLs",
+    "clinic_id": "clinicC",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "ste2B71evj8hKzvN0rO3",
+    "clinic_id": "clinicC",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "su5iOkagRSh3RvfrRf7c",
+    "clinic_id": "clinicA",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "suGYlrSpZEPdekaEEyXA",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "suxM57Dsti9VTBKKwFcH",
+    "clinic_id": "clinicD",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "svRrekdyR15vrXOGHLed",
+    "clinic_id": "clinicD",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "sw5WVG3LPlhzKxIjfPzC",
+    "clinic_id": "clinicB",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "swrCyt99ubEJiEyy8qax",
+    "clinic_id": "clinicC",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "swySgohSg0vY3N3g9wqH",
+    "clinic_id": "clinicB",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "swyjO1PNQxCuyPQKQo9s",
+    "clinic_id": "clinicD",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "sxhKYUZgVxdyfmS6xW7m",
+    "clinic_id": "clinicA",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "sy4zXLCvotOUVzCRFBPj",
+    "clinic_id": "clinicD",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "sy6B4xUUUcppCtYO2jq7",
+    "clinic_id": "clinicC",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "syBL507Bpl4jWAXuEdSD",
+    "clinic_id": "clinicC",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "szpypxDQ9gYTeMdeqB1g",
+    "clinic_id": "clinicC",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "t0KMsujabrx5biie5eX3",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "t0Y80sFnvameiaEwCbh2",
+    "clinic_id": "clinicB",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "t1rXXdSxNGv5Qz3tFUtG",
+    "clinic_id": "clinicD",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "t3CfBjyQwlhfJI2qOGiI",
+    "clinic_id": "clinicB",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "t42P73hPuXUIl1aQCBwO",
+    "clinic_id": "clinicE",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "t4fE1uz9uxJq2DEWOemY",
+    "clinic_id": "clinicD",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "t52D2GRyKESsvARY7PUf",
+    "clinic_id": "clinicE",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "t5sP3XQtX2yFsjpMUrNB",
+    "clinic_id": "clinicC",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "t7jL7RMnR4yavXBJK1wE",
+    "clinic_id": "clinicD",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "t8g9vHo3nWR8jvyRDSJj",
+    "clinic_id": "clinicB",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "t8kxSw1eeELbJNxaeeVG",
+    "clinic_id": "clinicA",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "t8lrMetSyNmREUEDsH3l",
+    "clinic_id": "clinicB",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "t8rtPPxbJznqgm2vkioe",
+    "clinic_id": "clinicD",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "t9SlqOMVCxKAGobpOvE2",
+    "clinic_id": "clinicD",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "t9Ve7ypJc9nSd5FI5ksZ",
+    "clinic_id": "clinicC",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "t9aWquiDFFzJFryaoLcf",
+    "clinic_id": "clinicD",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "tA1cMPZ3il6M7bsEnsKd",
+    "clinic_id": "clinicA",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "tA9fxQJvj1VDdwspaOGG",
+    "clinic_id": "clinicC",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "tAqqhgxmkOKbmSBRJoxF",
+    "clinic_id": "clinicC",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "tCM4CgHoX6QkxutzjF7i",
+    "clinic_id": "clinicA",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "tDtvQ8PhcDOj4loQx7xv",
+    "clinic_id": "clinicC",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "tEoeLvbCBcNghRWdAGN6",
+    "clinic_id": "clinicA",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "tFROUk3E2a9tSQSGEgTn",
+    "clinic_id": "clinicC",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "tG2P9qkmleGAkHj3vxFD",
+    "clinic_id": "clinicD",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "tGKXcC5oUMGsCTvXEpql",
+    "clinic_id": "clinicE",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "tGsAydEF112bRjG0EPGf",
+    "clinic_id": "clinicE",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "tGz03J1aIRZURJpZ5uCw",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "tH5NRTjKkiZeuW7AxZFb",
+    "clinic_id": "clinicA",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "tIuHNkXNkHXLPlbEAww1",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "tJrgydWjFg2mAnyQFthx",
+    "clinic_id": "clinicB",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "tK4sCH9y3KfYD7PR1Kn0",
+    "clinic_id": "clinicD",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "tK8Chgs2zgnnUgdLwyk5",
+    "clinic_id": "clinicB",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "tKwEQtgo0cxvzAXnoLze",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "tLAfq8tXtzWEmbkxLR2y",
+    "clinic_id": "clinicC",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "tLJ967fCJPGQfplt0Pg3",
+    "clinic_id": "clinicA",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "tLX0KaluDumjk6YUeqia",
+    "clinic_id": "clinicC",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "tLcdqZrbocrU50Gd0R26",
+    "clinic_id": "clinicC",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "tLd2ewDmdC0ck83Vfu22",
+    "clinic_id": "clinicA",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "tNo9POMXSn0yvY9kv9cD",
+    "clinic_id": "clinicE",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "tNqWiUmKeJBCfM9B4Etp",
+    "clinic_id": "clinicC",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "tO8v3YhAiUcp2U5KPqzA",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "tPG4HjnA917k4RIYPBPx",
+    "clinic_id": "clinicC",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "tPOcWjxSUKeiWIaHHCCx",
+    "clinic_id": "clinicC",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "tPd6U46Nj5PQYVYUqhxA",
+    "clinic_id": "clinicA",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "tRiqqUn2Ak8P8JndzSeL",
+    "clinic_id": "clinicE",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "tRxLojTvxdJfyMv8PXsN",
+    "clinic_id": "clinicD",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "tS6j3fry4Xmb67M1aCzh",
+    "clinic_id": "clinicD",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "tTmj6oJnmpnW6HA9EdlU",
+    "clinic_id": "clinicC",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "tUNSAOvrnLZQvwCAxT93",
+    "clinic_id": "clinicA",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "tUwxj2MO6dnWHIFJ2sXZ",
+    "clinic_id": "clinicD",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "tVye0TcS2bD4jEhIf7Ry",
+    "clinic_id": "clinicB",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "tXecy492uOJAm1RBkWZC",
+    "clinic_id": "clinicD",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "tZ795Yt6wwJ6GOhyOE12",
+    "clinic_id": "clinicA",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "tZJ8a5SjZ2cbGu2cDiKO",
+    "clinic_id": "clinicA",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "tZJYJbyOtON5blKSla4b",
+    "clinic_id": "clinicB",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "ta8gpEdUc5QPJJ5h8kQ6",
+    "clinic_id": "clinicD",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "tacDyMzWxvsnHTPp29AC",
+    "clinic_id": "clinicC",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "tapbA3L5pSmWtmF9BSgz",
+    "clinic_id": "clinicC",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "tbGAhSk1YmQeqhDMzOYy",
+    "clinic_id": "clinicD",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "tbZF9MJRhjtZe7dq7qma",
+    "clinic_id": "clinicC",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "tbwkyFQwNoOB4l0KShdX",
+    "clinic_id": "clinicB",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "tcVmYfGIxQ07sdkWBmKS",
+    "clinic_id": "clinicE",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "tca57vopkcDkk1bmrXlW",
+    "clinic_id": "clinicE",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "tecHq9CeUqELQIUqBWzG",
+    "clinic_id": "clinicC",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "tfVDlfthaT9MiLyw8oYz",
+    "clinic_id": "clinicE",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "tfizYB7Fu5Et002AdtG2",
+    "clinic_id": "clinicE",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "tft6OIeVqcwUJGoovUD5",
+    "clinic_id": "clinicB",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "tfvfIWexJwgQkCfAswFO",
+    "clinic_id": "clinicA",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "tfzuhTNkbdTdphmRXxTd",
+    "clinic_id": "clinicE",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "tg8yPtsXxr9zYyWtlWwS",
+    "clinic_id": "clinicD",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "tgUnsW0zLsXq9o6xKtje",
+    "clinic_id": "clinicB",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "thHcT8dc3YhvQA0kNQzY",
+    "clinic_id": "clinicD",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "thiqrIUnwtbLCr8SvrA7",
+    "clinic_id": "clinicE",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "tiRIutyv3ca5ijeemKsm",
+    "clinic_id": "clinicB",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "tjMaaoHqcT7pQ6ag8wPy",
+    "clinic_id": "clinicB",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "tk33ya3UGAb0uqtE4n3Q",
+    "clinic_id": "clinicC",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "tlfYbeMGAJI4MDv41LaF",
+    "clinic_id": "clinicA",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "tlyI6No5JTxq8rJZP18T",
+    "clinic_id": "clinicA",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "tmbSrlGha4usSHgiycKs",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "tmo79bLXj33SVt43AQaC",
+    "clinic_id": "clinicB",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "tnCzlD0Udk67CjJdam3F",
+    "clinic_id": "clinicB",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "tovT6pmVItM1jZAohp5f",
+    "clinic_id": "clinicB",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "tp7GgnsSyt6R2TgjDR6z",
+    "clinic_id": "clinicA",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "tpf6iSaO85WwAiE3Rhjz",
+    "clinic_id": "clinicC",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "trWRTDnZdile2lt50Utv",
+    "clinic_id": "clinicD",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "ttDaVjhK5BXu5CezpFZZ",
+    "clinic_id": "clinicB",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "ttx3pYZpdqbNvgrGfTek",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "tuBwXd6VedwGwyomoJDO",
+    "clinic_id": "clinicB",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "twI6H8wTPH0OnkWULtBO",
+    "clinic_id": "clinicB",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "twR7EqLuJQYwHoQ9Om8X",
+    "clinic_id": "clinicE",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "twwvrpasFSp1JOlcLlQk",
+    "clinic_id": "clinicE",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "tx0fZD00IzYjercxgPYz",
+    "clinic_id": "clinicB",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "txNlnNBqOKSbXcVdQrcr",
+    "clinic_id": "clinicC",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "tyPFYwsOAKjDDJzflrfQ",
+    "clinic_id": "clinicE",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "tyh0kWecxVpVQrSgVsug",
+    "clinic_id": "clinicD",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "tzpMiWggEjkx0hTlldtS",
+    "clinic_id": "clinicA",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "u0zKBecWUORNDt8GmQkA",
+    "clinic_id": "clinicE",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "u1LI3aIjfH9ll6qXVlD1",
+    "clinic_id": "clinicC",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "u1wqBA9wileCvDliCOmm",
+    "clinic_id": "clinicB",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "u2DrPPttGyhVtDCNRvRL",
+    "clinic_id": "clinicE",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "u2tFgq3mXB6RDZv5tjUr",
+    "clinic_id": "clinicD",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "u3kVgXkDkRwHOIJSgvc9",
+    "clinic_id": "clinicE",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "u54pl8YFJE3xb4YVxjBv",
+    "clinic_id": "clinicC",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "u5ER8Q0LFLBz3eKRZNSH",
+    "clinic_id": "clinicE",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "u68Pei924chrUL7scSBB",
+    "clinic_id": "clinicB",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "u6gAThFLGBGWtXzCG9qy",
+    "clinic_id": "clinicB",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "u6pOfVyhLER5luOQK0BR",
+    "clinic_id": "clinicD",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "u6uBoyVYTSufKFk8Ugj7",
+    "clinic_id": "clinicA",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "u8PzAxGo7C4SXWdNCdDI",
+    "clinic_id": "clinicB",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "u8VFIy2TpzlBKSOiywN0",
+    "clinic_id": "clinicB",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "u8qDnXv6wyf9LfEupgM8",
+    "clinic_id": "clinicD",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "u9J2Dex5wCQ8gntzyiga",
+    "clinic_id": "clinicA",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "uA28nv8sWxdugLFahyC7",
+    "clinic_id": "clinicC",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "uAO75BoEQahjHutZBTb9",
+    "clinic_id": "clinicC",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "uBdRioAtTsvS18yNUnRT",
+    "clinic_id": "clinicA",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "uCQYbukvLC228YPCxDSd",
+    "clinic_id": "clinicD",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "uCSMIJueEpjm1W3Iorti",
+    "clinic_id": "clinicD",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "uD21Wzxv8RLZkkE842Xo",
+    "clinic_id": "clinicC",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "uDvj5WB9CKAMQSrEnVnk",
+    "clinic_id": "clinicB",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "uFZhxfvIbh7JmB2CpE7B",
+    "clinic_id": "clinicE",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "uGdAERszBUpjdVuwGILp",
+    "clinic_id": "clinicE",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "uIEIfblC1pCITbW5sKD3",
+    "clinic_id": "clinicE",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "uIekQDLfPNvo0ixCTpG5",
+    "clinic_id": "clinicA",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "uJPucTzWHM1wPhcLb4Mi",
+    "clinic_id": "clinicC",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "uKNbRjcnhO0x68mQjkjt",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "uKqq1O5DL0njAjMQppAm",
+    "clinic_id": "clinicC",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "uLfWHeSvFyETF7JsEaTG",
+    "clinic_id": "clinicE",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "uLjX6DTlggOjrFv6i8QR",
+    "clinic_id": "clinicC",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "uLrsAFJO8NNl4qSyOW5G",
+    "clinic_id": "clinicD",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "uMcjayjpIiSvvN0DYBgL",
+    "clinic_id": "clinicC",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "uNDfTs6IjwFB6UqKFnIe",
+    "clinic_id": "clinicA",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "uNM3JY1lXjQAU5X9cuaU",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "uNTyYmYlXhXID12BTJ3N",
+    "clinic_id": "clinicB",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "uNiCfREZLyhk9Jdzdzfm",
+    "clinic_id": "clinicB",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "uQ8qw3nMV9n2IJodtfcq",
+    "clinic_id": "clinicA",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "uQMVGpNyiObbyftbpJAf",
+    "clinic_id": "clinicD",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "uTPiNAhtlDOy8w55WOrw",
+    "clinic_id": "clinicE",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "uTfr9hbEbJ6LYwVQEpXj",
+    "clinic_id": "clinicE",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "uUjOAh5V1BLHxjAhEpmy",
+    "clinic_id": "clinicE",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "uUp9lWgN482BoQWYacxq",
+    "clinic_id": "clinicA",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "uVecpXMuCV1yR9sCyWOw",
+    "clinic_id": "clinicB",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "uVwXuJWrqbAyazJRoGZB",
+    "clinic_id": "clinicB",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "uWjbr1yFyBtySrictZfJ",
+    "clinic_id": "clinicC",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "uXHXQemzZUgsCUqDKqi7",
+    "clinic_id": "clinicD",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "uXM2irieDbGdfWVlXbxQ",
+    "clinic_id": "clinicB",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "uXZnLAhZpEMl5BXKoXhJ",
+    "clinic_id": "clinicA",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "uXaWKbSlypssHgCJTCdS",
+    "clinic_id": "clinicD",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "uXvcRP1lVOFN35YVqJWz",
+    "clinic_id": "clinicB",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "uYBS5M5TemZoybYIiyc8",
+    "clinic_id": "clinicE",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "uYaofOXSlXiwcieZI70O",
+    "clinic_id": "clinicC",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "uZ24pLTNa7e5j9x40RUG",
+    "clinic_id": "clinicB",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "uZ8n872RNLRRCKs44NUI",
+    "clinic_id": "clinicE",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "uZGlbgp3i7186fJV0iHv",
+    "clinic_id": "clinicD",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "uZLLUbfLI8OoRkAMD5wT",
+    "clinic_id": "clinicE",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "uZSPdHAmhNYDOrUxHgZZ",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "uadPG3gzgDI51pOniFae",
+    "clinic_id": "clinicE",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "uamjInEAess236wA9Xmn",
+    "clinic_id": "clinicE",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "ub4v5KO48MC7z6tsTTzW",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "ubv4FCL1uFy4KGR2HIVF",
+    "clinic_id": "clinicC",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "uc8Z4ga64Kpkys6KoztT",
+    "clinic_id": "clinicE",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "uctunimjmjn3bmp559ly",
+    "clinic_id": "clinicD",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "udL0FHG0vfohB7WTADN8",
+    "clinic_id": "clinicD",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "ufZbV7Hakj8gNMgN2ufz",
+    "clinic_id": "clinicA",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "ugwXFpU0gszNYKPKafIU",
+    "clinic_id": "clinicA",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "uiVDqSuXpJOcT78lLRPq",
+    "clinic_id": "clinicB",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "ujBMcwH8tXBnaqcAu6Ic",
+    "clinic_id": "clinicC",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "ujKCLd7AYVSmqPYMTt4o",
+    "clinic_id": "clinicD",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "uk1tcByB9lE1wue6Z30x",
+    "clinic_id": "clinicB",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "ukEqElGUJFFpALFndh2O",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "ukKfb5EYllJpAJgm1DkA",
+    "clinic_id": "clinicA",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "ukYZolFNHQwUf7xNA6YZ",
+    "clinic_id": "clinicB",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "umZsbFVEPGYNQY0NNLH7",
+    "clinic_id": "clinicA",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "unn57tL5C7Os5ROwI7u2",
+    "clinic_id": "clinicD",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "uoi5w9khpcc9NXPTxTiu",
+    "clinic_id": "clinicB",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "upZNGOhmh2qhem8ClMXE",
+    "clinic_id": "clinicB",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "upcMzAvm5DmYTEWouaLv",
+    "clinic_id": "clinicE",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "uqRTaflj2zO6bRFJPT8c",
+    "clinic_id": "clinicD",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "uqY0dclkg1ibmJJH45yk",
+    "clinic_id": "clinicD",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "urXxCM2UKqpprJnijWUm",
+    "clinic_id": "clinicD",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "urf78UCxJRzAH1h1B0Ug",
+    "clinic_id": "clinicC",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "usFSouYsIxqmm45bT017",
+    "clinic_id": "clinicA",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "utPIjrBV7a5UV8uqmSA1",
+    "clinic_id": "clinicA",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "utfdOabdFpcubk9zuRw0",
+    "clinic_id": "clinicA",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "uutZGgW5QRm3eWNFaaZQ",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "uv1PfgkUCy0GOo9HoA3n",
+    "clinic_id": "clinicA",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "uvCdtiFqM3ryj7y0GxfV",
+    "clinic_id": "clinicC",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "uwgmgrjllumi8ddIaucm",
+    "clinic_id": "clinicD",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "ux3cspd5QTGjOoh46tsn",
+    "clinic_id": "clinicB",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "uxV5xFW3wqivG9u43a30",
+    "clinic_id": "clinicC",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "uxe31pZekpFZ8k7Zc3nM",
+    "clinic_id": "clinicC",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "uxeCvjoOZqBD0NTkDieu",
+    "clinic_id": "clinicA",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "uz4l4SGKWM8EE0n8MeGd",
+    "clinic_id": "clinicA",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "uza3BnOePotZzaEmk9se",
+    "clinic_id": "clinicC",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "v0pnmFUNYDzIRmKANJSQ",
+    "clinic_id": "clinicE",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "v0qE22Z0mxnJcynl2f5T",
+    "clinic_id": "clinicC",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "v2F8dAW56F28OuBTDxJJ",
+    "clinic_id": "clinicA",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "v2biim8aejcphNsj4ds0",
+    "clinic_id": "clinicD",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "v3NPB0QU97q3uHjHBYCm",
+    "clinic_id": "clinicE",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "v4HPpTs6xLUvjQFjrHU7",
+    "clinic_id": "clinicB",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "v4QZm4XirHKrgYJSnb1a",
+    "clinic_id": "clinicB",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "v4op08795FtCvEqICu51",
+    "clinic_id": "clinicD",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "v545mre4eqmbIK48P2Jk",
+    "clinic_id": "clinicE",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "v5KQv7A1ZswqtNjHsVOp",
+    "clinic_id": "clinicB",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "v5S8W1XY0yFaUQk7FbCO",
+    "clinic_id": "clinicA",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "v5Wv7bRzivNdTLvqhWHe",
+    "clinic_id": "clinicE",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "v5qYMkJff162ZygDt1C7",
+    "clinic_id": "clinicA",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "v71fOKLJ7QX2poxssnZW",
+    "clinic_id": "clinicE",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "v734w5inPVDs4M8Cx2rP",
+    "clinic_id": "clinicD",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "v8w38J34CNE9ORt8h4Va",
+    "clinic_id": "clinicD",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "v9BGZzTTY7lB1nNx1Mqj",
+    "clinic_id": "clinicE",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "v9fQWg4TlUC7BHEPX4Hn",
+    "clinic_id": "clinicE",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "vAnX4sjElea93US7T3kL",
+    "clinic_id": "clinicC",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "vBBmQR5KVDlimDaUiCsI",
+    "clinic_id": "clinicD",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "vBRYV5dHJAmvkBrck17F",
+    "clinic_id": "clinicA",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "vCT2MHqQs5UWoxw4OwU0",
+    "clinic_id": "clinicA",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "vCrBK3tcucg4lUUoQoxD",
+    "clinic_id": "clinicE",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "vDxQKOzNFunfs3bAzw4w",
+    "clinic_id": "clinicE",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "vEi4oL9fGlvdqHTfzwD6",
+    "clinic_id": "clinicA",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "vFM8rxzieVUXJRgDveLj",
+    "clinic_id": "clinicE",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "vG1Gyz6GJ1kF0IHutbzz",
+    "clinic_id": "clinicC",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "vGEoQcmAG6JAfFjNBweL",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "vGZghmMpCcCLPFfvPauC",
+    "clinic_id": "clinicE",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "vHGKCtB8GwBT6CFMgeQF",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "vHeZnzwIsAd57ETIs15G",
+    "clinic_id": "clinicC",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "vHl6gvN7LQkkoeOXNUza",
+    "clinic_id": "clinicE",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "vHoPXOuLyJjzISalEAm1",
+    "clinic_id": "clinicE",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "vITuMyuBAWZTfeCyQzEf",
+    "clinic_id": "clinicC",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "vIWxWqjtXhLX7ugm20uM",
+    "clinic_id": "clinicA",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "vIsiM2IZ5gxekZTUg8Ez",
+    "clinic_id": "clinicE",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "vJ3HN32mE4Gi6snei6ZZ",
+    "clinic_id": "clinicD",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "vJCcEOBq3dxABPheV9SG",
+    "clinic_id": "clinicC",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "vKGxOB6Jbb2ClrmrP9Ue",
+    "clinic_id": "clinicB",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "vKIeRIaYVSWfkSyek2j0",
+    "clinic_id": "clinicD",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "vLtsEoP7NliMiYibajz1",
+    "clinic_id": "clinicC",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "vMDtiMPzZFrIuA8QuXxi",
+    "clinic_id": "clinicD",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "vN0kGzxYMM44zJln42N3",
+    "clinic_id": "clinicC",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "vN39EyTjyGbDB1d0WGI9",
+    "clinic_id": "clinicA",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "vQHPjHIT1C8ebXvF1VnN",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "vREy5S6EKrGwLKATXBi1",
+    "clinic_id": "clinicD",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "vRT6zlXRZ1Dtmc2GxgKT",
+    "clinic_id": "clinicC",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "vSWC6z9jrMn4EujTQUdX",
+    "clinic_id": "clinicB",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "vT7PI5V5BfGbpfBG3Ib4",
+    "clinic_id": "clinicA",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "vUCSOYqJkY5eZuCB50ia",
+    "clinic_id": "clinicD",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "vUZ6jr5YpRVJBi0enHMM",
+    "clinic_id": "clinicC",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "vW54xwJ8s9wwfbnYQ3Qk",
+    "clinic_id": "clinicA",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "vWPkvvrjS92IHDf7GcAl",
+    "clinic_id": "clinicB",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "vWR85t3c3hT46K3fkjED",
+    "clinic_id": "clinicC",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "vWyjKFZT29tu5YAWzhAT",
+    "clinic_id": "clinicC",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "vXQ7q3qkG6LJXGLfyqbQ",
+    "clinic_id": "clinicC",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "vXTEzUdbxD2qDFp2RMXY",
+    "clinic_id": "clinicE",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "vYZWcK2Jum7HPsunk71I",
+    "clinic_id": "clinicB",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "vaPxMuD2fI21aB9mZnZm",
+    "clinic_id": "clinicE",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "vaZFkHYYraN4RlIc76AJ",
+    "clinic_id": "clinicB",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "vaqZ8IN37oJ1OvNeKgq9",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "vbN8QGMLDyOpVOY9KuCK",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "vbdfV0GS32Kospcf2hbK",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "vboznN9JANDlgVHhd0wN",
+    "clinic_id": "clinicE",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "vc2OoWyUonGmwUYF8VnS",
+    "clinic_id": "clinicE",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "vc9hcK2ehfZ2qs1wfYWc",
+    "clinic_id": "clinicA",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "vcGdVBTMpzCtLkTINqh4",
+    "clinic_id": "clinicC",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "vcNlhw9CuGcKEt0J2Jjn",
+    "clinic_id": "clinicA",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "vdQbUAKwpvSnhUtGVPuA",
+    "clinic_id": "clinicE",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "ve1CwvtGy6R7EkCw3mET",
+    "clinic_id": "clinicE",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "vghndnX6uo8n0BOcceSk",
+    "clinic_id": "clinicC",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "viUz8WiA1KCt6xlBDQmw",
+    "clinic_id": "clinicA",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "vjo256n7k1EfkBH20AgU",
+    "clinic_id": "clinicE",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "vkJyKshOoXxTIexkorMK",
+    "clinic_id": "clinicE",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "vl3HkzDCLy0RrmQtwjdC",
+    "clinic_id": "clinicB",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "vlrokuj841XksSDhFYXI",
+    "clinic_id": "clinicB",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "vmLCKiyNU1beBhZcbSYh",
+    "clinic_id": "clinicA",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "vmeWJh9F9OxWh3yVHHuU",
+    "clinic_id": "clinicC",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "vmyNVzFe2TUFBS6F7TFh",
+    "clinic_id": "clinicD",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "vncTIPfDCCSN2FyeYUWX",
+    "clinic_id": "clinicA",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "vpM4lnI77TSLjasEXJY0",
+    "clinic_id": "clinicE",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "vpgKXVxES6GbqTROpH8r",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "vpn7qgZUIGlCQ8wGZiE8",
+    "clinic_id": "clinicC",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "vqKXyqxm3JQuLbHhzfXd",
+    "clinic_id": "clinicA",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "vqskzEIXpPJWCquOmhVj",
+    "clinic_id": "clinicC",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "vsSbn3DfHRLWWFd75J6M",
+    "clinic_id": "clinicD",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "vtkqtYcfCuU47fhnR9pQ",
+    "clinic_id": "clinicD",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "vw0PMnxeiKVMZkGoOifj",
+    "clinic_id": "clinicD",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "vwWhLrFmLm3pW6PXQ22T",
+    "clinic_id": "clinicC",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "vwtdwFMucq00GD98jaKv",
+    "clinic_id": "clinicC",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "vxQeSvhbX2SyRZyuW7yI",
+    "clinic_id": "clinicA",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "vxjBekcG89QZeWOuREXh",
+    "clinic_id": "clinicA",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "vxmcuvRDT23CUlcKQpza",
+    "clinic_id": "clinicA",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "vyejLaruHYXoXcFzW3LH",
+    "clinic_id": "clinicC",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "w0Yq18xGgwGyHiKeitNI",
+    "clinic_id": "clinicA",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "w0bNpCyNfNteVVXBJ4Yj",
+    "clinic_id": "clinicD",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "w1hoTeKTG1xSAXu7bUdU",
+    "clinic_id": "clinicB",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "w2JnBbaVQfOB1dDFwOfi",
+    "clinic_id": "clinicC",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "w2WxC82O5RTbXeWbJHO9",
+    "clinic_id": "clinicB",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "w2vQUWCV6OVZHCLhOHKs",
+    "clinic_id": "clinicE",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "w356HKyqcc07R05y0Fze",
+    "clinic_id": "clinicC",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "w3JcjNYHIc87gR4SRQZc",
+    "clinic_id": "clinicA",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "w3MyUJrJ8c82KlYGUIqq",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "w3lIIoxQJSH76jaT1Xq1",
+    "clinic_id": "clinicD",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "w51Btzsuln64uIDv8Jct",
+    "clinic_id": "clinicA",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "w6zIuyms1qnGjIannE0A",
+    "clinic_id": "clinicE",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "w7hVIhwGk0qAK9dWflrA",
+    "clinic_id": "clinicE",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "w8aYuGYpOIHUDAwbFGaF",
+    "clinic_id": "clinicD",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "wAKkS8z4bW7WtJjwyTOs",
+    "clinic_id": "clinicA",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "wAZVf0u90lQbXK7pD2Zk",
+    "clinic_id": "clinicE",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "wBHkWXkqA53sg2EilqnK",
+    "clinic_id": "clinicB",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "wBT8OwcXgDzZalHbtvdY",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "wCemdSfETUYBD9XfkLbm",
+    "clinic_id": "clinicA",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "wClb7icDhSqMZtysIbHr",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "wDgxYgsJsGDgFKnOV2bm",
+    "clinic_id": "clinicB",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "wEpaYxwZZi33y0QJPuwU",
+    "clinic_id": "clinicC",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "wFLxjKUgjOe7TJ1jhVQP",
+    "clinic_id": "clinicA",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "wGsvUa2i5dUTEGsE7EM5",
+    "clinic_id": "clinicB",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "wHcqbkYFCoGw5fFXCqpY",
+    "clinic_id": "clinicE",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "wIdYD0MQKdNbUm5heheU",
+    "clinic_id": "clinicE",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "wIqMnFITkYy8TxY8lLRW",
+    "clinic_id": "clinicC",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "wIxhxXo8Uz0yJKJIRNCf",
+    "clinic_id": "clinicA",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "wJf7OJkrqsJADO7azOKa",
+    "clinic_id": "clinicD",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "wKGYUexqeZCEzxHrscBy",
+    "clinic_id": "clinicE",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "wLENcoASn2RmlCHAppF1",
+    "clinic_id": "clinicB",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "wLQx7yc33O576gZNPxAF",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "wM5znenVsF0uEnjBvxf7",
+    "clinic_id": "clinicE",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "wMrDknTAWnkAnoywhFh6",
+    "clinic_id": "clinicA",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "wNtJWtdWFUiyZMn1iuxD",
+    "clinic_id": "clinicA",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "wP8onjj2wjetH3Na8Dxo",
+    "clinic_id": "clinicD",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "wQ2OFTIAxNWiOmeglu3T",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "wQWsqYDGr3DMJGPlk0OA",
+    "clinic_id": "clinicA",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "wRRJcTsUUaP5pRP0aeiq",
+    "clinic_id": "clinicB",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "wSh8XjEd1Jfn1xO61Xea",
+    "clinic_id": "clinicE",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "wSofPERVIzWaJGOQLg1a",
+    "clinic_id": "clinicD",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "wTbdWvlYQkRJcQF4LP2w",
+    "clinic_id": "clinicA",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "wTcfDEJxuICXhiEbYuZH",
+    "clinic_id": "clinicB",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "wWDSGklb1yjoGDtNBzqe",
+    "clinic_id": "clinicB",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "wWelJnzMHk93NgPZW4t3",
+    "clinic_id": "clinicC",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "wX78xwMInpZ6Jep6Mdb5",
+    "clinic_id": "clinicD",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "wXb51xDiwhBaG9Xedz5z",
+    "clinic_id": "clinicC",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "wXnDJn6JGNK8SWyTI4ek",
+    "clinic_id": "clinicB",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "wYoEjaMRuXxg03O4yFNC",
+    "clinic_id": "clinicD",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "wZZs5wfMpMCdECqDc4oQ",
+    "clinic_id": "clinicB",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "wa9wCqWPF4IvPZMsFJ0A",
+    "clinic_id": "clinicB",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "waNAm3fXkcWTDx0kB9J1",
+    "clinic_id": "clinicB",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "wbCStX6JWTUDiIKTMYfn",
+    "clinic_id": "clinicA",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "wbJO5cvqd4H5YWRJ4f1w",
+    "clinic_id": "clinicE",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "wbM7S2lTfwH8gRKwG0XJ",
+    "clinic_id": "clinicD",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "wcKXCWqNjA1xj6GmILQJ",
+    "clinic_id": "clinicB",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "wcxMNdA8T944uOgMXJQx",
+    "clinic_id": "clinicB",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "weIjsP5zrpZZu3s8NjJ0",
+    "clinic_id": "clinicA",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "wePZlOpSuwsQETPUFAD7",
+    "clinic_id": "clinicB",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "wfY6tPFMDJ6Rjhzsfpx9",
+    "clinic_id": "clinicE",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "wgBkKrjIQ06lfkcLHwbi",
+    "clinic_id": "clinicD",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "wgawqqEzYYA26kJ3Txy4",
+    "clinic_id": "clinicE",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "wh5kqadCZ5MnK3kWzpye",
+    "clinic_id": "clinicA",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "wiYGCHAGCQizhBCfYa3I",
+    "clinic_id": "clinicA",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "wiwCz61X6QwNRQJTtn9g",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "wjBhkYov3zplK4MGNZa1",
+    "clinic_id": "clinicD",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "wkS3IV8fsbKFeYyolwwz",
+    "clinic_id": "clinicD",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "wlegVPyLY645CEM27JGO",
+    "clinic_id": "clinicE",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "wm7YRT8JzQoPcGmTuJg4",
+    "clinic_id": "clinicE",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "wn02Jo3oG8hx3Qka5mo0",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "wnCVOwQfWMqqsPpadrtz",
+    "clinic_id": "clinicA",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "wncLvkScqJ9ZfjYTbMuc",
+    "clinic_id": "clinicD",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "wnjGVSvqKwE8MUkXtSyw",
+    "clinic_id": "clinicA",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "wnvwvTgIB1YwRQabo49x",
+    "clinic_id": "clinicD",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "woIY4Rsc2eI298o4evCM",
+    "clinic_id": "clinicE",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "wpJJQCrCrs4w1vpec6k9",
+    "clinic_id": "clinicE",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "wpYvx4fbwExTJsTzC2zn",
+    "clinic_id": "clinicC",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "wqYIeljecZXYhxKkSxbY",
+    "clinic_id": "clinicA",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "wrU9E9ZZZcVR1VzeCNIr",
+    "clinic_id": "clinicE",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "wrYPs2FGTroZ4vL1B9u3",
+    "clinic_id": "clinicE",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "wrozBKM2O6ARZRaZPzWd",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "wrqpVKMrCztlfgEcUNQS",
+    "clinic_id": "clinicB",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "ws7QiKMNvBTCbnPC4yHT",
+    "clinic_id": "clinicD",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "wtQ691yQXEAXsyvShRJQ",
+    "clinic_id": "clinicA",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "wuH6itjI9TbrrDs3RfFx",
+    "clinic_id": "clinicB",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "wukw7mCahBZFRzO2fPLB",
+    "clinic_id": "clinicB",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "wvCe3yzQgcTo4XhQxQOy",
+    "clinic_id": "clinicD",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "wvdBE9R9QJ1sRu7p6EJ5",
+    "clinic_id": "clinicC",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "wwleCgXlX67dhWxk0R0Y",
+    "clinic_id": "clinicD",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "wxHmtYy6NcH7qQ2L0hBc",
+    "clinic_id": "clinicC",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "wxoUNnqKtHaKjhTohixh",
+    "clinic_id": "clinicA",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "wy2hO1xbiuewwSv6mroz",
+    "clinic_id": "clinicE",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "wyMeDr4yAdfaJ8quoJrX",
+    "clinic_id": "clinicD",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "wz8tEgdYhab4Tu2kqzBB",
+    "clinic_id": "clinicC",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "wzqZi6GLw06OaxXWvhio",
+    "clinic_id": "clinicC",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "wzqodtLAYcAjZB9N0igF",
+    "clinic_id": "clinicA",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "wzsxrpVB5GFEBX2ovCcS",
+    "clinic_id": "clinicB",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "x0B6ki3btBAJou3s8i4R",
+    "clinic_id": "clinicE",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "x1M2YA6wqZZYXwQilCG0",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "x1jFIIxVRPsZcPVd9q5q",
+    "clinic_id": "clinicC",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "x2BQ2XsueIbwrSGX13my",
+    "clinic_id": "clinicA",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "x4oYhn1RnR3rzewcpvb4",
+    "clinic_id": "clinicE",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "x562sCFAhHvPn8OJxUvu",
+    "clinic_id": "clinicC",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "x5MsktAQEHLuWs5uiMXE",
+    "clinic_id": "clinicC",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "x6JdQRsjeC3syCLINj3h",
+    "clinic_id": "clinicE",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "x6Q85WKWb1vEuNQje2zv",
+    "clinic_id": "clinicB",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "x7hCh1PF4ecPbseTymvk",
+    "clinic_id": "clinicE",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "x7saUNrQDAhfwXRz4d4L",
+    "clinic_id": "clinicA",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "x9f1uIqYyERtgUqnIhed",
+    "clinic_id": "clinicD",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "xAVQUHPvCfRFLRXIQw6T",
+    "clinic_id": "clinicC",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "xAl7FhH005wLHq8sOdP3",
+    "clinic_id": "clinicD",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "xBAAB13idzoV68zX7TM3",
+    "clinic_id": "clinicE",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "xBIJ4kWYVVJsR7YhCFpV",
+    "clinic_id": "clinicC",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "xCH44QrsCOjGMQBirmc3",
+    "clinic_id": "clinicE",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "xCfADzmyTuJD4xh8YSph",
+    "clinic_id": "clinicB",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "xE3mXcQ5RGl9c75Zthne",
+    "clinic_id": "clinicE",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "xE71g7sG2lFQ3Br2tcKG",
+    "clinic_id": "clinicD",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "xEc7ifTj51UDK0eRndzn",
+    "clinic_id": "clinicD",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "xGN1YzU3YeswfWM62T3N",
+    "clinic_id": "clinicD",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "xHVdSiOPiljXbHHxTQEW",
+    "clinic_id": "clinicD",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "xHjR5LVOpQID5NmUDljU",
+    "clinic_id": "clinicA",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "xHtJhMXbYAw5Ii7TSsl4",
+    "clinic_id": "clinicC",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "xHtrEPp1IKvUSnFqWids",
+    "clinic_id": "clinicB",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "xHyUI3F6WtxslQYrnvOT",
+    "clinic_id": "clinicB",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "xIe9tu3n68hC5ZmRDlsB",
+    "clinic_id": "clinicE",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "xIhAdDpkXkMhbo15LmuK",
+    "clinic_id": "clinicE",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "xIwAOrKJWJz2Y1mFe80p",
+    "clinic_id": "clinicC",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "xJAfDmNBHJq1Ej1ansGx",
+    "clinic_id": "clinicB",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "xJPrGjobHsDxFw8dZMFh",
+    "clinic_id": "clinicC",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "xKGIQkY7bkY49MKtOOez",
+    "clinic_id": "clinicA",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "xKN4mQGnBV9lPJqMw0iB",
+    "clinic_id": "clinicB",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "xKt6EWnuunFlnhoTqxwD",
+    "clinic_id": "clinicC",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "xMLxGQrP4tdltgviCTuI",
+    "clinic_id": "clinicD",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "xMOFDatq5F3eH3xA7gGw",
+    "clinic_id": "clinicE",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "xMnLOi7qJQc1OQGYxLfk",
+    "clinic_id": "clinicE",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "xN8BNnNAhkryLFWG2zeh",
+    "clinic_id": "clinicE",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "xNBZlh9cnEqGCqOuj35C",
+    "clinic_id": "clinicB",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "xNLdUOeB2oxBOO2iRmIX",
+    "clinic_id": "clinicA",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "xNMKzNacF4CxWwAGQruT",
+    "clinic_id": "clinicD",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "xNcQXXkLfFIWfASjyMrm",
+    "clinic_id": "clinicE",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "xQKbg2MjatvNFM2I9If0",
+    "clinic_id": "clinicB",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "xQRbtdFGrDnTNqBOEQze",
+    "clinic_id": "clinicD",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "xQj4BV7IWL4iw0XGHugM",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "xR8YNRWhmxe75hFaXI3V",
+    "clinic_id": "clinicD",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "xRAi8dy42HvbfOufDnwC",
+    "clinic_id": "clinicC",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "xRofdzIsU56h9dg1NuoL",
+    "clinic_id": "clinicB",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "xS9d21EWnD7D04oo2dLh",
+    "clinic_id": "clinicB",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "xSb9YiGb8FfDB9YMH4dl",
+    "clinic_id": "clinicE",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "xSfiL0vV4aGpsTkc6N20",
+    "clinic_id": "clinicA",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "xT6ycIHtW552PAPk8mYS",
+    "clinic_id": "clinicA",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "xTHMm147q7AwU4cdU0Lc",
+    "clinic_id": "clinicA",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "xTIWaKCBhDrFiVzGjUPz",
+    "clinic_id": "clinicC",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "xTca91VM9BKUaPL0QOdu",
+    "clinic_id": "clinicA",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "xTsWNhFCMykx1DJHeFfm",
+    "clinic_id": "clinicE",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "xUGptk0ddMJdNaaLfPZh",
+    "clinic_id": "clinicB",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "xUfSPUrepPVfKmAiVs2y",
+    "clinic_id": "clinicC",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "xVOcA7RSn9VFfocPSoW4",
+    "clinic_id": "clinicD",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "xVw6g1w8h5tNPuJA3qe6",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "xVxwbK7dG0rvBToxfUIr",
+    "clinic_id": "clinicA",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "xYg75p2CYsR5ZfKI3mwM",
+    "clinic_id": "clinicC",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "xYtAs2zf6fsbE3gUWgb3",
+    "clinic_id": "clinicC",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "xZYuqapulBfs2OySqRpH",
+    "clinic_id": "clinicE",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "xa7Qs58XA768HsZw3X7w",
+    "clinic_id": "clinicA",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "xajlEKRrNcqmuKuhkPHr",
+    "clinic_id": "clinicB",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "xbSnTRVwHSX9gU5lNE3x",
+    "clinic_id": "clinicB",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "xc0QPUtvTHyCXr2CuciS",
+    "clinic_id": "clinicB",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "xdAY2vei7F8rPdysHA93",
+    "clinic_id": "clinicA",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "xdxyOxFRhtkW3uhtp6Ae",
+    "clinic_id": "clinicA",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "xfvm1RUpPInYAMfWvL8q",
+    "clinic_id": "clinicE",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "xgn0ObO1FO26ktWfew3L",
+    "clinic_id": "clinicD",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "xgrsxnS0HuP36u9qRuXi",
+    "clinic_id": "clinicA",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "xhwl24JRUOnpXBSS6eh8",
+    "clinic_id": "clinicD",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "xiEsfHar1SZOK8suQZIy",
+    "clinic_id": "clinicB",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "xiRP0O7o9PCJTrLJmoW1",
+    "clinic_id": "clinicC",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "xisABKIBL5aqJZTL7hUz",
+    "clinic_id": "clinicD",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "xjpg5ma0xllzryBhZYES",
+    "clinic_id": "clinicE",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "xkehjnTLTFNF3YZ7Wnsd",
+    "clinic_id": "clinicD",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "xlWfNiPPs322f28HvuVq",
+    "clinic_id": "clinicD",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "xlczEXJ7ycwdCfFXv8Ql",
+    "clinic_id": "clinicE",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "xmB6DriRRkQFU4WCQJS9",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "xmtH53E1sRTSsPJRpF4i",
+    "clinic_id": "clinicD",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "xoNrlp0ovWhqcnICgD1J",
+    "clinic_id": "clinicC",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "xocNWSQjtlnAATtzF1SN",
+    "clinic_id": "clinicE",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "xopXRrsbDUernTp7oyNY",
+    "clinic_id": "clinicA",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "xp3l2gf6VQfqWOU4vkdk",
+    "clinic_id": "clinicE",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "xpHkpKOnK9NcSfuO3rBj",
+    "clinic_id": "clinicE",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "xpq3NM5GaXjRppT7NqSI",
+    "clinic_id": "clinicD",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "xrZOVuUaAWxWGPSnHvgs",
+    "clinic_id": "clinicA",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "xrnvoYXBPE9xWoqEhzmc",
+    "clinic_id": "clinicE",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "xrsZ0n9phuME4gTXlOof",
+    "clinic_id": "clinicC",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "xs8rY8rLtWVTWn5th0GH",
+    "clinic_id": "clinicD",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "xsx4a2p3DWHgf6MCdnoh",
+    "clinic_id": "clinicD",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "xtwwwh3BtrjPOVpNqWWl",
+    "clinic_id": "clinicA",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "xuhUCbfDeEc9G11ale6a",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "xv9rBp14Ifgpskp1eoMR",
+    "clinic_id": "clinicC",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "xw7EiHkXBUaXrUaYc5yT",
+    "clinic_id": "clinicC",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "xwUvnHXrEzjaC1ZPBZyT",
+    "clinic_id": "clinicC",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "xwY4i8qH6rAiryCIDqZj",
+    "clinic_id": "clinicE",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "xweQ4X8s5ndTQmmrX9O0",
+    "clinic_id": "clinicB",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "xxmZs1Bl63kkZJBMgRiU",
+    "clinic_id": "clinicB",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "xyfzqR82yH8AbsZsfM4I",
+    "clinic_id": "clinicB",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "xywCzTPC0is1sYGuvazo",
+    "clinic_id": "clinicE",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "xz1OfJi1r7GcLffAj7n0",
+    "clinic_id": "clinicB",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "xzSvvMUAeFkZGcHaG3jY",
+    "clinic_id": "clinicC",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "xzeU9uiMfyClLgc9rA4B",
+    "clinic_id": "clinicD",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "xzo7Ic5qw2lreVprWlfu",
+    "clinic_id": "clinicC",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "y0UsCwvP6Fkf1xxXhYql",
+    "clinic_id": "clinicC",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "y2WVE0jjhe37WWnLlJp0",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "y36vy4FN6zhBh1cqtJch",
+    "clinic_id": "clinicC",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "y3XzsEtRUbvfvZrfleAB",
+    "clinic_id": "clinicA",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "y4JHhOqjXSRyrTHn8xFX",
+    "clinic_id": "clinicA",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "y6etSAoam9SNBgsXQfWy",
+    "clinic_id": "clinicB",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "y80ZbXSHdd6IQ5OV5b2v",
+    "clinic_id": "clinicC",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "y8CtR3GJB5D1JSQX826u",
+    "clinic_id": "clinicE",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "yAv91JpIas27bcjaC2Uh",
+    "clinic_id": "clinicA",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "yBaHtzZjjN7iTka2nJNK",
+    "clinic_id": "clinicE",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "yCQMEz9xHDWiM6QemxdR",
+    "clinic_id": "clinicE",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "yCx5LmG8TezBVO6NRaY6",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "yDghyiNPgjUXJQ9IlMLY",
+    "clinic_id": "clinicB",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "yDns15oZWRw9vGnWBMTC",
+    "clinic_id": "clinicC",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "yEQMYsvxFMSIHbKvET0P",
+    "clinic_id": "clinicC",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "yFsghKJcg5EaEqu4wqrT",
+    "clinic_id": "clinicA",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "yGAXZZnHRbGYHitSakYU",
+    "clinic_id": "clinicC",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "yHubfqO8t4BjAN38yIsT",
+    "clinic_id": "clinicA",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "yIIxgO4h6mS6qByOr9MH",
+    "clinic_id": "clinicB",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "yJyt6Ni1BZOm0vGMmYAF",
+    "clinic_id": "clinicD",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "yK6aGolrPgOF0Mvldaxo",
+    "clinic_id": "clinicE",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "yK7lMq6imEKEfWR76Y6I",
+    "clinic_id": "clinicE",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "yKWrhDurVREaTUjjfCvP",
+    "clinic_id": "clinicA",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "yKiK38olPTIOOaonhjAX",
+    "clinic_id": "clinicC",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "yKwy54biKcXyOSv0RCqz",
+    "clinic_id": "clinicC",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "yLNQCP9EzENtEAE80j8m",
+    "clinic_id": "clinicD",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "yLutaMWynJtkkyXrO302",
+    "clinic_id": "clinicE",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "yM78FrYsNMnsECCo5XyC",
+    "clinic_id": "clinicB",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "yMLojH8YXUSqta1L17Xj",
+    "clinic_id": "clinicB",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "yODNyS8abbRERRkcCoTw",
+    "clinic_id": "clinicE",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "yOGbImZPdarsNhtSOjfR",
+    "clinic_id": "clinicA",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "yOevHfXcSzTiU83fK5Xd",
+    "clinic_id": "clinicD",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "yPZ9OrGOz0SOk1I9GfZY",
+    "clinic_id": "clinicC",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "yQE912xoDjbZ8QfTwFxZ",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "yQgnPOgXLtTsbDs2GNYQ",
+    "clinic_id": "clinicC",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "ySRwGTqU7XINBeqymqTu",
+    "clinic_id": "clinicD",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "yT5AvAotabzjWxLczROi",
+    "clinic_id": "clinicC",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "yV9u0aamPxWaiYvsH7B4",
+    "clinic_id": "clinicB",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "yVIHhHyhYc3k7gA6b9Uq",
+    "clinic_id": "clinicE",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "yVX2EJkg2jodOELI1vfU",
+    "clinic_id": "clinicC",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "yVmRuzvFR8gUnBDGS17u",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "yWPGVgI9fw2JvTfpOJRX",
+    "clinic_id": "clinicE",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "yYRO9PFxbCTz1p6QvPG2",
+    "clinic_id": "clinicC",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "yYaVXTLUtYH1BWjbX6QY",
+    "clinic_id": "clinicA",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "yZXKE1qQPfavMwgtfyxX",
+    "clinic_id": "clinicD",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "yaBPpO4IEvl7THr1n9B8",
+    "clinic_id": "clinicD",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "yb4pJvUPXrwfqZUjlPGu",
+    "clinic_id": "clinicB",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "ybvI4JRIDr85Zvya3LIt",
+    "clinic_id": "clinicE",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "ydC1Wr7N9B3vXvk0LmoE",
+    "clinic_id": "clinicE",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "ydEicmIjDeGSwLVGAPA0",
+    "clinic_id": "clinicB",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "ydfDlUn22cWoBfUR33ik",
+    "clinic_id": "clinicB",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "ydg88c0PiyrEaRvaCx66",
+    "clinic_id": "clinicC",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "yedCNTV7JOiH7ICbG8br",
+    "clinic_id": "clinicA",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "yewW2OHHu01Y7LBYLvPx",
+    "clinic_id": "clinicB",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "yg43290bsOJLkPANmfvO",
+    "clinic_id": "clinicE",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "ygUOYLQ20EyrLUubfuJg",
+    "clinic_id": "clinicC",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "ygv3Xq0l8uggqalOazYm",
+    "clinic_id": "clinicD",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "yhwnjIiyE0wEK7jXvAka",
+    "clinic_id": "clinicE",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "yiCP9zTwJJ5oRQLhl1R7",
+    "clinic_id": "clinicB",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "yiWhk2NxvDepFm4cvAbq",
+    "clinic_id": "clinicE",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "yjHaq6vc5iSQ4ouWbdgG",
+    "clinic_id": "clinicE",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "ykBqQdxiSGKLn4B5e7A5",
+    "clinic_id": "clinicA",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "ykMrvplq0Vu5Pu9NCqnX",
+    "clinic_id": "clinicC",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "ykOLhY3jge3HRrE0xnEH",
+    "clinic_id": "clinicE",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "ylXeqQiVoRAzVvLjicxM",
+    "clinic_id": "clinicC",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "ym8WgcWpyjRmySqkoOkG",
+    "clinic_id": "clinicD",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "yn55OdCR3heEjt0fAnjo",
+    "clinic_id": "clinicD",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "yne91LpMEj1sC7SSh5Zd",
+    "clinic_id": "clinicD",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "yoS3VJ4t0d8LWaFDVUlL",
+    "clinic_id": "clinicE",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "yoZPOx2E9oAktWII4Z9u",
+    "clinic_id": "clinicD",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "yohsTaaaWO9HapDugxqg",
+    "clinic_id": "clinicE",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "yoqcvoXxW0DHD3r5MjOL",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "ypNoRDWOVZZzVd71ZE6F",
+    "clinic_id": "clinicB",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "ypVjgcpJvlATvfGPxMxe",
+    "clinic_id": "clinicD",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "yqFhwmj438MPL128Ozo5",
+    "clinic_id": "clinicB",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "yqL5MMOFSyfPHi7SEN8r",
+    "clinic_id": "clinicD",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "yqnPFDyZ4wEZdCEfE4qc",
+    "clinic_id": "clinicA",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "yqvnw3HwZHQyuB4Vh2WM",
+    "clinic_id": "clinicC",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "yrWNVB8A6xbngVtQHPfR",
+    "clinic_id": "clinicA",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "ysqptSYEk9qXNiOPl2nU",
+    "clinic_id": "clinicB",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "yu2EuT8pIoG9wsE6vOw6",
+    "clinic_id": "clinicB",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "yu4TtTq2Z6hPHdedlTon",
+    "clinic_id": "clinicC",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "yvJwWwAzwOLv5WZM4tHo",
+    "clinic_id": "clinicE",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "yvdMAnAIVBC7ckJM7Fwb",
+    "clinic_id": "clinicC",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "yvpGrEegEOjathIKjzH2",
+    "clinic_id": "clinicD",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "ywHaSjXUPi0k9BFcQzEj",
+    "clinic_id": "clinicD",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "ywKDjo3gPNM4DvLqNEmv",
+    "clinic_id": "clinicC",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "ywyrrXfWS62bJiW8ebXR",
+    "clinic_id": "clinicD",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "yx8W6P6N3QgcQUdj6o6h",
+    "clinic_id": "clinicC",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "yxv03JzEKD6jYbTpoIaI",
+    "clinic_id": "clinicA",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "yyYi6OwT30s9qlvG4Opp",
+    "clinic_id": "clinicE",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "yyqBvgZs3HjnZLYEYePS",
+    "clinic_id": "clinicB",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "yzOBq1Y6mm9fjdCfiVi1",
+    "clinic_id": "clinicC",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "z0B71CmjJLNl8INXnnKC",
+    "clinic_id": "clinicB",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "z0L8T9IpFQktZrj08vjx",
+    "clinic_id": "clinicE",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "z0YP3AjXThQTlBOJ9PE3",
+    "clinic_id": "clinicD",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "z0fmWEJ9pe3AFokurN5b",
+    "clinic_id": "clinicE",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "z1lIZeDiBhCJqdxVMDrL",
+    "clinic_id": "clinicA",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "z1yWRi4WA4CBxhLLxpYZ",
+    "clinic_id": "clinicE",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "z2Kg8GNIuyhnMQ4EbRdx",
+    "clinic_id": "clinicC",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "z2Nw5WTMenTKfkFk4lkz",
+    "clinic_id": "clinicA",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "z2VxjqvHjJkm4ywSWssE",
+    "clinic_id": "clinicA",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "z3Er749kTbYC24UeKnM4",
+    "clinic_id": "clinicB",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "z48b6iEwBn3bIiRuiMFF",
+    "clinic_id": "clinicB",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "z4DT1CgxmIyX5Mk32S16",
+    "clinic_id": "clinicD",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "z5SwXuhI5UDcXDj8pazi",
+    "clinic_id": "clinicC",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "z5rIZe6IKhbJtIDbS4kx",
+    "clinic_id": "clinicD",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "z79U5BLE3cj6QVWAZwPR",
+    "clinic_id": "clinicC",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "z87p59OYKJuwSKP4QU2p",
+    "clinic_id": "clinicC",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "z8DWJNdESLLCMboGRZAs",
+    "clinic_id": "clinicA",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "z9HuyUKJfrPkhXAnNlc8",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "z9vSBcL1ByGZL9LrdVMS",
+    "clinic_id": "clinicA",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "zAK5evR7UluME3rxKR5A",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "zATsPoSDeGru3OQQ3Ro8",
+    "clinic_id": "clinicB",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "zAwIL6Ci5brIowJH0nIq",
+    "clinic_id": "clinicE",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "zBzSaxhKqvhLvtE0QMYW",
+    "clinic_id": "clinicB",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "zC3Fxz570HH5QDGMSqTb",
+    "clinic_id": "clinicE",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "zCaka2yyRxojclSWr5sM",
+    "clinic_id": "clinicE",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "zCgaXN2b9GfT7RLEDo1t",
+    "clinic_id": "clinicC",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "zD0tvGzc37yLY0A2EiEv",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "zDQSid9wqKxsWq6Yat6L",
+    "clinic_id": "clinicA",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "zEEqYQUVy4fif8RQdf1H",
+    "clinic_id": "clinicD",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "zGtcdzVkyL4WVbYPd6Z0",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "zH2aAwpakcLaT8UBS8DJ",
+    "clinic_id": "clinicC",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "zHi7MgWlFAqNNi1FFh27",
+    "clinic_id": "clinicC",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "zHtLkOWD1qT09I1hXYCA",
+    "clinic_id": "clinicE",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "zIHoj0l3kxmVA8dTJqoR",
+    "clinic_id": "clinicE",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "zIjabU3QWmDLsN1Y11Kk",
+    "clinic_id": "clinicB",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "zJI3CzKB1FzBCxRL3ccY",
+    "clinic_id": "clinicC",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "zJpKT0SzRae9BRSMGQhj",
+    "clinic_id": "clinicE",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "zK8cExrEK1mx616gBw3v",
+    "clinic_id": "clinicE",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "zL31Eg255GdEUKbozg8T",
+    "clinic_id": "clinicB",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "zL3mGDgzPsRAnsJNyV5i",
+    "clinic_id": "clinicD",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "zM5UXmbWF3MFCKhfRoV0",
+    "clinic_id": "clinicB",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "zNLw6v1AyLqbPBXHVkSe",
+    "clinic_id": "clinicD",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "zNyYz7ouGImyNmp7uxLX",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "zO4SnXuDI8V8xKBlmG1V",
+    "clinic_id": "clinicC",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "zOZHXIlbeXRLNjds5fzN",
+    "clinic_id": "clinicE",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "zObz4i2Rt3g3q6yb19nd",
+    "clinic_id": "clinicD",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "zOcXnGENeMhcxD9qQHFp",
+    "clinic_id": "clinicA",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "zP3edFY5aFqe07k4KW77",
+    "clinic_id": "clinicA",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "zQ0bU3nW4JWowNwqwaMA",
+    "clinic_id": "clinicE",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "zQU25ac4xaUaI1o10nfu",
+    "clinic_id": "clinicE",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "zRLg3A9JLRhEhpFODD9J",
+    "clinic_id": "clinicD",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "zRaF5yZ4C6GHOwrGmvVy",
+    "clinic_id": "clinicD",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "zRfkfBHCtbPtqwbGc2sj",
+    "clinic_id": "clinicB",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "zRyThuQRvPgbnS1ASKik",
+    "clinic_id": "clinicA",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "zS7TWFsw0q1NY3UoWyjD",
+    "clinic_id": "clinicD",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "zSHZMRmTnM3tyBXM2sPs",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "zSSRtiG4EmbSdOXjF4lh",
+    "clinic_id": "clinicA",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "zSd9wPr50n3359IFFxAG",
+    "clinic_id": "clinicD",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "zTEJj1gX5RRzQb1Enk0v",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "zTQTmWDlofTj5BlnmG3M",
+    "clinic_id": "clinicB",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "zTopDP92MVna9onkpmX2",
+    "clinic_id": "clinicD",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "zUUGeR6eaaoqFKalAkOn",
+    "clinic_id": "clinicB",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "zUyhgaG84io09BfHbky3",
+    "clinic_id": "clinicE",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "zVMSP6kZlhZnVpq7ixpz",
+    "clinic_id": "clinicC",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "zVeQG0d3Li3imi0GTzch",
+    "clinic_id": "clinicD",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "zVjgJfeaS0wOqYnruveF",
+    "clinic_id": "clinicC",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "zVpfFuo9Xa47zXksRfEq",
+    "clinic_id": "clinicA",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "zVweqPiUEnOYJvk4wLWC",
+    "clinic_id": "clinicA",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "zVyyTwqYmcccarhkmdRg",
+    "clinic_id": "clinicB",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "zWiFy8krd5dekCDBsAw9",
+    "clinic_id": "clinicE",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "zWx0din42uKGNFNWUSkG",
+    "clinic_id": "clinicA",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "zXEUe8tilCnJFYqs4Tgz",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "zY7vFFnS3DWoCasjxuCR",
+    "clinic_id": "clinicB",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "zYFaReXtI8PdQxmTQw0x",
+    "clinic_id": "clinicE",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "za2NFFY8Dab7gvaodxUc",
+    "clinic_id": "clinicA",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "zb4ZlBOsrQMyGBaoff1z",
+    "clinic_id": "clinicC",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "zbMBb7Bql1RG72SogObt",
+    "clinic_id": "clinicD",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "zc6vnkOgRWETn2C7NkxV",
+    "clinic_id": "clinicD",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "zc8IYlIlwjmvtiLgsN2A",
+    "clinic_id": "clinicC",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "zcIDMVLMybvtbJAnor1b",
+    "clinic_id": "clinicD",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "zd60rloI0xVTRiZLjUld",
+    "clinic_id": "clinicD",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "zd7suvRlIQpsqVuwaYXn",
+    "clinic_id": "clinicB",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "ze669uQoLvPKHXfeNY67",
+    "clinic_id": "clinicC",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "zebUCfB6rH45uItx5ioj",
+    "clinic_id": "clinicA",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "zfFYIbDClTFUd7R7dkNh",
+    "clinic_id": "clinicA",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "zfVzadM7lB2izY6nVYvG",
+    "clinic_id": "clinicA",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "zfcsnnqgRrCmKusw5mpg",
+    "clinic_id": "clinicE",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "zfhms2YS13nRrKxDVGnx",
+    "clinic_id": "clinicC",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "zfkZUnRSNaVbxbuE0mTp",
+    "clinic_id": "clinicB",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "zfmEFkbzSVce53LpdxPJ",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "zg3O9Nfd1u7fHhhW4Yie",
+    "clinic_id": "clinicD",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "zgL2p1oD89qxC3CegeST",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "zgkq2RDVzwpsJT2VTNuk",
+    "clinic_id": "clinicB",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "zhPK3PV87aFYSj2B305p",
+    "clinic_id": "clinicE",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "zhj8lczFpV53L0l5PfMh",
+    "clinic_id": "clinicA",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "ziIAKVizNgpWvQ12D9cO",
+    "clinic_id": "clinicE",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "zjP9GzkVFQkcXJrt3iNc",
+    "clinic_id": "clinicC",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "zjZcLKCSe5K2kKAEQWce",
+    "clinic_id": "clinicC",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "zk4JyRu70xVwjT1C7sgY",
+    "clinic_id": "clinicA",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "zkCSwsDS1lKhdVuvKl3r",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "zkd0wQSHg47UcN145DiV",
+    "clinic_id": "clinicB",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "zkussTSypMquatGnxfiJ",
+    "clinic_id": "clinicA",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "zlit78b1X5mtiIE4vA5n",
+    "clinic_id": "clinicD",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "zllZKs3KQB0OTsyba8fl",
+    "clinic_id": "clinicE",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "znJzy5s71dIUoGTNHj9K",
+    "clinic_id": "clinicD",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "zpQNzkSlZEdTeg1Zr4Sh",
+    "clinic_id": "clinicB",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "zpZXRjeJhrXSVQxPZRZ3",
+    "clinic_id": "clinicC",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "zrNDmuazh7VEYAQoqq3C",
+    "clinic_id": "clinicD",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "zrn7W1EUu0APrHrrlOLB",
+    "clinic_id": "clinicA",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "zt5gGSPIm7s02Vra0Wcx",
+    "clinic_id": "clinicD",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "ztcZ0BlHFDKbE6VHtRQh",
+    "clinic_id": "clinicA",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "zuc5iD1PA4yP3BPP2HcV",
+    "clinic_id": "clinicB",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "zukPgm2HtM9NhqGk2H6f",
+    "clinic_id": "clinicD",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "zuoPTGOj2Xmlg0QDRF0u",
+    "clinic_id": "clinicD",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "zvJCcCLvuhZML05hiLYi",
+    "clinic_id": "clinicB",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "zvjFJlUoFM8UfRRe3zq1",
+    "clinic_id": "clinicB",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "zvmwVdGMydbi7C0SMnJC",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "zw2rgIVK8wv2PbSDjilq",
+    "clinic_id": "clinicE",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "zwmI4UYwgrUPNWIWRJHK",
+    "clinic_id": "clinicE",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "zxDZZJCKkT5lLlMwpSkc",
+    "clinic_id": "clinicC",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "zysTX8rjq0RwNnsdXIMI",
+    "clinic_id": "clinicE",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "zzWSiXctQbMPXBG3sI3b",
+    "clinic_id": "clinicA",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "zzm3NFX6Fjl6Yg9uETv9",
+    "clinic_id": "clinicC",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "1br47pgCUOiSToK2CCzR",
+    "clinic_id": "clinicA",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "8BvxMqlB2h3isSUcFAOH",
+    "clinic_id": "clinicA",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "9ZEBKgZop15QSuS3PYSJ",
+    "clinic_id": "clinicA",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "ByHUGgsZCXtQH3NteI8G",
+    "clinic_id": "clinicA",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "VDDhfyhb0eTWm9SvDw2T",
+    "clinic_id": "clinicA",
+    "item_name": "Uphamol"
+  },
+  {
+    "document_id": "bVEvqIIABi7tq07BZYsI",
+    "clinic_id": "clinicA",
+    "item_name": "Uphamol"
+  },
+  {
+    "document_id": "l0lAEAzyJKbdVV4Qh5ms",
+    "clinic_id": "clinicA",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "nUft4ABKCKomxUTrRygT",
+    "clinic_id": "clinicA",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "qeAIgR0saO6VBjSa3PBr",
+    "clinic_id": "clinicA",
+    "item_name": "Uphamol"
+  },
+  {
+    "document_id": "vqEQHLZjZ9BUfp9XLHp8",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "1mC8RHd575omstIQ8SFT",
+    "clinic_id": "clinicB",
+    "item_name": "Beclomethasone 100mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "1mC8RHd575omstIQ8SFT",
+    "clinic_id": "clinicB",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "1mC8RHd575omstIQ8SFT",
+    "clinic_id": "clinicB",
+    "item_name": "Atorvastatin 20mg Tablet"
+  },
+  {
+    "document_id": "1mC8RHd575omstIQ8SFT",
+    "clinic_id": "clinicB",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "1mC8RHd575omstIQ8SFT",
+    "clinic_id": "clinicB",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "1mC8RHd575omstIQ8SFT",
+    "clinic_id": "clinicB",
+    "item_name": "Ethyl Chloride 100ml Spray"
+  },
+  {
+    "document_id": "1mC8RHd575omstIQ8SFT",
+    "clinic_id": "clinicB",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "1mC8RHd575omstIQ8SFT",
+    "clinic_id": "clinicB",
+    "item_name": "Albendazole 200mg/5ml Suspension (10ml)"
+  },
+  {
+    "document_id": "1mC8RHd575omstIQ8SFT",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 5mg Tablet"
+  },
+  {
+    "document_id": "1mC8RHd575omstIQ8SFT",
+    "clinic_id": "clinicB",
+    "item_name": "Albendazole 200mg Tablet"
+  },
+  {
+    "document_id": "1mC8RHd575omstIQ8SFT",
+    "clinic_id": "clinicB",
+    "item_name": "Promethazine HCl 5mg/5ml Syrup"
+  },
+  {
+    "document_id": "1mC8RHd575omstIQ8SFT",
+    "clinic_id": "clinicB",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "1mC8RHd575omstIQ8SFT",
+    "clinic_id": "clinicB",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  },
+  {
+    "document_id": "1mC8RHd575omstIQ8SFT",
+    "clinic_id": "clinicB",
+    "item_name": "Amiloride HCl 5mg & Hydrochlorothiazide 50mg Tablet"
+  },
+  {
+    "document_id": "1mC8RHd575omstIQ8SFT",
+    "clinic_id": "clinicB",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "taRQPaEbky8sv7XPSoxN",
+    "clinic_id": "clinicA",
+    "item_name": "Uphamol"
+  },
+  {
+    "document_id": "vQ4kRyTXr1GgIEKPP32J",
+    "clinic_id": "clinicA",
+    "item_name": "Amlodipine 10mg Tablet"
+  },
+  {
+    "document_id": "vQ4kRyTXr1GgIEKPP32J",
+    "clinic_id": "clinicA",
+    "item_name": "Potassium Citrate & Citric Acid Mixture (120ml)"
+  },
+  {
+    "document_id": "vQ4kRyTXr1GgIEKPP32J",
+    "clinic_id": "clinicA",
+    "item_name": "Salicylic Acid 2% Ointment 15g"
+  },
+  {
+    "document_id": "vQ4kRyTXr1GgIEKPP32J",
+    "clinic_id": "clinicA",
+    "item_name": "Methyl Salicylate 25% Ointment (30g)"
+  },
+  {
+    "document_id": "vQ4kRyTXr1GgIEKPP32J",
+    "clinic_id": "clinicA",
+    "item_name": "Timolol Maleate 0.5% Eye Drops (5ml)"
+  },
+  {
+    "document_id": "vQ4kRyTXr1GgIEKPP32J",
+    "clinic_id": "clinicA",
+    "item_name": "Azathioprine 50mg Tablet"
+  },
+  {
+    "document_id": "vQ4kRyTXr1GgIEKPP32J",
+    "clinic_id": "clinicA",
+    "item_name": "Budesonide 200mcg Inhaler (200 Doses)"
+  }
+]
