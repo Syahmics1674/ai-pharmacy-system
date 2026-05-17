@@ -3,6 +3,8 @@ import json
 import re
 from pathlib import Path
 
+from firebase_admin import firestore
+
 from firebase_config import db
 
 
@@ -219,6 +221,7 @@ def build_medicine_document(medicine):
         "medicine_id": medicine["id"],
         "name": medicine["name"],
         "category": medicine["category"],
+        "product_code": medicine.get("product_code", medicine["id"]),
         "unit": medicine["unit"],
         "aliases": build_aliases(medicine),
         "standard_min_qty": DEFAULT_MIN_QTY,
@@ -436,6 +439,34 @@ def initialize_clinic_inventory(clinic_id, batch_size=400):
 
         if medicine_id:
             existing_medicine_ids.add(medicine_id)
+            medicine = medicine_map.get(medicine_id, {})
+            batch.update(
+                doc.reference,
+                {
+                    "clinic_id": data.get("clinic_id", clinic_id),
+                    "item_name": medicine.get("name", data.get("item_name")),
+                    "category": medicine.get("category", data.get("category", "")),
+                    "product_code": medicine.get(
+                        "product_code",
+                        data.get("product_code", medicine_id),
+                    ),
+                    "unit": medicine.get("unit", data.get("unit", "")),
+                    "min_order_qty": data.get(
+                        "min_order_qty",
+                        medicine.get("standard_min_qty", DEFAULT_MIN_QTY),
+                    ),
+                    "last_updated": data.get("last_updated", firestore.SERVER_TIMESTAMP),
+                },
+            )
+            operation_count += 1
+            if operation_count >= batch_size:
+                batch, operation_count = commit_batch(
+                    batch,
+                    operation_count,
+                    progress_message=(
+                        f"Updated existing inventory schema for clinic {clinic_id}..."
+                    ),
+                )
             continue
 
         medicine = match_medicine(
@@ -446,7 +477,22 @@ def initialize_clinic_inventory(clinic_id, batch_size=400):
         if medicine is None:
             continue
 
-        batch.update(doc.reference, {"medicine_id": medicine["medicine_id"]})
+        batch.update(
+            doc.reference,
+            {
+                "clinic_id": data.get("clinic_id", clinic_id),
+                "medicine_id": medicine["medicine_id"],
+                "item_name": medicine["name"],
+                "category": medicine.get("category", ""),
+                "product_code": medicine.get("product_code", medicine["medicine_id"]),
+                "unit": medicine.get("unit", ""),
+                "min_order_qty": data.get(
+                    "min_order_qty",
+                    medicine.get("standard_min_qty", DEFAULT_MIN_QTY),
+                ),
+                "last_updated": data.get("last_updated", firestore.SERVER_TIMESTAMP),
+            },
+        )
         operation_count += 1
         existing_medicine_ids.add(medicine["medicine_id"])
 
@@ -469,11 +515,15 @@ def initialize_clinic_inventory(clinic_id, batch_size=400):
         batch.set(
             doc_ref,
             {
+                "clinic_id": clinic_id,
                 "medicine_id": medicine_id,
                 "item_name": medicine["name"],
-                "clinic_id": clinic_id,
+                "category": medicine.get("category", ""),
+                "product_code": medicine.get("product_code", medicine_id),
+                "unit": medicine.get("unit", ""),
                 "current_stock": 0,
-                "min_order_qty": medicine["standard_min_qty"],
+                "min_order_qty": medicine.get("standard_min_qty", DEFAULT_MIN_QTY),
+                "last_updated": firestore.SERVER_TIMESTAMP,
             },
             merge=True,
         )

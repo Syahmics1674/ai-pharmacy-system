@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from firebase_admin import firestore
 from consolidation import consolidate_order_date
 from firebase_config import db  
 from migrate_inventory import (
@@ -93,6 +94,11 @@ def standardize_inventory_entry(data, medicines=None, medicine_lookup=None, matc
         "medicine_id": medicine["medicine_id"] if medicine else data.get("medicine_id", ""),
         "item_name": medicine["name"] if medicine else data.get("item_name", "Unknown Medicine"),
         "category": medicine.get("category") if medicine else data.get("category", "Uncategorized"),
+        "product_code": (
+            medicine.get("product_code", medicine.get("medicine_id", ""))
+            if medicine else data.get("product_code", "")
+        ),
+        "unit": medicine.get("unit") if medicine else data.get("unit", ""),
         "current_stock": data.get("current_stock", 0),
         "min_order_qty": data.get(
             "min_order_qty",
@@ -760,7 +766,10 @@ def get_stock_in_logs():
         logs.append({
             "medicine_id": standardized["medicine_id"],
             "item_name": standardized["item_name"],
-            "qty_received": data.get("qty_received", data.get("qty_added", data.get("quantity_added", 0))),
+            "quantity_received": data.get(
+                "quantity_received",
+                data.get("qty_received", data.get("qty_added", data.get("quantity_added", 0))),
+            ),
             "timestamp": str(data.get("timestamp")),
         })
 
@@ -820,12 +829,18 @@ def stock_in():
         db.collection("inventory").document(doc.id).update({
             "medicine_id": standardized_id,
             "item_name": standardized_name,
+            "category": medicine.get("category", data_db.get("category", "")) if medicine else data_db.get("category", ""),
+            "product_code": (
+                medicine.get("product_code", medicine.get("medicine_id", standardized_id))
+                if medicine else data_db.get("product_code", standardized_id)
+            ),
+            "unit": medicine.get("unit", data_db.get("unit", "")) if medicine else data_db.get("unit", ""),
             "current_stock": new_stock,
             "min_order_qty": data_db.get(
                 "min_order_qty",
                 medicine.get("standard_min_qty", 100) if medicine else 100,
             ),
-            "last_updated": datetime.utcnow(),
+            "last_updated": firestore.SERVER_TIMESTAMP,
         })
 
     if not found:
@@ -833,9 +848,12 @@ def stock_in():
             "clinic_id": clinic_id,
             "medicine_id": standardized_id,
             "item_name": standardized_name,
+            "category": medicine.get("category", "") if medicine else "",
+            "product_code": medicine.get("product_code", standardized_id) if medicine else standardized_id,
+            "unit": medicine.get("unit", "") if medicine else "",
             "current_stock": quantity_added,
             "min_order_qty": medicine.get("standard_min_qty", 100) if medicine else 100,
-            "last_updated": datetime.utcnow(),
+            "last_updated": firestore.SERVER_TIMESTAMP,
         })
 
     db.collection("stock_in_logs").add({
@@ -843,6 +861,7 @@ def stock_in():
         "medicine_id": standardized_id,
         "item_name": standardized_name,
         "quantity_added": quantity_added,
+        "quantity_received": quantity_added,
         "qty_received": quantity_added,
         "timestamp": datetime.utcnow()
     })
@@ -909,8 +928,14 @@ def stock_out():
         db.collection("inventory").document(doc.id).update({
             "medicine_id": standardized_id,
             "item_name": standardized_name,
+            "category": medicine.get("category", data_db.get("category", "")) if medicine else data_db.get("category", ""),
+            "product_code": (
+                medicine.get("product_code", medicine.get("medicine_id", standardized_id))
+                if medicine else data_db.get("product_code", standardized_id)
+            ),
+            "unit": medicine.get("unit", data_db.get("unit", "")) if medicine else data_db.get("unit", ""),
             "current_stock": new_stock,
-            "last_updated": datetime.utcnow(),
+            "last_updated": firestore.SERVER_TIMESTAMP,
         })
 
     if not found:
@@ -1361,8 +1386,11 @@ def complete_order():
                 inv_doc.reference.update({
                     "medicine_id": medicine_id,
                     "item_name": item_name,
+                    "category": medicine_lookup.get(medicine_id, {}).get("category", inv_data.get("category", "")),
+                    "product_code": medicine_lookup.get(medicine_id, {}).get("product_code", inv_data.get("product_code", medicine_id)),
+                    "unit": medicine_lookup.get(medicine_id, {}).get("unit", inv_data.get("unit", "")),
                     "current_stock": current_stock + qty,
-                    "last_updated": datetime.utcnow(),
+                    "last_updated": firestore.SERVER_TIMESTAMP,
                 })
                 # 📝 LOG STOCK IN
                 db.collection("stock_in_logs").add({
@@ -1370,6 +1398,7 @@ def complete_order():
                     "medicine_id": medicine_id,
                     "item_name": item_name,
                     "qty_added": qty,
+                    "quantity_received": qty,
                     "qty_received": qty,
                     "timestamp": datetime.utcnow()
                 })
@@ -1379,9 +1408,12 @@ def complete_order():
                     "clinic_id": clinic_id,
                     "medicine_id": medicine_id,
                     "item_name": item_name,
+                    "category": medicine_lookup.get(medicine_id, {}).get("category", ""),
+                    "product_code": medicine_lookup.get(medicine_id, {}).get("product_code", medicine_id),
+                    "unit": medicine_lookup.get(medicine_id, {}).get("unit", ""),
                     "current_stock": qty,
                     "min_order_qty": medicine_lookup.get(medicine_id, {}).get("standard_min_qty", 100),
-                    "last_updated": datetime.utcnow(),
+                    "last_updated": firestore.SERVER_TIMESTAMP,
                 })
 
         # ✅ Mark order Received
