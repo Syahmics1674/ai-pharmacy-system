@@ -7,6 +7,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'dart:typed_data';
 import 'order_history_page.dart';
 import 'pkd_dashboard_page.dart';
+import 'clinic_map_page.dart';
 
 String medicineIdOf(dynamic item) {
   if (item is Map) {
@@ -155,6 +156,7 @@ class _MainScreenState extends State<MainScreen> {
     "Stock Operations",
     "AI Insights",
     "Order Management",
+    "Clinic Map",
   ];
 
   @override
@@ -170,6 +172,7 @@ class _MainScreenState extends State<MainScreen> {
       StockOperationsPage(clinicId: widget.clinicId),
       AIInsightsPage(clinicId: widget.clinicId),
       OrderPage(key: orderKey, clinicId: widget.clinicId),
+      ClinicMapPage(clinicId: widget.clinicId),
     ];
 
     return Scaffold(
@@ -231,6 +234,7 @@ class _MainScreenState extends State<MainScreen> {
         onTap: _onItemTapped,
         selectedItemColor: Colors.blue,
         unselectedItemColor: Colors.grey,
+        type: BottomNavigationBarType.fixed,
         items: [
           BottomNavigationBarItem(
             icon: Icon(Icons.inventory),
@@ -247,6 +251,10 @@ class _MainScreenState extends State<MainScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.shopping_cart),
             label: "Orders",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.map_rounded),
+            label: "Clinic Map",
           ),
         ],
       ),
@@ -288,19 +296,16 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      final response = await http.post(
-        Uri.parse("$baseUrl/login"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({"user_id": userId, "password": password}),
-      );
-
-      if (!mounted) return;
-
-      setState(() {
-        isLoading = false;
-      });
+      final response = await http
+          .post(
+            Uri.parse("$baseUrl/login"),
+            headers: {"Content-Type": "application/json"},
+            body: jsonEncode({"user_id": userId, "password": password}),
+          )
+          .timeout(const Duration(seconds: 10));
 
       final data = json.decode(response.body) as Map<String, dynamic>;
+      if (!mounted) return;
 
       if (response.statusCode == 200 && data["success"] == true) {
         final role = (data["role"] ?? "").toString().toLowerCase();
@@ -338,14 +343,21 @@ class _LoginPageState extends State<LoginPage> {
           context,
         ).showSnackBar(SnackBar(content: Text("$errorMessage ❌")));
       }
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
-      setState(() {
-        isLoading = false;
-      });
+      String message = "Unable to connect to backend ❌";
+      if (e.toString().contains("Timeout")) {
+        message = "Server timeout. Please try again ⏳";
+      }
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text("Unable to connect to backend ❌")));
+      ).showSnackBar(SnackBar(content: Text(message)));
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 
@@ -446,12 +458,17 @@ class _LoginPageState extends State<LoginPage> {
                   onPressed: isLoading ? null : login,
                   style: ElevatedButton.styleFrom(
                     padding: EdgeInsets.symmetric(vertical: 15),
+                    backgroundColor: Colors.blueAccent,
+                    foregroundColor: Colors.white,
                   ),
                   child: isLoading
                       ? SizedBox(
-                          width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         )
                       : Text("Login", style: TextStyle(fontSize: 16)),
                 ),
@@ -1324,10 +1341,11 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
     }
 
     return Container(
-      color: const Color(0xFF0F172A), // Space Blue Dark Theme
+      color: const Color(0xFF0F172A),
       padding: const EdgeInsets.all(20.0),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment:
+            CrossAxisAlignment.stretch, // FIX: gives children bounded height
         children: [
           // LEFT PANEL: MASTER LIST (35% Width)
           Expanded(
@@ -1341,7 +1359,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
               child: Column(
                 children: [
                   Container(
-                    padding: EdgeInsets.all(20),
+                    padding: EdgeInsets.fromLTRB(20, 16, 20, 12),
                     alignment: Alignment.centerLeft,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1367,7 +1385,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                   Divider(color: Colors.white12, height: 1),
                   Expanded(
                     child: ListView.builder(
-                      padding: EdgeInsets.all(12),
+                      padding: EdgeInsets.all(10),
                       itemCount: smartInventory.length,
                       itemBuilder: (context, index) {
                         return _buildListTile(index);
@@ -1391,7 +1409,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                       style: TextStyle(color: Colors.white54, fontSize: 18),
                     ),
                   )
-                : _buildDetailPanel(),
+                : SingleChildScrollView(child: _buildDetailPanel()),
           ),
         ],
       ),
@@ -1473,6 +1491,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
     int runOutDays = data['run_out_days'];
     String runOutDate = data['run_out_date'];
     int recommendQty = data['recommend_order'];
+    int surplusStock = data['surplus_stock'] ?? 0;
     bool hasWarning = data['has_epidemic_warning'];
     String weatherWarning = data['weather_warning'] ?? "";
     bool hasWeatherWarning = weatherWarning.isNotEmpty;
@@ -1485,291 +1504,341 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
 
     Color statusColor = Colors.greenAccent;
     String daysText = "Safe Stock";
+    IconData statusIcon = Icons.check_circle_rounded;
+
     if (runOutDays > 0 && runOutDays <= 7) {
       statusColor = Colors.redAccent;
       daysText = "$runOutDays Days Left!";
+      statusIcon = Icons.emergency_rounded;
     } else if (runOutDays > 7 && runOutDays <= 14) {
       statusColor = Colors.orangeAccent;
       daysText = "$runOutDays Days Left";
+      statusIcon = Icons.warning_rounded;
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // BIG HEADER
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  itemName,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 36,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  "AI Forecast & Depletion Analysis",
-                  style: TextStyle(color: Colors.cyanAccent, fontSize: 14),
-                ),
-              ],
-            ),
-            if (hasWarning)
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.redAccent.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.redAccent),
-                ),
-                child: Row(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      Icons.warning_amber_rounded,
-                      color: Colors.redAccent,
-                      size: 20,
-                    ),
-                    SizedBox(width: 8),
                     Text(
-                      "Epidemic Spike Detected",
-                      style: TextStyle(
-                        color: Colors.redAccent,
+                      itemName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 30,
                         fontWeight: FontWeight.bold,
+                        letterSpacing: -0.5,
                       ),
+                    ),
+                    const SizedBox(height: 3),
+                    const Text(
+                      "AI Forecast & Depletion Analysis",
+                      style: TextStyle(color: Colors.cyanAccent, fontSize: 13),
                     ),
                   ],
                 ),
               ),
-          ],
-        ),
-        SizedBox(height: 30),
-
-        // WEATHER WARNING BANNER
-        if (hasWeatherWarning)
-          Container(
-            width: double.infinity,
-            margin: EdgeInsets.only(bottom: 24),
-            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            decoration: BoxDecoration(
-              color: Colors.blueAccent.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: Colors.blueAccent.withOpacity(0.5),
-                width: 2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.blueAccent.withOpacity(0.1),
-                  blurRadius: 15,
+              const SizedBox(width: 12),
+              if (surplusStock > 0)
+                _buildStatusBadge(
+                  "Surplus: +$surplusStock",
+                  Colors.greenAccent,
+                  Icons.inventory_2_rounded,
+                ),
+              if (hasWarning) ...[
+                const SizedBox(width: 8),
+                _buildStatusBadge(
+                  "Epidemic Spike",
+                  Colors.redAccent,
+                  Icons.bolt_rounded,
                 ),
               ],
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.cloud_sync_rounded,
-                  color: Colors.blueAccent,
-                  size: 32,
-                ),
-                SizedBox(width: 16),
-                Expanded(
-                  child: Text(
-                    weatherWarning,
-                    style: TextStyle(
-                      color: Colors.blue[100],
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+              if (runOutDays > 0 && runOutDays <= 14) ...[
+                const SizedBox(width: 8),
+                _buildStatusBadge(daysText, statusColor, statusIcon),
+              ],
+            ],
+          ),
+          const SizedBox(height: 14),
+          if (hasWeatherWarning)
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(bottom: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.blueAccent.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.blueAccent.withOpacity(0.4)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.cloud_sync_rounded,
+                    color: Colors.blueAccent,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      weatherWarning,
+                      style: TextStyle(
+                        color: Colors.blue[200],
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
+                  ),
+                ],
+              ),
+            ),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: _buildMetricCard(
+                    "Run-Out Date",
+                    runOutDate,
+                    daysText,
+                    statusColor,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildMetricCard(
+                    "Current Stock",
+                    "$currentStock Units",
+                    "In Inventory",
+                    Colors.white70,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildMetricCard(
+                    "Recommended Order",
+                    "+$recommendQty",
+                    "30-day safety stock",
+                    Colors.cyanAccent,
                   ),
                 ),
               ],
             ),
           ),
-
-        // 3 METRIC CARDS
-        Row(
-          children: [
-            Expanded(
-              child: _buildMetricCard(
-                "Run-Out Date",
-                runOutDate,
-                daysText,
-                statusColor,
-              ),
-            ),
-            SizedBox(width: 16),
-            Expanded(
-              child: _buildMetricCard(
-                "Current Stock",
-                "$currentStock Units",
-                "In Inventory",
-                Colors.white,
-              ),
-            ),
-            SizedBox(width: 16),
-            Expanded(
-              child: _buildMetricCard(
-                "Recommended Order",
-                "+$recommendQty",
-                "To reach 30-day safety",
-                Colors.cyanAccent,
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: 30),
-
-        // CHART CONTAINER
-        Expanded(
-          child: Container(
-            padding: EdgeInsets.all(24),
+          const SizedBox(height: 14),
+          Container(
+            height: 240,
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             decoration: BoxDecoration(
               color: const Color(0xFF1E293B),
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(20),
               border: Border.all(color: Colors.white12),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black26,
-                  blurRadius: 20,
-                  offset: Offset(0, 10),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
                 ),
               ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  "7-Day Trajectory",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.show_chart_rounded,
+                      color: Colors.cyanAccent,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      "7-Day Demand Trajectory",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.cyanAccent.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: Colors.cyanAccent.withOpacity(0.3),
+                        ),
+                      ),
+                      child: const Text(
+                        "AI Forecast",
+                        style: TextStyle(
+                          color: Colors.cyanAccent,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                SizedBox(height: 24),
+                const SizedBox(height: 8),
                 Expanded(child: _buildChart(forecastData)),
               ],
             ),
           ),
-        ),
+          const SizedBox(height: 14),
+          if (recommendQty > 0 && hasTransferCandidate)
+            _buildTransferCard(itemName, recommendQty, bestDonor)
+          else
+            _buildPKDOrderButton(itemName, recommendQty),
+        ],
+      ),
+    );
+  }
 
-        SizedBox(height: 24),
-
-        // AI TRANSFER RECOMMENDATION
-        if (recommendQty > 0 && hasTransferCandidate) ...[
-          Container(
-            padding: EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.amber.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: Colors.amber.withOpacity(0.4),
-                width: 2,
-              ),
+  Widget _buildStatusBadge(String label, Color color, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.6)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 14),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
             ),
-            child: Row(
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTransferCard(
+    String itemName,
+    int recommendQty,
+    dynamic bestDonor,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.amber.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.amber.withOpacity(0.4)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.lightbulb_rounded, color: Colors.amber, size: 28),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.lightbulb, color: Colors.amber, size: 36),
-                SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "💡 Cost-Saving Transfer Available!",
-                        style: TextStyle(
-                          color: Colors.amber,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        "Neighboring clinic '${bestDonor['clinic_id']}' has a confirmed surplus of ${bestDonor['surplus_stock']} units.",
-                        style: TextStyle(color: Colors.white70),
-                      ),
-                    ],
+                const Text(
+                  "Cost-Saving Transfer Available!",
+                  style: TextStyle(
+                    color: Colors.amber,
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                ElevatedButton.icon(
-                  icon: Icon(Icons.compare_arrows),
-                  label: Text(
-                    "Request Transfer",
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.amber,
-                    foregroundColor: Colors.black,
-                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: () {
-                    _showTransferConfirmDialog(
-                      itemName,
-                      recommendQty,
-                      bestDonor['clinic_id'],
-                    );
-                  },
-                ),
-                SizedBox(width: 12),
-                OutlinedButton(
-                  child: Text(
-                    "Order PKD anyway",
-                    style: TextStyle(color: Colors.white70),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: Colors.white24),
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: () {
-                    _showOrderConfirmDialog(itemName, recommendQty);
-                  },
+                const SizedBox(height: 2),
+                Text(
+                  "Clinic '${bestDonor['clinic_id']}' has a surplus of ${bestDonor['surplus_stock']} units",
+                  style: const TextStyle(color: Colors.white60, fontSize: 12),
                 ),
               ],
             ),
           ),
-        ] else ...[
-          // REGULAR ACTION BUTTON
-          SizedBox(
-            width: double.infinity,
-            height: 60,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.cyanAccent,
-                foregroundColor: Colors.black,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                elevation: 10,
-                shadowColor: Colors.cyanAccent.withOpacity(0.5),
+          const SizedBox(width: 10),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.compare_arrows, size: 16),
+            label: const Text(
+              "Transfer",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.amber,
+              foregroundColor: Colors.black,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: Text(
-                "Send PKD Order Request",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              onPressed: () {
-                if (recommendQty > 0) {
-                  _showOrderConfirmDialog(itemName, recommendQty);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Stock is perfectly healthy!")),
-                  );
-                }
-              },
+            ),
+            onPressed: () => _showTransferConfirmDialog(
+              itemName,
+              recommendQty,
+              bestDonor['clinic_id'],
             ),
           ),
+          const SizedBox(width: 8),
+          OutlinedButton(
+            child: const Text(
+              "Order PKD",
+              style: TextStyle(color: Colors.white60, fontSize: 12),
+            ),
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: Colors.white24),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onPressed: () => _showOrderConfirmDialog(itemName, recommendQty),
+          ),
         ],
-      ],
+      ),
+    );
+  }
+
+  Widget _buildPKDOrderButton(String itemName, int recommendQty) {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: ElevatedButton.icon(
+        icon: const Icon(Icons.send_rounded, size: 18),
+        label: const Text(
+          "Send PKD Order Request",
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.cyanAccent,
+          foregroundColor: Colors.black,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          elevation: 8,
+          shadowColor: Colors.cyanAccent.withOpacity(0.4),
+        ),
+        onPressed: () {
+          if (recommendQty > 0) {
+            _showOrderConfirmDialog(itemName, recommendQty);
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("Stock is perfectly healthy! No order needed."),
+              ),
+            );
+          }
+        },
+      ),
     );
   }
 
@@ -1780,16 +1849,16 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
     Color glowColor,
   ) {
     return Container(
-      padding: EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       decoration: BoxDecoration(
         color: const Color(0xFF1E293B),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: glowColor.withOpacity(0.3)),
         boxShadow: [
           BoxShadow(
-            color: glowColor.withOpacity(0.1),
-            blurRadius: 20,
-            spreadRadius: -5,
+            color: glowColor.withOpacity(0.08),
+            blurRadius: 14,
+            spreadRadius: -4,
           ),
         ],
       ),
@@ -1799,27 +1868,27 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
           Text(
             title,
             style: TextStyle(
-              color: Colors.blueGrey[300],
-              fontSize: 12,
+              color: Colors.blueGrey[400],
+              fontSize: 10,
               fontWeight: FontWeight.bold,
-              letterSpacing: 1,
+              letterSpacing: 0.8,
             ),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             value,
-            style: TextStyle(
+            style: const TextStyle(
               color: Colors.white,
-              fontSize: 28,
+              fontSize: 22,
               fontWeight: FontWeight.bold,
             ),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 4),
           Text(
             subtitle,
             style: TextStyle(
               color: glowColor,
-              fontSize: 13,
+              fontSize: 11,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -1863,7 +1932,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              reservedSize: 32,
+              reservedSize: 42,
               interval: 1,
               getTitlesWidget: (value, meta) {
                 return Padding(

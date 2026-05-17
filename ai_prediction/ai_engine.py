@@ -79,11 +79,22 @@ def calculate_smart_inventory(usage_data, current_stock, item_name="", weather_d
     
     weather_warning = ""
     # --- METEOROLOGICAL SCALING ---
-    if weather_data and weather_data.get('max_rain_mm', 0) > 15.0:
-        if item_name in ['Paracetamol', 'Uphamol', 'Cephalexin 250mg']:
-            # 20% spike in fever/flu medications during monsoons
-            forecast_30 = [int(x * 1.20) for x in forecast_30]
-            weather_warning = f"🌧️ Weather Risk: Severe rainfall ({weather_data['max_rain_mm']}mm) expected. AI increased +20% demand forecast."
+    if weather_data:
+        max_rain = weather_data.get('max_rain_mm', 0)
+        is_flu_med = item_name in ['Paracetamol', 'Uphamol', 'Cephalexin 250mg']
+        
+        if max_rain > 15.0:
+            if is_flu_med:
+                # 20% spike in fever/flu medications during monsoons
+                forecast_30 = [int(x * 1.20) for x in forecast_30]
+                weather_warning = f"🌧️ Weather Risk: Severe rainfall ({max_rain}mm) expected. AI increased +20% demand forecast."
+            else:
+                weather_warning = f"🌧️ Heavy rainfall ({max_rain}mm) expected, but {item_name} demand is unaffected by weather."
+        else:
+            if is_flu_med:
+                weather_warning = f"☀️ Clear Weather: Normal demand forecast for fever/flu medications."
+            else:
+                weather_warning = f"🌤️ General Weather: No climate scaling applied to this item."
 
     forecast_7 = forecast_30[:7]
     
