@@ -16,6 +16,8 @@ from collections import defaultdict
 import sys
 import os
 import math
+import time
+import google.api_core.exceptions
 import requests as ext_requests
 
 # Allow import from ai_prediction parent directory
@@ -41,6 +43,21 @@ except ModuleNotFoundError:
 
 app = Flask(__name__)
 CORS(app)
+
+# ============================================================
+# IN-MEMORY CACHE
+# ============================================================
+_cache = {}
+CACHE_TTL = 300  # 5 minutes
+
+def cache_get(key):
+    entry = _cache.get(key)
+    if entry and time.time() - entry["time"] < CACHE_TTL:
+        return entry["data"]
+    return None
+
+def cache_set(key, data):
+    _cache[key] = {"data": data, "time": time.time()}
 
 # ============================================================
 # CLINIC NETWORK — Coordinates, Haversine, Weather
@@ -547,16 +564,33 @@ def build_pkd_clinic_analysis(district):
 
 
 def build_pkd_top_medicines(district):
+    start = time.time()
     medicines, medicine_lookup, match_index = get_medicine_catalog()
     clinics = get_district_clinics(district)
     usage_by_medicine = defaultdict(int)
 
+    thirty_days_ago = utc_now() - timedelta(days=30)
+    total_logs_read = 0
+    MAX_LOGS = 500
+
     for clinic in clinics:
-        usage_docs = db.collection("usage_logs") \
-            .where("clinic_id", "==", clinic["clinic_id"]) \
-            .stream()
+        if total_logs_read >= MAX_LOGS:
+            break
+
+        try:
+            usage_docs = db.collection("usage_logs") \
+                .where("clinic_id", "==", clinic["clinic_id"]) \
+                .where("timestamp", ">=", thirty_days_ago) \
+                .limit(MAX_LOGS) \
+                .stream()
+        except google.api_core.exceptions.ResourceExhausted:
+            print(f"[PKD] Firestore quota error reading usage_logs for {clinic['clinic_id']}")
+            continue
 
         for doc in usage_docs:
+            if total_logs_read >= MAX_LOGS:
+                break
+
             data = doc.to_dict()
             standardized = standardize_log_entry(
                 data,
@@ -567,6 +601,10 @@ def build_pkd_top_medicines(district):
             quantity = extract_log_quantity(data, ["quantity_used", "qty_used"])
             if standardized["medicine_id"]:
                 usage_by_medicine[standardized["medicine_id"]] += quantity
+            total_logs_read += 1
+
+    elapsed = time.time() - start
+    print(f"[PKD] top_medicines district={district} logs_read={total_logs_read} time={elapsed:.3f}s")
 
     top_items = []
     for rank, (medicine_id, total_used) in enumerate(
@@ -870,10 +908,26 @@ def pkd_top_medicines():
     if not district:
         return jsonify({"error": "district is required"}), 400
 
-    return jsonify({
+    cache_key = f"top_medicines:{district}"
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return jsonify(cached)
+
+    try:
+        medicines = build_pkd_top_medicines(district)
+    except google.api_core.exceptions.ResourceExhausted:
+        return jsonify({
+            "success": False,
+            "error": "quota_exceeded",
+            "message": "Firestore quota temporarily exceeded",
+        })
+
+    response_data = {
         "district": district,
-        "medicines": build_pkd_top_medicines(district),
-    })
+        "medicines": medicines,
+    }
+    cache_set(cache_key, response_data)
+    return jsonify(response_data)
 
 @app.route('/clinic_info', methods=['GET'])
 def clinic_info():
