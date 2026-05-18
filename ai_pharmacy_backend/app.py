@@ -10,6 +10,7 @@ from migrate_inventory import (
 )
 from datetime import timedelta
 from datetime import datetime
+from datetime import timezone
 from flask_cors import CORS  
 from collections import defaultdict
 import sys
@@ -285,18 +286,44 @@ def parse_timestamp(value):
     if value is None:
         return None
     if isinstance(value, datetime):
-        return value
+        return ensure_utc_datetime(value)
     if hasattr(value, "to_datetime"):
         try:
-            return value.to_datetime()
+            return ensure_utc_datetime(value.to_datetime())
         except Exception:
             return None
     if isinstance(value, str):
         try:
-            return datetime.fromisoformat(value.replace("Z", "+00:00"))
+            return ensure_utc_datetime(
+                datetime.fromisoformat(value.replace("Z", "+00:00"))
+            )
         except ValueError:
             return None
     return None
+
+
+def ensure_utc_datetime(value):
+    if value is None or not isinstance(value, datetime):
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
+def utc_now():
+    return datetime.now(timezone.utc)
+
+
+def days_since(timestamp, reference=None):
+    normalized_timestamp = ensure_utc_datetime(timestamp)
+    if normalized_timestamp is None:
+        return None
+
+    normalized_reference = ensure_utc_datetime(reference or utc_now())
+    if normalized_reference is None:
+        return None
+
+    return (normalized_reference - normalized_timestamp).days
 
 
 def extract_log_quantity(data, quantity_keys):
@@ -323,13 +350,16 @@ def build_usage_summary_for_clinic(clinic_id, medicines, medicine_lookup, match_
         .where("clinic_id", "==", clinic_id) \
         .stream()
 
-    now = datetime.utcnow()
+    now = utc_now()
     monthly_usage_by_medicine = defaultdict(int)
     weekly_usage_by_medicine = defaultdict(int)
     monthly_log_count = 0
 
     for doc in usage_docs:
         data = doc.to_dict()
+        if not isinstance(data, dict):
+            continue
+
         standardized = standardize_log_entry(
             data,
             medicines=medicines,
@@ -339,14 +369,18 @@ def build_usage_summary_for_clinic(clinic_id, medicines, medicine_lookup, match_
         quantity = extract_log_quantity(data, ["quantity_used", "qty_used"])
         timestamp = parse_timestamp(data.get("timestamp") or data.get("created_at"))
 
-        if not timestamp:
+        if not timestamp or not standardized["medicine_id"] or quantity <= 0:
             continue
 
-        if (now - timestamp).days <= 30:
+        age_in_days = days_since(timestamp, now)
+        if age_in_days is None or age_in_days < 0:
+            continue
+
+        if age_in_days <= 30:
             monthly_log_count += 1
             monthly_usage_by_medicine[standardized["medicine_id"]] += quantity
 
-        if (now - timestamp).days <= 7:
+        if age_in_days <= 7:
             weekly_usage_by_medicine[standardized["medicine_id"]] += quantity
 
     return {
@@ -446,12 +480,13 @@ def analyze_clinic_risk(clinic, medicines, medicine_lookup, match_index):
         risk_reason = top_pressure_reason
 
     risk_level = risk_level_from_score(risk_score)
+    current_time = utc_now()
     if risk_level == "HIGH":
-        next_order_date = datetime.utcnow() + timedelta(days=2)
+        next_order_date = current_time + timedelta(days=2)
     elif risk_level == "MEDIUM":
-        next_order_date = datetime.utcnow() + timedelta(days=5)
+        next_order_date = current_time + timedelta(days=5)
     else:
-        next_order_date = datetime.utcnow() + timedelta(days=12)
+        next_order_date = current_time + timedelta(days=12)
 
     ai_status = {
         "HIGH": "Urgent attention needed",
