@@ -870,9 +870,13 @@ def pkd_overview():
     district = (request.args.get('district') or '').strip()
 
     if not district:
-        return jsonify({"error": "district is required"}), 400
+        return jsonify({"error": "district is required", "success": False}), 400
 
-    return jsonify(build_pkd_overview(district))
+    try:
+        return jsonify(build_pkd_overview(district))
+    except Exception as e:
+        print(f"[PKD] /pkd/overview error for district={district}: {e}")
+        return jsonify({"error": "Failed to load overview", "success": False}), 500
 
 
 @app.route('/pkd/clinic_risks', methods=['GET'])
@@ -880,12 +884,16 @@ def pkd_clinic_risks():
     district = (request.args.get('district') or '').strip()
 
     if not district:
-        return jsonify({"error": "district is required"}), 400
+        return jsonify({"error": "district is required", "success": False}), 400
 
-    return jsonify({
-        "district": district,
-        "clinics": build_pkd_clinic_analysis(district),
-    })
+    try:
+        return jsonify({
+            "district": district,
+            "clinics": build_pkd_clinic_analysis(district),
+        })
+    except Exception as e:
+        print(f"[PKD] /pkd/clinic_risks error for district={district}: {e}")
+        return jsonify({"error": "Failed to load clinic risks", "success": False}), 500
 
 
 @app.route('/pkd/routes', methods=['GET'])
@@ -893,12 +901,16 @@ def pkd_routes():
     district = (request.args.get('district') or '').strip()
 
     if not district:
-        return jsonify({"error": "district is required"}), 400
+        return jsonify({"error": "district is required", "success": False}), 400
 
-    return jsonify({
-        "district": district,
-        "routes": build_pkd_route_analysis(district),
-    })
+    try:
+        return jsonify({
+            "district": district,
+            "routes": build_pkd_route_analysis(district),
+        })
+    except Exception as e:
+        print(f"[PKD] /pkd/routes error for district={district}: {e}")
+        return jsonify({"error": "Failed to load routes", "success": False}), 500
 
 
 @app.route('/pkd/top_medicines', methods=['GET'])
@@ -906,7 +918,7 @@ def pkd_top_medicines():
     district = (request.args.get('district') or '').strip()
 
     if not district:
-        return jsonify({"error": "district is required"}), 400
+        return jsonify({"error": "district is required", "success": False}), 400
 
     cache_key = f"top_medicines:{district}"
     cached = cache_get(cache_key)
@@ -921,6 +933,9 @@ def pkd_top_medicines():
             "error": "quota_exceeded",
             "message": "Firestore quota temporarily exceeded",
         })
+    except Exception as e:
+        print(f"[PKD] /pkd/top_medicines error for district={district}: {e}")
+        return jsonify({"error": "Failed to load top medicines", "success": False}), 500
 
     response_data = {
         "district": district,
