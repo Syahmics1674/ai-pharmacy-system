@@ -7,7 +7,6 @@ import 'package:fl_chart/fl_chart.dart';
 import 'dart:typed_data';
 import 'order_history_page.dart';
 import 'pkd_dashboard_page.dart';
-import 'clinic_map_page.dart';
 
 String medicineIdOf(dynamic item) {
   if (item is Map) {
@@ -156,7 +155,6 @@ class _MainScreenState extends State<MainScreen> {
     "Stock Operations",
     "AI Insights",
     "Order Management",
-    "Clinic Map",
   ];
 
   @override
@@ -172,7 +170,6 @@ class _MainScreenState extends State<MainScreen> {
       StockOperationsPage(clinicId: widget.clinicId),
       AIInsightsPage(clinicId: widget.clinicId),
       OrderPage(key: orderKey, clinicId: widget.clinicId),
-      ClinicMapPage(clinicId: widget.clinicId),
     ];
 
     return Scaffold(
@@ -251,10 +248,6 @@ class _MainScreenState extends State<MainScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.shopping_cart),
             label: "Orders",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.map_rounded),
-            label: "Clinic Map",
           ),
         ],
       ),
