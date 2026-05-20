@@ -243,25 +243,36 @@ def build_insight_message_payload(stock_summary, top_products):
 def login():
     data = request.get_json()
 
-    username = data.get("username")
+    print(f"[LOGIN] Received data keys: {list(data.keys()) if data else 'None'}")
+
+    user_id = data.get("user_id") or data.get("username")
     password = data.get("password")
 
-    if not username or not password:
-        return jsonify({"error": "Missing credentials"}), 400
+    if not user_id or not password:
+        print(f"[LOGIN] Missing credentials - user_id={bool(user_id)}, password={bool(password)}")
+        return jsonify({"success": False, "error": "Missing credentials"}), 400
+
+    print(f"[LOGIN] Attempting login for user_id={user_id}")
 
     docs = db.collection("users") \
-             .where("username", "==", username) \
+             .where("user_id", "==", user_id) \
              .where("password", "==", password) \
              .stream()
 
     for doc in docs:
         user = doc.to_dict()
+        print(f"[LOGIN] Success: user_id={user_id}, role={user.get('role', 'unknown')}")
         return jsonify({
+            "success": True,
             "message": "Login successful",
-            "clinic_id": user["clinic_id"]
+            "user_id": user.get("user_id"),
+            "role": user.get("role", "clinic"),
+            "clinic_id": user.get("clinic_id"),
+            "district": user.get("district", "")
         })
 
-    return jsonify({"error": "Invalid credentials"}), 401
+    print(f"[LOGIN] Failed: invalid credentials for user_id={user_id}")
+    return jsonify({"success": False, "error": "Invalid credentials"}), 401
 
 @app.route('/clinic_info', methods=['GET'])
 def clinic_info():
@@ -925,7 +936,6 @@ def update_order_status():
             "has_pending_order": True
         })
 
-    return jsonify({"message": "Order status updated"})
     return jsonify({"message": "Order status updated"})
 
 if __name__ == "__main__":

@@ -6,7 +6,7 @@ import 'package:latlong2/latlong.dart';
 
 class ClinicMapPage extends StatefulWidget {
   final String clinicId;
-  const ClinicMapPage({super.key, required this.clinicId});
+  const ClinicMapPage({Key? key, required this.clinicId}) : super(key: key);
 
   @override
   _ClinicMapPageState createState() => _ClinicMapPageState();
@@ -395,7 +395,7 @@ class _ClinicMapPageState extends State<ClinicMapPage> {
           ),
           const SizedBox(height: 8),
           Text(
-            "${_weatherIcon(condition)}  $condition${temp != null ? '  ·  $temp°C' : ''}",
+            "${_weatherIcon(condition)}  $condition${temp != null ? '  ·  ${temp}°C' : ''}",
             style: TextStyle(color: _weatherColor(condition), fontSize: 13, fontWeight: FontWeight.w500),
           ),
           if ((rain as num) > 0)
@@ -506,7 +506,7 @@ class _ClinicMapPageState extends State<ClinicMapPage> {
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    "$condition${temp != null ? '  ·  $temp°C' : ''}",
+                    "${condition}${temp != null ? '  ·  ${temp}°C' : ''}",
                     style: TextStyle(color: _weatherColor(condition), fontSize: 12, fontWeight: FontWeight.w500),
                     overflow: TextOverflow.ellipsis,
                   ),
