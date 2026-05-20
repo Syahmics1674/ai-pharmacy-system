@@ -276,12 +276,13 @@ def get_district_clinics(district):
 
 
 def count_orders_for_clinic(clinic_id, status):
-    docs = db.collection("orders") \
-             .where("clinic_id", "==", clinic_id) \
-             .where("status", "==", status) \
-             .stream()
-
-    return sum(1 for _ in docs)
+    count = 0
+    for doc in db.collection("orders") \
+            .where("clinic_id", "==", clinic_id) \
+            .stream():
+        if doc.to_dict().get("status") == status:
+            count += 1
+    return count
 
 
 def coerce_int(value, default=0):
@@ -580,7 +581,6 @@ def build_pkd_top_medicines(district):
         try:
             usage_docs = db.collection("usage_logs") \
                 .where("clinic_id", "==", clinic["clinic_id"]) \
-                .where("timestamp", ">=", thirty_days_ago) \
                 .limit(MAX_LOGS) \
                 .stream()
         except google.api_core.exceptions.ResourceExhausted:
@@ -592,6 +592,10 @@ def build_pkd_top_medicines(district):
                 break
 
             data = doc.to_dict()
+            timestamp = parse_timestamp(data.get("timestamp") or data.get("created_at"))
+            if not timestamp or timestamp < thirty_days_ago:
+                continue
+
             standardized = standardize_log_entry(
                 data,
                 medicines=medicines,
