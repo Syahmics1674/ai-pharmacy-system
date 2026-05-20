@@ -1039,7 +1039,7 @@ class _StockOperationsPageState extends State<StockOperationsPage> {
 class AIInsightsPage extends StatefulWidget {
   final String clinicId;
 
-  const AIInsightsPage({Key? key, required this.clinicId}) : super(key: key);
+  const AIInsightsPage({super.key, required this.clinicId});
 
   @override
   _AIInsightsPageState createState() => _AIInsightsPageState();
@@ -1423,9 +1423,9 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
     bool hasWarning = data['has_epidemic_warning'];
 
     Color statusColor = Colors.greenAccent;
-    if (runOutDays > 0 && runOutDays <= 7)
+    if (runOutDays > 0 && runOutDays <= 7) {
       statusColor = Colors.redAccent;
-    else if (runOutDays > 7 && runOutDays <= 14)
+    } else if (runOutDays > 7 && runOutDays <= 14)
       statusColor = Colors.orangeAccent;
 
     return GestureDetector(
@@ -1790,10 +1790,6 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
           ),
           const SizedBox(width: 8),
           OutlinedButton(
-            child: const Text(
-              "Order PKD",
-              style: TextStyle(color: Colors.white60, fontSize: 12),
-            ),
             style: OutlinedButton.styleFrom(
               side: const BorderSide(color: Colors.white24),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -1802,6 +1798,10 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
               ),
             ),
             onPressed: () => _showOrderConfirmDialog(itemName, recommendQty),
+            child: const Text(
+              "Order PKD",
+              style: TextStyle(color: Colors.white60, fontSize: 12),
+            ),
           ),
         ],
       ),

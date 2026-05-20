@@ -1,21 +1,11 @@
 from flask import Flask, request, jsonify
-from firebase_admin import firestore
 from consolidation import consolidate_order_date
 from firebase_config import db  
-from migrate_inventory import (
-    build_match_index,
-    initialize_clinic_inventory,
-    list_medicines,
-    match_medicine,
-)
 from datetime import timedelta
 from datetime import datetime
 from flask_cors import CORS  
-from collections import defaultdict
 import sys
 import os
-import math
-import requests as ext_requests
 
 # Allow import from ai_prediction parent directory
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'ai_prediction')))
@@ -41,56 +31,30 @@ except ModuleNotFoundError:
 app = Flask(__name__)
 CORS(app)
 
-# ============================================================
-# CLINIC NETWORK — Coordinates, Haversine, Weather
-# ============================================================
-
-CLINIC_COORDINATES = {
-    'clinicA': {'lat': 3.1336, 'lng': 101.6869, 'name': 'Kuala Lumpur Health Clinic_A', 'area': 'KL Sentral'},
-    'clinicB': {'lat': 3.1623, 'lng': 101.7024, 'name': 'Kuala Lumpur Health Clinic_B', 'area': 'Chow Kit'},
-    'clinicC': {'lat': 3.1290, 'lng': 101.6740, 'name': 'Kuala Lumpur Health Clinic_C', 'area': 'Bangsar'},
-    'clinicD': {'lat': 3.1569, 'lng': 101.7655, 'name': 'Kuala Lumpur Health Clinic_D', 'area': 'Ampang'},
-    'clinicE': {'lat': 3.0565, 'lng': 101.5850, 'name': 'Kuala Lumpur Health Clinic_E', 'area': 'Subang'},
+FALLBACK_OVERALL_USAGE = {
+    "daily": [10, 12, 8, 15, 20, 18, 22],
+    "weekly": [80, 95, 70, 110],
+    "monthly": [300, 420, 390]
 }
 
-def haversine_km(lat1, lng1, lat2, lng2):
-    R = 6371
-    dlat = math.radians(lat2 - lat1)
-    dlng = math.radians(lng2 - lng1)
-    a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlng/2)**2
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    return round(R * c, 1)
+FALLBACK_STOCK_SUMMARY = {
+    "critical": 3,
+    "low": 5,
+    "safe": 12
+}
 
-def get_clinic_weather(lat, lng):
-    url = (
-        f"https://api.open-meteo.com/v1/forecast"
-        f"?latitude={lat}&longitude={lng}"
-        f"&current=temperature_2m,precipitation,weathercode"
-        f"&timezone=auto"
-    )
-    try:
-        resp = ext_requests.get(url, timeout=5)
-        if resp.status_code == 200:
-            current = resp.json().get('current', {})
-            temp = current.get('temperature_2m')
-            rain = current.get('precipitation', 0)
-            wcode = current.get('weathercode', 0)
-            if wcode == 0:
-                condition = 'Clear Sky'
-            elif wcode <= 3:
-                condition = 'Partly Cloudy'
-            elif wcode <= 67:
-                condition = 'Rainy'
-            elif wcode <= 77:
-                condition = 'Snowy'
-            elif wcode <= 82:
-                condition = 'Heavy Rain'
-            else:
-                condition = 'Thunderstorm'
-            return {'temperature': temp, 'rain_mm': rain, 'condition': condition}
-    except Exception as e:
-        print(f"Clinic weather fetch failed: {e}")
-    return {'temperature': None, 'rain_mm': 0, 'condition': 'Unknown'}
+FALLBACK_TOP_PRODUCTS = [
+    {"item_name": "Paracetamol", "total_used": 120},
+    {"item_name": "Amoxicillin", "total_used": 95},
+    {"item_name": "Cephalexin 250mg", "total_used": 81},
+    {"item_name": "Uphamol", "total_used": 74},
+    {"item_name": "Metformin", "total_used": 63}
+]
+
+FALLBACK_INSIGHT_MESSAGE = {
+    "message": "Paracetamol demand is increasing. Consider increasing stock."
+}
+
 
 def ai_unavailable_response():
     if AI_FEATURES_AVAILABLE:
@@ -105,383 +69,210 @@ def ai_unavailable_response():
     }), 503
 
 
-def get_medicine_catalog():
-    medicines = list_medicines()
-    medicine_lookup = {
-        medicine["medicine_id"]: medicine
-        for medicine in medicines
-        if medicine.get("medicine_id")
-    }
-    match_index = build_match_index(medicines)
-    return medicines, medicine_lookup, match_index
+def get_usage_logs_for_clinic(clinic_id):
+    query = db.collection("usage_logs")
 
+    if clinic_id:
+        query = query.where("clinic_id", "==", clinic_id)
 
-def resolve_medicine(medicine_id=None, item_name=None, medicines=None, medicine_lookup=None, match_index=None):
-    medicines = medicines or []
-    medicine_lookup = medicine_lookup or {}
-
-    if medicine_id and medicine_id in medicine_lookup:
-        return medicine_lookup[medicine_id]
-
-    if not item_name:
-        return None
-
-    return match_medicine(
-        item_name,
-        medicines=medicines,
-        match_index=match_index,
-    )
-
-
-def standardize_inventory_entry(data, medicines=None, medicine_lookup=None, match_index=None):
-    medicine = resolve_medicine(
-        medicine_id=data.get("medicine_id"),
-        item_name=data.get("item_name"),
-        medicines=medicines,
-        medicine_lookup=medicine_lookup,
-        match_index=match_index,
-    )
-
-    return {
-        "medicine_id": medicine["medicine_id"] if medicine else data.get("medicine_id", ""),
-        "item_name": medicine["name"] if medicine else data.get("item_name", "Unknown Medicine"),
-        "category": medicine.get("category") if medicine else data.get("category", "Uncategorized"),
-        "product_code": (
-            medicine.get("product_code", medicine.get("medicine_id", ""))
-            if medicine else data.get("product_code", "")
-        ),
-        "unit": medicine.get("unit") if medicine else data.get("unit", ""),
-        "current_stock": data.get("current_stock", 0),
-        "min_order_qty": data.get(
-            "min_order_qty",
-            medicine.get("standard_min_qty", 100) if medicine else 100,
-        ),
-        "last_updated": data.get("last_updated"),
-    }
-
-
-def standardize_log_entry(data, medicines=None, medicine_lookup=None, match_index=None):
-    medicine = resolve_medicine(
-        medicine_id=data.get("medicine_id"),
-        item_name=data.get("item_name"),
-        medicines=medicines,
-        medicine_lookup=medicine_lookup,
-        match_index=match_index,
-    )
-
-    item_name = medicine["name"] if medicine else data.get("item_name", "Unknown Medicine")
-    medicine_id = medicine["medicine_id"] if medicine else data.get("medicine_id", "")
-
-    return {
-        "medicine_id": medicine_id,
-        "item_name": item_name,
-    }
-
-
-def standardize_order_item(item, medicines=None, medicine_lookup=None, match_index=None):
-    medicine = resolve_medicine(
-        medicine_id=item.get("medicine_id"),
-        item_name=item.get("item_name"),
-        medicines=medicines,
-        medicine_lookup=medicine_lookup,
-        match_index=match_index,
-    )
-
-    quantity = item.get("qty")
-    if quantity is None:
-        quantity = item.get("suggested_qty", item.get("quantity", 0))
-
-    standardized_name = medicine["name"] if medicine else item.get("item_name", "Unknown Medicine")
-    standardized_id = medicine["medicine_id"] if medicine else item.get("medicine_id", "")
-
-    return {
-        "medicine_id": standardized_id,
-        "item_name": standardized_name,
-        "qty": quantity,
-        "suggested_qty": item.get("suggested_qty", quantity),
-    }
-
-
-def matches_medicine_reference(data, medicine_id=None, item_name=None, medicines=None, medicine_lookup=None, match_index=None):
-    if medicine_id and data.get("medicine_id") == medicine_id:
-        return True
-
-    if item_name and data.get("item_name") == item_name:
-        return True
-
-    resolved = resolve_medicine(
-        medicine_id=data.get("medicine_id"),
-        item_name=data.get("item_name"),
-        medicines=medicines,
-        medicine_lookup=medicine_lookup,
-        match_index=match_index,
-    )
-    requested = resolve_medicine(
-        medicine_id=medicine_id,
-        item_name=item_name,
-        medicines=medicines,
-        medicine_lookup=medicine_lookup,
-        match_index=match_index,
-    )
-
-    if resolved and requested:
-        return resolved["medicine_id"] == requested["medicine_id"]
-
-    return False
-
-
-def get_inventory_docs_for_clinic(clinic_id):
-    return list(
-        db.collection("inventory")
-        .where("clinic_id", "==", clinic_id)
-        .stream()
-    )
-
-
-def get_district_clinics(district):
-    docs = db.collection("clinics") \
-             .where("district", "==", district) \
-             .stream()
-
-    clinics = []
-
-    for doc in docs:
+    logs = []
+    for doc in query.stream():
         data = doc.to_dict()
-        clinics.append({
-            "clinic_id": doc.id,
-            "name": data.get("name", doc.id),
-            "route_id": data.get("route_id", "Unassigned")
+        logs.append({
+            "item_name": data.get("item_name"),
+            "quantity_used": int(data.get("quantity_used", 0)),
+            "timestamp": data.get("timestamp")
         })
 
-    clinics.sort(key=lambda clinic: clinic["name"].lower())
-    return clinics
+    return logs
 
 
-def analyze_clinic_risk(clinic_id):
-    docs = db.collection("inventory") \
-             .where("clinic_id", "==", clinic_id) \
-             .stream()
+def get_inventory_for_clinic(clinic_id):
+    query = db.collection("inventory")
 
-    high_items = 0
-    medium_items = 0
+    if clinic_id:
+        query = query.where("clinic_id", "==", clinic_id)
 
-    for doc in docs:
+    items = []
+    for doc in query.stream():
         data = doc.to_dict()
-        stock = data.get("current_stock", 0)
+        items.append({
+            "item_name": data.get("item_name"),
+            "current_stock": int(data.get("current_stock", 0))
+        })
 
+    return items
+
+
+def build_overall_usage_payload(logs):
+    dated_logs = [log for log in logs if log.get("timestamp")]
+    if len(dated_logs) < 7:
+        return FALLBACK_OVERALL_USAGE
+
+    today = datetime.utcnow().date()
+    daily = []
+    for offset in range(6, -1, -1):
+        target_date = today - timedelta(days=offset)
+        total = sum(
+            log["quantity_used"]
+            for log in dated_logs
+            if log["timestamp"].date() == target_date
+        )
+        daily.append(total)
+
+    weekly = []
+    for week_index in range(3, -1, -1):
+        end_date = today - timedelta(days=week_index * 7)
+        start_date = end_date - timedelta(days=6)
+        total = sum(
+            log["quantity_used"]
+            for log in dated_logs
+            if start_date <= log["timestamp"].date() <= end_date
+        )
+        weekly.append(total)
+
+    monthly = []
+    month_keys = []
+    for month_offset in range(2, -1, -1):
+        month_anchor = today.month - month_offset
+        year = today.year
+        while month_anchor <= 0:
+            month_anchor += 12
+            year -= 1
+        month_keys.append((year, month_anchor))
+
+    for year, month in month_keys:
+        total = sum(
+            log["quantity_used"]
+            for log in dated_logs
+            if log["timestamp"].year == year and log["timestamp"].month == month
+        )
+        monthly.append(total)
+
+    if sum(daily) == 0 and sum(weekly) == 0 and sum(monthly) == 0:
+        return FALLBACK_OVERALL_USAGE
+
+    return {
+        "daily": daily,
+        "weekly": weekly,
+        "monthly": monthly
+    }
+
+
+def build_stock_summary_payload(inventory_items):
+    if not inventory_items:
+        return FALLBACK_STOCK_SUMMARY
+
+    critical = 0
+    low = 0
+    safe = 0
+
+    for item in inventory_items:
+        stock = item["current_stock"]
         if stock < 100:
-            high_items += 1
+            critical += 1
         elif stock < 200:
-            medium_items += 1
-
-    if high_items > 0:
-        return {
-            "risk_level": "HIGH",
-            "next_order_date": datetime.utcnow(),
-            "high_item_count": high_items,
-            "medium_item_count": medium_items
-        }
-
-    if medium_items > 0:
-        return {
-            "risk_level": "MEDIUM",
-            "next_order_date": datetime.utcnow() + timedelta(days=5),
-            "high_item_count": high_items,
-            "medium_item_count": medium_items
-        }
+            low += 1
+        else:
+            safe += 1
 
     return {
-        "risk_level": "LOW",
-        "next_order_date": datetime.utcnow() + timedelta(days=14),
-        "high_item_count": high_items,
-        "medium_item_count": medium_items
+        "critical": critical,
+        "low": low,
+        "safe": safe
     }
 
 
-def count_orders_for_clinic(clinic_id, status):
-    docs = db.collection("orders") \
-             .where("clinic_id", "==", clinic_id) \
-             .where("status", "==", status) \
-             .stream()
+def build_top_products_payload(logs):
+    if not logs:
+        return FALLBACK_TOP_PRODUCTS
 
-    return sum(1 for _ in docs)
+    totals = {}
+    for log in logs:
+        item_name = log.get("item_name")
+        if not item_name:
+            continue
+        totals[item_name] = totals.get(item_name, 0) + int(log.get("quantity_used", 0))
+
+    if not totals:
+        return FALLBACK_TOP_PRODUCTS
+
+    ranked = sorted(
+        (
+            {"item_name": item_name, "total_used": total_used}
+            for item_name, total_used in totals.items()
+        ),
+        key=lambda item: item["total_used"],
+        reverse=True
+    )
+
+    return ranked[:5]
 
 
-def build_pkd_clinic_analysis(district):
-    clinics = get_district_clinics(district)
-    analysis = []
+def build_insight_message_payload(stock_summary, top_products):
+    if not top_products:
+        return FALLBACK_INSIGHT_MESSAGE
 
-    for clinic in clinics:
-        risk = analyze_clinic_risk(clinic["clinic_id"])
-        pending_orders = count_orders_for_clinic(clinic["clinic_id"], "PENDING")
+    top_item = top_products[0]["item_name"]
+    critical = stock_summary.get("critical", 0)
+    low = stock_summary.get("low", 0)
 
-        analysis.append({
-            "clinic_id": clinic["clinic_id"],
-            "name": clinic["name"],
-            "route_id": clinic["route_id"],
-            "risk_level": risk["risk_level"],
-            "next_order_date": risk["next_order_date"].strftime("%Y-%m-%d"),
-            "pending_orders": pending_orders,
-            "high_item_count": risk["high_item_count"],
-            "medium_item_count": risk["medium_item_count"]
-        })
+    if critical > 0:
+        return {
+            "message": (
+                f"{top_item} demand is rising while {critical} items are already "
+                "critical. Consider urgent replenishment."
+            )
+        }
 
-    risk_priority = {"HIGH": 0, "MEDIUM": 1, "LOW": 2}
-    analysis.sort(key=lambda clinic: (risk_priority.get(clinic["risk_level"], 3), clinic["name"].lower()))
-    return analysis
+    if low > 0:
+        return {
+            "message": (
+                f"{top_item} remains one of the most dispensed products. "
+                "Monitor low stock items and plan the next replenishment soon."
+            )
+        }
+
+    return {
+        "message": (
+            f"{top_item} leads current usage, but overall stock levels look stable."
+        )
+    }
 
 @app.route('/login', methods=['POST'])
 def login():
-    data = request.get_json(silent=True) or {}
-    user_id = (data.get("user_id") or "").strip()
+    data = request.get_json()
+
+    print(f"[LOGIN] Received data keys: {list(data.keys()) if data else 'None'}")
+
+    user_id = data.get("user_id") or data.get("username")
     password = data.get("password")
 
     if not user_id or not password:
-        return jsonify({"error": "user_id and password are required"}), 400
+        print(f"[LOGIN] Missing credentials - user_id={bool(user_id)}, password={bool(password)}")
+        return jsonify({"success": False, "error": "Missing credentials"}), 400
 
-    doc = db.collection("users").document(user_id).get()
+    print(f"[LOGIN] Attempting login for user_id={user_id}")
 
-    if not doc.exists:
-        return jsonify({"error": "User not found"}), 404
+    docs = db.collection("users") \
+             .where("user_id", "==", user_id) \
+             .where("password", "==", password) \
+             .stream()
 
-    user = doc.to_dict()
-
-    if user.get("password") != password:
-        return jsonify({"error": "Invalid password"}), 401
-
-    return jsonify({
-        "success": True,
-        "role": user.get("role"),
-        "clinic_id": user.get("clinic_id"),
-        "district": user.get("district")
-    })
-
-
-@app.route('/clinics_by_district', methods=['GET'])
-def clinics_by_district():
-    district = (request.args.get('district') or '').strip()
-
-    if not district:
-        return jsonify({"error": "district is required"}), 400
-
-    return jsonify({"clinics": get_district_clinics(district)})
-
-
-@app.route('/pkd_summary', methods=['GET'])
-def pkd_summary():
-    district = (request.args.get('district') or '').strip()
-
-    if not district:
-        return jsonify({"error": "district is required"}), 400
-
-    clinic_analysis = build_pkd_clinic_analysis(district)
-
-    total_clinics = len(clinic_analysis)
-    high_risk_clinics = sum(1 for clinic in clinic_analysis if clinic["risk_level"] == "HIGH")
-    pending_orders = sum(clinic["pending_orders"] for clinic in clinic_analysis)
-    submitted_orders = sum(
-        count_orders_for_clinic(clinic["clinic_id"], "SUBMITTED")
-        for clinic in clinic_analysis
-    )
-
-    return jsonify({
-        "total_clinics": total_clinics,
-        "high_risk_clinics": high_risk_clinics,
-        "pending_orders": pending_orders,
-        "submitted_orders": submitted_orders
-    })
-
-
-@app.route('/pkd_clinic_analysis', methods=['GET'])
-def pkd_clinic_analysis():
-    district = (request.args.get('district') or '').strip()
-
-    if not district:
-        return jsonify({"error": "district is required"}), 400
-
-    clinic_analysis = build_pkd_clinic_analysis(district)
-
-    return jsonify({
-        "clinics": [
-            {
-                "clinic_id": clinic["clinic_id"],
-                "name": clinic["name"],
-                "route_id": clinic["route_id"],
-                "risk_level": clinic["risk_level"],
-                "next_order_date": clinic["next_order_date"],
-                "pending_orders": clinic["pending_orders"]
-            }
-            for clinic in clinic_analysis
-        ]
-    })
-
-
-@app.route('/pkd_route_analysis', methods=['GET'])
-def pkd_route_analysis():
-    district = (request.args.get('district') or '').strip()
-
-    if not district:
-        return jsonify({"error": "district is required"}), 400
-
-    clinic_analysis = build_pkd_clinic_analysis(district)
-    routes = defaultdict(list)
-
-    for clinic in clinic_analysis:
-        routes[clinic["route_id"]].append(clinic)
-
-    route_results = []
-
-    for route_id, clinics in routes.items():
-        urgent_date = min(clinic["next_order_date"] for clinic in clinics)
-        route_results.append({
-            "route_id": route_id,
-            "total_clinics": len(clinics),
-            "high_risk_clinics": sum(1 for clinic in clinics if clinic["risk_level"] == "HIGH"),
-            "urgent_date": urgent_date
+    for doc in docs:
+        user = doc.to_dict()
+        print(f"[LOGIN] Success: user_id={user_id}, role={user.get('role', 'unknown')}")
+        return jsonify({
+            "success": True,
+            "message": "Login successful",
+            "user_id": user.get("user_id"),
+            "role": user.get("role", "clinic"),
+            "clinic_id": user.get("clinic_id"),
+            "district": user.get("district", "")
         })
 
-    route_results.sort(key=lambda route: route["route_id"])
-
-    return jsonify({"routes": route_results})
-
-
-@app.route('/pkd_alerts', methods=['GET'])
-def pkd_alerts():
-    district = (request.args.get('district') or '').strip()
-
-    if not district:
-        return jsonify({"error": "district is required"}), 400
-
-    clinic_analysis = build_pkd_clinic_analysis(district)
-    alerts = []
-
-    for clinic in clinic_analysis:
-        if clinic["risk_level"] == "HIGH":
-            if clinic["high_item_count"] > 1:
-                alerts.append(
-                    f"{clinic['name']} has multiple HIGH-risk medicines"
-                )
-            else:
-                alerts.append(
-                    f"{clinic['name']} has a HIGH-risk medicine that may need urgent attention"
-                )
-
-    route_map = defaultdict(list)
-    for clinic in clinic_analysis:
-        route_map[clinic["route_id"]].append(clinic)
-
-    for route_id, clinics in route_map.items():
-        if any(clinic["risk_level"] == "HIGH" for clinic in clinics):
-            alerts.append(f"{route_id} may require urgent replenishment")
-
-    upcoming_clinics = sum(
-        1 for clinic in clinic_analysis if clinic["risk_level"] in ["HIGH", "MEDIUM"]
-    )
-    alerts.append(
-        f"{upcoming_clinics} clinics expected to submit orders within 5 days"
-    )
-
-    return jsonify({"alerts": alerts[:6]})
+    print(f"[LOGIN] Failed: invalid credentials for user_id={user_id}")
+    return jsonify({"success": False, "error": "Invalid credentials"}), 401
 
 @app.route('/clinic_info', methods=['GET'])
 def clinic_info():
@@ -535,15 +326,6 @@ def consolidate():
         "details": result["details"]
     })
 
-
-@app.route('/medicines', methods=['GET'])
-def get_medicines():
-    medicines = list_medicines()
-
-    return jsonify({
-        "medicines": medicines
-    })
-
 @app.route('/inventory', methods=['GET'])
 def get_inventory():
 
@@ -556,27 +338,14 @@ def get_inventory():
              .where("clinic_id", "==", clinic_id) \
              .stream()
 
-    medicines, medicine_lookup, match_index = get_medicine_catalog()
     inventory_list = []
 
     for doc in docs:
         data = doc.to_dict()
-        inventory_list.append(
-            standardize_inventory_entry(
-                data,
-                medicines=medicines,
-                medicine_lookup=medicine_lookup,
-                match_index=match_index,
-            )
-        )
-
-    inventory_list.sort(
-        key=lambda item: (
-            item.get("category", ""),
-            item.get("current_stock", 0),
-            item.get("item_name", ""),
-        )
-    )
+        inventory_list.append({
+            "item_name": data.get("item_name"),
+            "current_stock": data.get("current_stock")
+        })
     
     clinic_doc = db.collection("clinics").document(clinic_id).get()
     clinic_name = clinic_doc.to_dict().get("name", clinic_id)
@@ -585,71 +354,6 @@ def get_inventory():
         "clinic_id": clinic_id,
         "clinic_name": clinic_name,  
         "inventory": inventory_list
-    })
-
-
-@app.route('/inventory_summary', methods=['GET'])
-def get_inventory_summary():
-    clinic_id = request.args.get('clinic_id')
-
-    if not clinic_id:
-        return jsonify({"error": "clinic_id is required"}), 400
-
-    medicines, medicine_lookup, match_index = get_medicine_catalog()
-    inventory_docs = get_inventory_docs_for_clinic(clinic_id)
-    inventory_items = [
-        standardize_inventory_entry(
-            doc.to_dict(),
-            medicines=medicines,
-            medicine_lookup=medicine_lookup,
-            match_index=match_index,
-        )
-        for doc in inventory_docs
-    ]
-
-    low_stock_count = sum(
-        1 for item in inventory_items if 0 < item["current_stock"] < item["min_order_qty"]
-    )
-    out_of_stock_count = sum(
-        1 for item in inventory_items if item["current_stock"] <= 0
-    )
-
-    usage_docs = list(
-        db.collection("usage_logs")
-        .where("clinic_id", "==", clinic_id)
-        .stream()
-    )
-    usage_by_medicine = defaultdict(int)
-    for doc in usage_docs:
-        data = doc.to_dict()
-        standardized = standardize_log_entry(
-            data,
-            medicines=medicines,
-            medicine_lookup=medicine_lookup,
-            match_index=match_index,
-        )
-        quantity = data.get("quantity_used", data.get("qty_used", 0))
-        usage_by_medicine[standardized["medicine_id"]] += quantity
-
-    top_used = []
-    for medicine_id, total_used in sorted(
-        usage_by_medicine.items(),
-        key=lambda entry: entry[1],
-        reverse=True,
-    )[:5]:
-        medicine = medicine_lookup.get(medicine_id)
-        top_used.append({
-            "medicine_id": medicine_id,
-            "item_name": medicine["name"] if medicine else medicine_id,
-            "total_used": total_used,
-        })
-
-    return jsonify({
-        "clinic_id": clinic_id,
-        "total_medicines": len(inventory_items),
-        "low_stock_count": low_stock_count,
-        "out_of_stock_count": out_of_stock_count,
-        "top_used_medicines": top_used,
     })
 
 @app.route('/order_suggestions', methods=['GET'])
@@ -672,36 +376,25 @@ def get_order_suggestions():
              .where("clinic_id", "==", clinic_id) \
              .stream()
 
-    medicines, medicine_lookup, match_index = get_medicine_catalog()
     suggestions = []
 
     for doc in docs:
         data = doc.to_dict()
-        inventory_item = standardize_inventory_entry(
-            data,
-            medicines=medicines,
-            medicine_lookup=medicine_lookup,
-            match_index=match_index,
-        )
-        stock = inventory_item.get("current_stock", 0)
-        item = inventory_item.get("item_name")
-        medicine_id = inventory_item.get("medicine_id", "")
-        min_order_qty = inventory_item.get("min_order_qty", 100)
+        stock = data.get("current_stock", 0)
+        item = data.get("item_name")
 
         # 🔥 LOW STOCK RULE
-        if stock < min_order_qty:
+        if stock < 100:
             suggestions.append({
-                "medicine_id": medicine_id,
                 "item_name": item,
-                "suggested_qty": max(min_order_qty * 2 - stock, min_order_qty),
+                "suggested_qty": 200 - stock,  # simple rule
                 "priority": "HIGH"
             })
 
-        elif stock < min_order_qty * 2:
+        elif stock < 200:
             suggestions.append({
-                "medicine_id": medicine_id,
                 "item_name": item,
-                "suggested_qty": max(min_order_qty * 3 - stock, min_order_qty),
+                "suggested_qty": 300 - stock,
                 "priority": "MEDIUM"
             })
 
@@ -722,17 +415,10 @@ def get_usage_logs():
              .where("clinic_id", "==", clinic_id) \
              .stream()
 
-    medicines, medicine_lookup, match_index = get_medicine_catalog()
     logs = []
 
     for doc in docs:
         data = doc.to_dict()
-        standardized = standardize_log_entry(
-            data,
-            medicines=medicines,
-            medicine_lookup=medicine_lookup,
-            match_index=match_index,
-        )
 
         # Convert timestamp → Malaysia time
         timestamp = data.get("timestamp")
@@ -743,9 +429,8 @@ def get_usage_logs():
             formatted_time = None
 
         logs.append({
-            "medicine_id": standardized["medicine_id"],
-            "item_name": standardized["item_name"],
-            "quantity_used": data.get("quantity_used", data.get("qty_used", 0)),
+            "item_name": data.get("item_name"),
+            "quantity_used": data.get("quantity_used"),
             "timestamp": formatted_time
         })
 
@@ -760,74 +445,21 @@ def add_usage_log():
     data = request.get_json()
 
     clinic_id = data.get("clinic_id")
-    medicine_id = data.get("medicine_id")
     item_name = data.get("item_name")
-    quantity_used = data.get("quantity_used", data.get("qty_used"))
+    quantity_used = data.get("quantity_used")
 
-    medicines, medicine_lookup, match_index = get_medicine_catalog()
-    medicine = resolve_medicine(
-        medicine_id=medicine_id,
-        item_name=item_name,
-        medicines=medicines,
-        medicine_lookup=medicine_lookup,
-        match_index=match_index,
-    )
-
-    if not clinic_id or quantity_used is None or (not medicine and not item_name):
+    if not clinic_id or not item_name or not quantity_used:
         return jsonify({"error": "Missing data"}), 400
-
-    standardized_name = medicine["name"] if medicine else item_name
-    standardized_id = medicine["medicine_id"] if medicine else medicine_id
 
     db.collection("usage_logs").add({
         "clinic_id": clinic_id,
-        "medicine_id": standardized_id,
-        "item_name": standardized_name,
+        "item_name": item_name,
         "quantity_used": quantity_used,
-        "qty_used": quantity_used,
         "timestamp": datetime.utcnow()
     })
 
     return jsonify({
         "message": "Usage log added successfully"
-    })
-
-
-@app.route('/stock_in_logs', methods=['GET'])
-def get_stock_in_logs():
-    clinic_id = request.args.get('clinic_id')
-
-    if not clinic_id:
-        return jsonify({"error": "clinic_id is required"}), 400
-
-    docs = db.collection("stock_in_logs") \
-             .where("clinic_id", "==", clinic_id) \
-             .stream()
-
-    medicines, medicine_lookup, match_index = get_medicine_catalog()
-    logs = []
-
-    for doc in docs:
-        data = doc.to_dict()
-        standardized = standardize_log_entry(
-            data,
-            medicines=medicines,
-            medicine_lookup=medicine_lookup,
-            match_index=match_index,
-        )
-        logs.append({
-            "medicine_id": standardized["medicine_id"],
-            "item_name": standardized["item_name"],
-            "quantity_received": data.get(
-                "quantity_received",
-                data.get("qty_received", data.get("qty_added", data.get("quantity_added", 0))),
-            ),
-            "timestamp": str(data.get("timestamp")),
-        })
-
-    return jsonify({
-        "clinic_id": clinic_id,
-        "stock_in_logs": logs,
     })
 
 @app.route('/stock_in', methods=['POST'])
@@ -838,83 +470,41 @@ def stock_in():
     print("🔥 RECEIVED:", data)
 
     clinic_id = data.get("clinic_id")
-    medicine_id = data.get("medicine_id")
     item_name = data.get("item_name")
     quantity_added = int(data.get("quantity_added", 0))  
 
-    medicines, medicine_lookup, match_index = get_medicine_catalog()
-    medicine = resolve_medicine(
-        medicine_id=medicine_id,
-        item_name=item_name,
-        medicines=medicines,
-        medicine_lookup=medicine_lookup,
-        match_index=match_index,
-    )
-
-    if clinic_id is None or quantity_added is None or (not medicine and item_name is None):
+    if clinic_id is None or item_name is None or quantity_added is None:
         return jsonify({"error": "Missing data"}), 400
 
-    standardized_name = medicine["name"] if medicine else item_name
-    standardized_id = medicine["medicine_id"] if medicine else medicine_id
-
-    docs = get_inventory_docs_for_clinic(clinic_id)
+    docs = db.collection("inventory") \
+             .where("clinic_id", "==", clinic_id) \
+             .where("item_name", "==", item_name) \
+             .stream()
 
     found = False
 
     for doc in docs:
-        data_db = doc.to_dict()
-        if not matches_medicine_reference(
-            data_db,
-            medicine_id=standardized_id,
-            item_name=standardized_name,
-            medicines=medicines,
-            medicine_lookup=medicine_lookup,
-            match_index=match_index,
-        ):
-            continue
-
         found = True
+        data_db = doc.to_dict()
         current_stock = data_db.get("current_stock", 0)
 
         new_stock = current_stock + quantity_added
 
         db.collection("inventory").document(doc.id).update({
-            "medicine_id": standardized_id,
-            "item_name": standardized_name,
-            "category": medicine.get("category", data_db.get("category", "")) if medicine else data_db.get("category", ""),
-            "product_code": (
-                medicine.get("product_code", medicine.get("medicine_id", standardized_id))
-                if medicine else data_db.get("product_code", standardized_id)
-            ),
-            "unit": medicine.get("unit", data_db.get("unit", "")) if medicine else data_db.get("unit", ""),
-            "current_stock": new_stock,
-            "min_order_qty": data_db.get(
-                "min_order_qty",
-                medicine.get("standard_min_qty", 100) if medicine else 100,
-            ),
-            "last_updated": firestore.SERVER_TIMESTAMP,
+            "current_stock": new_stock
         })
 
     if not found:
         db.collection("inventory").add({
             "clinic_id": clinic_id,
-            "medicine_id": standardized_id,
-            "item_name": standardized_name,
-            "category": medicine.get("category", "") if medicine else "",
-            "product_code": medicine.get("product_code", standardized_id) if medicine else standardized_id,
-            "unit": medicine.get("unit", "") if medicine else "",
-            "current_stock": quantity_added,
-            "min_order_qty": medicine.get("standard_min_qty", 100) if medicine else 100,
-            "last_updated": firestore.SERVER_TIMESTAMP,
+            "item_name": item_name,
+            "current_stock": quantity_added
         })
 
     db.collection("stock_in_logs").add({
         "clinic_id": clinic_id,
-        "medicine_id": standardized_id,
-        "item_name": standardized_name,
+        "item_name": item_name,
         "quantity_added": quantity_added,
-        "quantity_received": quantity_added,
-        "qty_received": quantity_added,
         "timestamp": datetime.utcnow()
     })
 
@@ -929,44 +519,24 @@ def stock_out():
     print("🔥 STOCK OUT:", data)
 
     clinic_id = data.get("clinic_id")
-    medicine_id = data.get("medicine_id")
     item_name = data.get("item_name")
     quantity_used = int(data.get("quantity_used", 0)) 
 
-    medicines, medicine_lookup, match_index = get_medicine_catalog()
-    medicine = resolve_medicine(
-        medicine_id=medicine_id,
-        item_name=item_name,
-        medicines=medicines,
-        medicine_lookup=medicine_lookup,
-        match_index=match_index,
-    )
-
-    if clinic_id is None or quantity_used is None or (not medicine and item_name is None):
+    if clinic_id is None or item_name is None or quantity_used is None:
         return jsonify({"error": "Missing data"}), 400
 
     quantity_used = int(quantity_used)  
 
-    standardized_name = medicine["name"] if medicine else item_name
-    standardized_id = medicine["medicine_id"] if medicine else medicine_id
-
-    docs = get_inventory_docs_for_clinic(clinic_id)
+    docs = db.collection("inventory") \
+             .where("clinic_id", "==", clinic_id) \
+             .where("item_name", "==", item_name) \
+             .stream()
 
     found = False
 
     for doc in docs:
-        data_db = doc.to_dict()
-        if not matches_medicine_reference(
-            data_db,
-            medicine_id=standardized_id,
-            item_name=standardized_name,
-            medicines=medicines,
-            medicine_lookup=medicine_lookup,
-            match_index=match_index,
-        ):
-            continue
-
         found = True
+        data_db = doc.to_dict()
         current_stock = data_db.get("current_stock", 0)
 
         # ❗ Prevent negative stock
@@ -978,16 +548,7 @@ def stock_out():
         new_stock = current_stock - quantity_used
 
         db.collection("inventory").document(doc.id).update({
-            "medicine_id": standardized_id,
-            "item_name": standardized_name,
-            "category": medicine.get("category", data_db.get("category", "")) if medicine else data_db.get("category", ""),
-            "product_code": (
-                medicine.get("product_code", medicine.get("medicine_id", standardized_id))
-                if medicine else data_db.get("product_code", standardized_id)
-            ),
-            "unit": medicine.get("unit", data_db.get("unit", "")) if medicine else data_db.get("unit", ""),
-            "current_stock": new_stock,
-            "last_updated": firestore.SERVER_TIMESTAMP,
+            "current_stock": new_stock
         })
 
     if not found:
@@ -997,10 +558,8 @@ def stock_out():
 
     db.collection("usage_logs").add({
         "clinic_id": clinic_id,
-        "medicine_id": standardized_id,
-        "item_name": standardized_name,
+        "item_name": item_name,
         "quantity_used": quantity_used,
-        "qty_used": quantity_used,
         "timestamp": datetime.utcnow()
     })
 
@@ -1015,40 +574,21 @@ def ai_forecast():
         return unavailable
 
     clinic_id = request.args.get('clinic_id')
-    medicine_id = request.args.get('medicine_id')
     item_name = request.args.get('item_name')
 
-    if not clinic_id or (not medicine_id and not item_name):
-        return jsonify({"error": "Missing clinic_id and medicine reference"}), 400
-
-    medicines, medicine_lookup, match_index = get_medicine_catalog()
-    requested_medicine = resolve_medicine(
-        medicine_id=medicine_id,
-        item_name=item_name,
-        medicines=medicines,
-        medicine_lookup=medicine_lookup,
-        match_index=match_index,
-    )
+    if not clinic_id or not item_name:
+        return jsonify({"error": "Missing clinic_id or item_name"}), 400
 
     docs = db.collection("usage_logs") \
              .where("clinic_id", "==", clinic_id) \
+             .where("item_name", "==", item_name) \
              .stream()
 
     usage_data = []
     for doc in docs:
         data = doc.to_dict()
-        standardized = standardize_log_entry(
-            data,
-            medicines=medicines,
-            medicine_lookup=medicine_lookup,
-            match_index=match_index,
-        )
-        if requested_medicine and standardized["medicine_id"] != requested_medicine["medicine_id"]:
-            continue
         usage_data.append({
-            "medicine_id": standardized["medicine_id"],
-            "item_name": standardized["item_name"],
-            "quantity_used": data.get("quantity_used", data.get("qty_used", 0)),
+            "quantity_used": data.get("quantity_used", 0),
             "timestamp": data.get("timestamp")
         })
 
@@ -1056,8 +596,7 @@ def ai_forecast():
 
     return jsonify({
         "clinic_id": clinic_id,
-        "medicine_id": requested_medicine["medicine_id"] if requested_medicine else medicine_id,
-        "item_name": requested_medicine["name"] if requested_medicine else item_name,
+        "item_name": item_name,
         "forecast_7_days": forecast
     })
 
@@ -1076,20 +615,12 @@ def ai_anomalies():
              .where("clinic_id", "==", clinic_id) \
              .stream()
 
-    medicines, medicine_lookup, match_index = get_medicine_catalog()
     usage_data = []
     for doc in docs:
         data = doc.to_dict()
-        standardized = standardize_log_entry(
-            data,
-            medicines=medicines,
-            medicine_lookup=medicine_lookup,
-            match_index=match_index,
-        )
         usage_data.append({
-            "medicine_id": standardized["medicine_id"],
-            "item_name": standardized["item_name"],
-            "quantity_used": data.get("quantity_used", data.get("qty_used", 0)),
+            "item_name": data.get("item_name"),
+            "quantity_used": data.get("quantity_used", 0),
             "timestamp": data.get("timestamp")
         })
 
@@ -1097,7 +628,7 @@ def ai_anomalies():
     anomalies_report = []
     item_groups = {}
     for entry in usage_data:
-        item = entry['medicine_id'] or entry['item_name']
+        item = entry['item_name']
         if item not in item_groups:
             item_groups[item] = []
         item_groups[item].append(entry)
@@ -1105,10 +636,8 @@ def ai_anomalies():
     for item, item_data in item_groups.items():
         anomalies = detect_anomalies(item_data)
         if anomalies:
-            sample = item_data[0]
             anomalies_report.append({
-                "medicine_id": sample.get("medicine_id", ""),
-                "item_name": sample.get("item_name", item),
+                "item_name": item,
                 "anomalies": anomalies
             })
 
@@ -1116,6 +645,38 @@ def ai_anomalies():
         "clinic_id": clinic_id,
         "epidemic_warnings": anomalies_report
     })
+
+
+@app.route('/ai/overall_usage', methods=['GET'])
+def ai_overall_usage():
+    clinic_id = request.args.get('clinic_id')
+    logs = get_usage_logs_for_clinic(clinic_id)
+    return jsonify(build_overall_usage_payload(logs))
+
+
+@app.route('/ai/stock_summary', methods=['GET'])
+def ai_stock_summary():
+    clinic_id = request.args.get('clinic_id')
+    inventory_items = get_inventory_for_clinic(clinic_id)
+    return jsonify(build_stock_summary_payload(inventory_items))
+
+
+@app.route('/ai/top_products', methods=['GET'])
+def ai_top_products():
+    clinic_id = request.args.get('clinic_id')
+    logs = get_usage_logs_for_clinic(clinic_id)
+    return jsonify(build_top_products_payload(logs))
+
+
+@app.route('/ai/insight_message', methods=['GET'])
+def ai_insight_message():
+    clinic_id = request.args.get('clinic_id')
+    logs = get_usage_logs_for_clinic(clinic_id)
+    inventory_items = get_inventory_for_clinic(clinic_id)
+    stock_summary = build_stock_summary_payload(inventory_items)
+    top_products = build_top_products_payload(logs)
+    return jsonify(build_insight_message_payload(stock_summary, top_products))
+
 
 @app.route('/ai/smart_inventory', methods=['GET'])
 def ai_smart_inventory():
@@ -1128,64 +689,37 @@ def ai_smart_inventory():
     if not clinic_id:
         return jsonify({"error": "Missing clinic_id"}), 400
 
-    medicines, medicine_lookup, match_index = get_medicine_catalog()
     # 1. High-Performance Bulk Load
     all_inv_docs = db.collection("inventory").stream()
-    global_inv = {} # { clinic_id: { medicine_id: {stock, item_name} } }
+    global_inv = {} # { clinic_id: { item: stock } }
     for doc in all_inv_docs:
         d = doc.to_dict()
         cid = d.get('clinic_id')
-        standardized = standardize_inventory_entry(
-            d,
-            medicines=medicines,
-            medicine_lookup=medicine_lookup,
-            match_index=match_index,
-        )
-        med_id = standardized["medicine_id"] or standardized["item_name"]
-        if cid not in global_inv:
-            global_inv[cid] = {}
-        global_inv[cid][med_id] = {
-            "current_stock": standardized["current_stock"],
-            "item_name": standardized["item_name"],
-            "medicine_id": standardized["medicine_id"],
-        }
+        if cid not in global_inv: global_inv[cid] = {}
+        global_inv[cid][d.get('item_name')] = d.get('current_stock', 0)
 
     # 1.5 Fetch Meteorological Data once
     weather_data = get_7_day_weather()
 
     # 2. Bulk Load Usage Logs
     all_usage_docs = db.collection("usage_logs").stream()
-    global_usage = {} # { clinic_id: { medicine_id: [logs] } }
+    global_usage = {} # { clinic_id: { item: [logs] } }
     for doc in all_usage_docs:
         d = doc.to_dict()
         cid = d.get('clinic_id')
-        standardized = standardize_log_entry(
-            d,
-            medicines=medicines,
-            medicine_lookup=medicine_lookup,
-            match_index=match_index,
-        )
-        med_id = standardized["medicine_id"] or standardized["item_name"]
-        if cid not in global_usage:
-            global_usage[cid] = {}
-        if med_id not in global_usage[cid]:
-            global_usage[cid][med_id] = []
-        log_entry = dict(d)
-        log_entry["medicine_id"] = standardized["medicine_id"]
-        log_entry["item_name"] = standardized["item_name"]
-        log_entry["quantity_used"] = d.get("quantity_used", d.get("qty_used", 0))
-        global_usage[cid][med_id].append(log_entry)
+        item = d.get('item_name')
+        if cid not in global_usage: global_usage[cid] = {}
+        if item not in global_usage[cid]: global_usage[cid][item] = []
+        global_usage[cid][item].append(d)
 
     # 3. Process each item for the local clinic
     smart_list = []
     my_inventory = global_inv.get(clinic_id, {})
 
-    for med_id, item_data in my_inventory.items():
-        stock = item_data["current_stock"]
-        item_name = item_data["item_name"]
-        logs = global_usage.get(clinic_id, {}).get(med_id, [])
+    for item, stock in my_inventory.items():
+        logs = global_usage.get(clinic_id, {}).get(item, [])
         anomalies = detect_anomalies(logs)
-        metrics = calculate_smart_inventory(logs, stock, item_name=item_name, weather_data=weather_data)
+        metrics = calculate_smart_inventory(logs, stock, item_name=item, weather_data=weather_data)
         
         has_warning = len(anomalies) > 0
         
@@ -1193,17 +727,11 @@ def ai_smart_inventory():
         transfer_candidates = []
         if metrics['recommend_order'] > 0:
             for other_clinic, other_items in global_inv.items():
-                if other_clinic == clinic_id:
-                    continue
-                other_inventory = other_items.get(med_id)
-                if other_inventory and other_inventory["current_stock"] > 0:
-                    other_logs = global_usage.get(other_clinic, {}).get(med_id, [])
-                    other_metrics = calculate_smart_inventory(
-                        other_logs,
-                        other_inventory["current_stock"],
-                        item_name=item_name,
-                        weather_data=weather_data,
-                    )
+                if other_clinic == clinic_id: continue
+                other_stock = other_items.get(item, 0)
+                if other_stock > 0:
+                    other_logs = global_usage.get(other_clinic, {}).get(item, [])
+                    other_metrics = calculate_smart_inventory(other_logs, other_stock, item_name=item, weather_data=weather_data)
                     if other_metrics['surplus_stock'] >= 20: # Only bother if they have a meaningful surplus > 20
                         transfer_candidates.append({
                             "clinic_id": other_clinic,
@@ -1214,8 +742,7 @@ def ai_smart_inventory():
         transfer_candidates.sort(key=lambda x: x['surplus_stock'], reverse=True)
 
         smart_list.append({
-            "medicine_id": item_data["medicine_id"],
-            "item_name": item_name,
+            "item_name": item,
             "current_stock": stock,
             "run_out_days": metrics['run_out_days'],
             "run_out_date": metrics['run_out_date'],
@@ -1248,36 +775,22 @@ def pkd_request_transfer():
     data = request.get_json()
     from_clinic = data.get('from_clinic')
     to_clinic = data.get('clinic_id') # The one making the request
-    medicine_id = data.get('medicine_id')
     item_name = data.get('item_name')
     quantity = data.get('quantity')
 
-    medicines, medicine_lookup, match_index = get_medicine_catalog()
-    medicine = resolve_medicine(
-        medicine_id=medicine_id,
-        item_name=item_name,
-        medicines=medicines,
-        medicine_lookup=medicine_lookup,
-        match_index=match_index,
-    )
-
-    if not from_clinic or not to_clinic or not quantity or (not medicine and not item_name):
+    if not from_clinic or not to_clinic or not item_name or not quantity:
         return jsonify({"error": "Missing data"}), 400
-
-    standardized_name = medicine["name"] if medicine else item_name
-    standardized_id = medicine["medicine_id"] if medicine else medicine_id
 
     db.collection("interclinic_transfers").add({
         "from_clinic": from_clinic,
         "to_clinic": to_clinic,
-        "medicine_id": standardized_id,
-        "item_name": standardized_name,
+        "item_name": item_name,
         "quantity": int(quantity),
         "status": "Pending Acceptance",
         "timestamp": datetime.utcnow()
     })
 
-    return jsonify({"message": f"Transfer request for {quantity} {standardized_name} sent to {from_clinic}!"})
+    return jsonify({"message": f"Transfer request for {quantity} {item_name} sent to {from_clinic}!"})
 
 @app.route('/pkd/request_order', methods=['POST'])
 def pkd_request_order():
@@ -1288,26 +801,9 @@ def pkd_request_order():
     if not clinic_id or not orders:
         return jsonify({"error": "Missing data"}), 400
 
-    medicines, medicine_lookup, match_index = get_medicine_catalog()
-    standardized_orders = []
-    for item in orders:
-        medicine = resolve_medicine(
-            medicine_id=item.get("medicine_id"),
-            item_name=item.get("item_name"),
-            medicines=medicines,
-            medicine_lookup=medicine_lookup,
-            match_index=match_index,
-        )
-        quantity = item.get("quantity", item.get("qty", item.get("suggested_qty", 0)))
-        standardized_orders.append({
-            "medicine_id": medicine["medicine_id"] if medicine else item.get("medicine_id", ""),
-            "item_name": medicine["name"] if medicine else item.get("item_name", "Unknown Medicine"),
-            "quantity": quantity,
-        })
-
     db.collection("pkd_orders").add({
         "clinic_id": clinic_id,
-        "orders": standardized_orders,
+        "orders": orders,
         "status": "Pending Verification",
         "timestamp": datetime.utcnow()
     })
@@ -1324,20 +820,9 @@ def generate_order():
     if not clinic_id or not items:
         return jsonify({"error": "Missing data"}), 400
 
-    medicines, medicine_lookup, match_index = get_medicine_catalog()
-    standardized_items = [
-        standardize_order_item(
-            item,
-            medicines=medicines,
-            medicine_lookup=medicine_lookup,
-            match_index=match_index,
-        )
-        for item in items
-    ]
-
     order_data = {
         "clinic_id": clinic_id,
-        "items": standardized_items,
+        "items": items,
         "status": "PENDING",
         "created_at": datetime.utcnow()
     }
@@ -1362,24 +847,14 @@ def get_orders():
              .where("clinic_id", "==", clinic_id) \
              .stream()
 
-    medicines, medicine_lookup, match_index = get_medicine_catalog()
     orders = []
 
     for doc in docs:
         data = doc.to_dict()
-        standardized_items = [
-            standardize_order_item(
-                item,
-                medicines=medicines,
-                medicine_lookup=medicine_lookup,
-                match_index=match_index,
-            )
-            for item in data.get("items", [])
-        ]
 
         orders.append({
             "id": doc.id,
-            "items": standardized_items,
+            "items": data.get("items", []),
             "status": data.get("status", "PENDING"),
             "created_at": str(data.get("created_at"))
         })
@@ -1399,87 +874,37 @@ def complete_order():
         .where("status", "==", "SUBMITTED") \
         .stream()
 
-    medicines, medicine_lookup, match_index = get_medicine_catalog()
-
     for doc in orders:
         order_data = doc.to_dict()
         items = order_data.get("items", [])
 
         # 🔥 UPDATE INVENTORY HERE
         for item in items:
-            standardized_item = standardize_order_item(
-                item,
-                medicines=medicines,
-                medicine_lookup=medicine_lookup,
-                match_index=match_index,
-            )
-            item_name = standardized_item.get("item_name")
-            medicine_id = standardized_item.get("medicine_id")
-            qty = standardized_item.get("qty", 0)
+            item_name = item.get("item_name")
+            qty = item.get("qty", 0)
 
-            inv_docs = get_inventory_docs_for_clinic(clinic_id)
-            matched_inventory = False
+            inv_docs = db.collection("inventory") \
+                .where("clinic_id", "==", clinic_id) \
+                .where("item_name", "==", item_name) \
+                .stream()
 
             for inv_doc in inv_docs:
-                inv_data = inv_doc.to_dict()
-                if not matches_medicine_reference(
-                    inv_data,
-                    medicine_id=medicine_id,
-                    item_name=item_name,
-                    medicines=medicines,
-                    medicine_lookup=medicine_lookup,
-                    match_index=match_index,
-                ):
-                    continue
-
-                matched_inventory = True
-                current_stock = inv_data.get("current_stock", 0)
+                current_stock = inv_doc.to_dict().get("current_stock", 0)
 
                 inv_doc.reference.update({
-                    "medicine_id": medicine_id,
-                    "item_name": item_name,
-                    "category": medicine_lookup.get(medicine_id, {}).get("category", inv_data.get("category", "")),
-                    "product_code": medicine_lookup.get(medicine_id, {}).get("product_code", inv_data.get("product_code", medicine_id)),
-                    "unit": medicine_lookup.get(medicine_id, {}).get("unit", inv_data.get("unit", "")),
-                    "current_stock": current_stock + qty,
-                    "last_updated": firestore.SERVER_TIMESTAMP,
+                    "current_stock": current_stock + qty
                 })
                 # 📝 LOG STOCK IN
                 db.collection("stock_in_logs").add({
                     "clinic_id": clinic_id,
-                    "medicine_id": medicine_id,
                     "item_name": item_name,
                     "qty_added": qty,
-                    "quantity_received": qty,
-                    "qty_received": qty,
                     "timestamp": datetime.utcnow()
-                })
-
-            if not matched_inventory:
-                db.collection("inventory").add({
-                    "clinic_id": clinic_id,
-                    "medicine_id": medicine_id,
-                    "item_name": item_name,
-                    "category": medicine_lookup.get(medicine_id, {}).get("category", ""),
-                    "product_code": medicine_lookup.get(medicine_id, {}).get("product_code", medicine_id),
-                    "unit": medicine_lookup.get(medicine_id, {}).get("unit", ""),
-                    "current_stock": qty,
-                    "min_order_qty": medicine_lookup.get(medicine_id, {}).get("standard_min_qty", 100),
-                    "last_updated": firestore.SERVER_TIMESTAMP,
                 })
 
         # ✅ Mark order Received
         doc.reference.update({
-            "status": "RECEIVED",
-            "items": [
-                standardize_order_item(
-                    item,
-                    medicines=medicines,
-                    medicine_lookup=medicine_lookup,
-                    match_index=match_index,
-                )
-                for item in items
-            ],
+            "status": "RECEIVED"
         })
 
     # 🔁 Reset flag
@@ -1512,44 +937,6 @@ def update_order_status():
         })
 
     return jsonify({"message": "Order status updated"})
-    return jsonify({"message": "Order status updated"})
-
-@app.route('/clinic_network', methods=['GET'])
-def clinic_network():
-    clinic_id = request.args.get('clinic_id')
-
-    if not clinic_id or clinic_id not in CLINIC_COORDINATES:
-        return jsonify({"error": "Invalid or missing clinic_id"}), 400
-
-    my_info = CLINIC_COORDINATES[clinic_id]
-
-    result = []
-    for cid, info in CLINIC_COORDINATES.items():
-        is_self = (cid == clinic_id)
-        dist = 0.0 if is_self else haversine_km(
-            my_info['lat'], my_info['lng'],
-            info['lat'], info['lng']
-        )
-        weather = get_clinic_weather(info['lat'], info['lng'])
-        result.append({
-            'clinic_id': cid,
-            'name': info['name'],
-            'area': info['area'],
-            'lat': info['lat'],
-            'lng': info['lng'],
-            'distance_km': dist,
-            'is_self': is_self,
-            'weather': weather
-        })
-
-    # Sort: own clinic first, then by distance
-    result.sort(key=lambda x: (0 if x['is_self'] else 1, x['distance_km']))
-
-    return jsonify({
-        'clinic_id': clinic_id,
-        'my_location': my_info,
-        'clinics': result
-    })
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
