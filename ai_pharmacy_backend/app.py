@@ -633,11 +633,21 @@ def login():
     print(f"[LOGIN] Attempting login for user_id={user_id}")
 
     docs = db.collection("users") \
-             .where("user_id", "==", user_id) \
-             .where("password", "==", password) \
-             .stream()
+        .where("user_id", "==", user_id) \
+        .where("password", "==", password) \
+        .stream()
 
-    user = doc.to_dict()
+    user = None
+
+    for doc in docs:
+        user = doc.to_dict()
+        break
+
+    if not user:
+        return jsonify({
+            "success": False,
+            "error": "Invalid credentials"
+        }), 401
 
     if user.get("password") != password:
         return jsonify({"error": "Invalid password"}), 401
