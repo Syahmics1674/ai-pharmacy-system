@@ -3,9 +3,14 @@ from consolidation import consolidate_order_date
 from firebase_config import db  
 from datetime import timedelta
 from datetime import datetime
+from datetime import timezone
 from flask_cors import CORS  
 import sys
 import os
+import math
+import time
+import google.api_core.exceptions
+import requests as ext_requests
 
 # Allow import from ai_prediction parent directory
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'ai_prediction')))
@@ -31,10 +36,31 @@ except ModuleNotFoundError:
 app = Flask(__name__)
 CORS(app)
 
-FALLBACK_OVERALL_USAGE = {
-    "daily": [10, 12, 8, 15, 20, 18, 22],
-    "weekly": [80, 95, 70, 110],
-    "monthly": [300, 420, 390]
+# ============================================================
+# IN-MEMORY CACHE
+# ============================================================
+_cache = {}
+CACHE_TTL = 300  # 5 minutes
+
+def cache_get(key):
+    entry = _cache.get(key)
+    if entry and time.time() - entry["time"] < CACHE_TTL:
+        return entry["data"]
+    return None
+
+def cache_set(key, data):
+    _cache[key] = {"data": data, "time": time.time()}
+
+# ============================================================
+# CLINIC NETWORK — Coordinates, Haversine, Weather
+# ============================================================
+
+CLINIC_COORDINATES = {
+    'clinicA': {'lat': 3.1336, 'lng': 101.6869, 'name': 'Kuala Lumpur Health Clinic_A', 'area': 'KL Sentral'},
+    'clinicB': {'lat': 3.1623, 'lng': 101.7024, 'name': 'Kuala Lumpur Health Clinic_B', 'area': 'Chow Kit'},
+    'clinicC': {'lat': 3.1290, 'lng': 101.6740, 'name': 'Kuala Lumpur Health Clinic_C', 'area': 'Bangsar'},
+    'clinicD': {'lat': 3.1569, 'lng': 101.7655, 'name': 'Kuala Lumpur Health Clinic_D', 'area': 'Ampang'},
+    'clinicE': {'lat': 3.0565, 'lng': 101.5850, 'name': 'Kuala Lumpur Health Clinic_E', 'area': 'Subang'},
 }
 
 FALLBACK_STOCK_SUMMARY = {
@@ -87,156 +113,508 @@ def get_usage_logs_for_clinic(clinic_id):
     return logs
 
 
-def get_inventory_for_clinic(clinic_id):
-    query = db.collection("inventory")
+def count_orders_for_clinic(clinic_id, status):
+    count = 0
+    for doc in db.collection("orders") \
+            .where("clinic_id", "==", clinic_id) \
+            .stream():
+        if doc.to_dict().get("status") == status:
+            count += 1
+    return count
 
-    if clinic_id:
-        query = query.where("clinic_id", "==", clinic_id)
 
-    items = []
-    for doc in query.stream():
+def coerce_int(value, default=0):
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    if value is None:
+        return default
+    try:
+        return int(str(value))
+    except (TypeError, ValueError):
+        return default
+
+
+def parse_timestamp(value):
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return ensure_utc_datetime(value)
+    if hasattr(value, "to_datetime"):
+        try:
+            return ensure_utc_datetime(value.to_datetime())
+        except Exception:
+            return None
+    if isinstance(value, str):
+        try:
+            return ensure_utc_datetime(
+                datetime.fromisoformat(value.replace("Z", "+00:00"))
+            )
+        except ValueError:
+            return None
+    return None
+
+
+def ensure_utc_datetime(value):
+    if value is None or not isinstance(value, datetime):
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
+def utc_now():
+    return datetime.now(timezone.utc)
+
+
+def days_since(timestamp, reference=None):
+    normalized_timestamp = ensure_utc_datetime(timestamp)
+    if normalized_timestamp is None:
+        return None
+
+    normalized_reference = ensure_utc_datetime(reference or utc_now())
+    if normalized_reference is None:
+        return None
+
+    return (normalized_reference - normalized_timestamp).days
+
+
+def extract_log_quantity(data, quantity_keys):
+    for key in quantity_keys:
+        if key in data:
+            return coerce_int(data.get(key))
+    return 0
+
+
+def risk_level_from_score(score):
+    if score >= 3:
+        return "HIGH"
+    if score >= 2:
+        return "MEDIUM"
+    return "SAFE"
+
+
+def format_risk_reason(reason, fallback="Operating within safe limits"):
+    return reason or fallback
+
+
+def build_usage_summary_for_clinic(clinic_id, medicines, medicine_lookup, match_index):
+    usage_docs = db.collection("usage_logs") \
+        .where("clinic_id", "==", clinic_id) \
+        .stream()
+
+    now = utc_now()
+    monthly_usage_by_medicine = defaultdict(int)
+    weekly_usage_by_medicine = defaultdict(int)
+    monthly_log_count = 0
+
+    for doc in usage_docs:
         data = doc.to_dict()
-        items.append({
-            "item_name": data.get("item_name"),
-            "current_stock": int(data.get("current_stock", 0))
-        })
+        if not isinstance(data, dict):
+            continue
 
-    return items
-
-
-def build_overall_usage_payload(logs):
-    dated_logs = [log for log in logs if log.get("timestamp")]
-    if len(dated_logs) < 7:
-        return FALLBACK_OVERALL_USAGE
-
-    today = datetime.utcnow().date()
-    daily = []
-    for offset in range(6, -1, -1):
-        target_date = today - timedelta(days=offset)
-        total = sum(
-            log["quantity_used"]
-            for log in dated_logs
-            if log["timestamp"].date() == target_date
+        standardized = standardize_log_entry(
+            data,
+            medicines=medicines,
+            medicine_lookup=medicine_lookup,
+            match_index=match_index,
         )
-        daily.append(total)
+        quantity = extract_log_quantity(data, ["quantity_used", "qty_used"])
+        timestamp = parse_timestamp(data.get("timestamp") or data.get("created_at"))
 
-    weekly = []
-    for week_index in range(3, -1, -1):
-        end_date = today - timedelta(days=week_index * 7)
-        start_date = end_date - timedelta(days=6)
-        total = sum(
-            log["quantity_used"]
-            for log in dated_logs
-            if start_date <= log["timestamp"].date() <= end_date
-        )
-        weekly.append(total)
+        if not timestamp or not standardized["medicine_id"] or quantity <= 0:
+            continue
 
-    monthly = []
-    month_keys = []
-    for month_offset in range(2, -1, -1):
-        month_anchor = today.month - month_offset
-        year = today.year
-        while month_anchor <= 0:
-            month_anchor += 12
-            year -= 1
-        month_keys.append((year, month_anchor))
+        age_in_days = days_since(timestamp, now)
+        if age_in_days is None or age_in_days < 0:
+            continue
 
-    for year, month in month_keys:
-        total = sum(
-            log["quantity_used"]
-            for log in dated_logs
-            if log["timestamp"].year == year and log["timestamp"].month == month
-        )
-        monthly.append(total)
+        if age_in_days <= 30:
+            monthly_log_count += 1
+            monthly_usage_by_medicine[standardized["medicine_id"]] += quantity
 
-    if sum(daily) == 0 and sum(weekly) == 0 and sum(monthly) == 0:
-        return FALLBACK_OVERALL_USAGE
+        if age_in_days <= 7:
+            weekly_usage_by_medicine[standardized["medicine_id"]] += quantity
 
     return {
-        "daily": daily,
-        "weekly": weekly,
-        "monthly": monthly
+        "monthly_usage_by_medicine": monthly_usage_by_medicine,
+        "weekly_usage_by_medicine": weekly_usage_by_medicine,
+        "monthly_log_count": monthly_log_count,
     }
 
 
-def build_stock_summary_payload(inventory_items):
-    if not inventory_items:
-        return FALLBACK_STOCK_SUMMARY
+def analyze_clinic_risk(clinic, medicines, medicine_lookup, match_index):
+    clinic_id = clinic["clinic_id"]
+    inventory_docs = get_inventory_docs_for_clinic(clinic_id)
+    inventory_items = [
+        standardize_inventory_entry(
+            doc.to_dict(),
+            medicines=medicines,
+            medicine_lookup=medicine_lookup,
+            match_index=match_index,
+        )
+        for doc in inventory_docs
+    ]
+    usage_summary = build_usage_summary_for_clinic(
+        clinic_id,
+        medicines,
+        medicine_lookup,
+        match_index,
+    )
+    monthly_usage_by_medicine = usage_summary["monthly_usage_by_medicine"]
 
-    critical = 0
-    low = 0
-    safe = 0
+    pending_orders = count_orders_for_clinic(clinic_id, "PENDING")
+    submitted_orders = count_orders_for_clinic(clinic_id, "SUBMITTED")
+
+    low_stock_count = 0
+    high_depletion_count = 0
+    stockout_7d_count = 0
+    stockout_14d_count = 0
+    latest_inventory_update = None
+    top_pressure_reason = ""
+    top_pressure_score = -1.0
 
     for item in inventory_items:
-        stock = item["current_stock"]
-        if stock < 100:
-            critical += 1
-        elif stock < 200:
-            low += 1
-        else:
-            safe += 1
+        current_stock = coerce_int(item.get("current_stock"))
+        min_order_qty = max(coerce_int(item.get("min_order_qty"), 100), 1)
+        medicine_id = item.get("medicine_id", "")
+        monthly_used = monthly_usage_by_medicine.get(medicine_id, 0)
+        daily_usage = monthly_used / 30 if monthly_used > 0 else 0
+        depletion_ratio = current_stock / min_order_qty if min_order_qty else 1
+        item_last_updated = parse_timestamp(item.get("last_updated"))
+
+        if item_last_updated and (
+            latest_inventory_update is None or item_last_updated > latest_inventory_update
+        ):
+            latest_inventory_update = item_last_updated
+
+        if current_stock <= 0 or depletion_ratio < 0.75:
+            low_stock_count += 1
+
+        if daily_usage >= 3:
+            high_depletion_count += 1
+
+        if daily_usage > 0:
+            run_out_days = current_stock / daily_usage if current_stock > 0 else 0
+            if run_out_days <= 7:
+                stockout_7d_count += 1
+            elif run_out_days <= 14:
+                stockout_14d_count += 1
+
+            pressure_score = (daily_usage * 2) + max(0, (1 - depletion_ratio) * 10)
+            if pressure_score > top_pressure_score:
+                top_pressure_score = pressure_score
+                top_pressure_reason = (
+                    f"{item.get('item_name', 'Unknown medicine')} is depleting quickly"
+                )
+
+    risk_score = 1
+    risk_reason = ""
+
+    if stockout_7d_count > 0:
+        risk_score = 3
+        risk_reason = f"{stockout_7d_count} medicines may stock out within 7 days"
+    elif pending_orders >= 3:
+        risk_score = 3
+        risk_reason = "Multiple pending orders are still unresolved"
+    elif low_stock_count >= 4:
+        risk_score = 3
+        risk_reason = f"{low_stock_count} medicines are below safe stock levels"
+    elif stockout_14d_count > 0:
+        risk_score = 2
+        risk_reason = f"{stockout_14d_count} medicines may stock out within 14 days"
+    elif high_depletion_count >= 3:
+        risk_score = 2
+        risk_reason = "Medicine depletion is accelerating across several items"
+    elif pending_orders > 0:
+        risk_score = 2
+        risk_reason = "Pending orders still need operational follow-up"
+    elif top_pressure_reason:
+        risk_reason = top_pressure_reason
+
+    risk_level = risk_level_from_score(risk_score)
+    current_time = utc_now()
+    if risk_level == "HIGH":
+        next_order_date = current_time + timedelta(days=2)
+    elif risk_level == "MEDIUM":
+        next_order_date = current_time + timedelta(days=5)
+    else:
+        next_order_date = current_time + timedelta(days=12)
+
+    ai_status = {
+        "HIGH": "Urgent attention needed",
+        "MEDIUM": "Monitor closely",
+        "SAFE": "Stable",
+    }[risk_level]
 
     return {
-        "critical": critical,
-        "low": low,
-        "safe": safe
+        "clinic_id": clinic_id,
+        "name": clinic["name"],
+        "district": clinic.get("district", ""),
+        "route_id": clinic["route_id"],
+        "risk_level": risk_level,
+        "risk_score": risk_score,
+        "risk_reason": format_risk_reason(risk_reason),
+        "pending_orders": pending_orders,
+        "submitted_orders": submitted_orders,
+        "next_order_date": next_order_date.strftime("%Y-%m-%d"),
+        "last_inventory_update": (
+            latest_inventory_update.isoformat() if latest_inventory_update else None
+        ),
+        "low_stock_count": low_stock_count,
+        "high_depletion_count": high_depletion_count,
+        "stockout_7d_count": stockout_7d_count,
+        "stockout_14d_count": stockout_14d_count,
+        "ai_status": ai_status,
+        "monthly_usage_logs": usage_summary["monthly_log_count"],
     }
 
 
-def build_top_products_payload(logs):
-    if not logs:
-        return FALLBACK_TOP_PRODUCTS
+def build_pkd_clinic_analysis(district):
+    medicines, medicine_lookup, match_index = get_medicine_catalog()
+    clinics = get_district_clinics(district)
+    analysis = []
 
-    totals = {}
-    for log in logs:
-        item_name = log.get("item_name")
-        if not item_name:
+    for clinic in clinics:
+        clinic_with_context = {
+            **clinic,
+            "district": district,
+        }
+        analysis.append(
+            analyze_clinic_risk(
+                clinic_with_context,
+                medicines,
+                medicine_lookup,
+                match_index,
+            )
+        )
+
+    risk_priority = {"HIGH": 0, "MEDIUM": 1, "SAFE": 2}
+    analysis.sort(
+        key=lambda clinic: (
+            risk_priority.get(clinic["risk_level"], 3),
+            clinic["name"].lower(),
+        )
+    )
+    return analysis
+
+
+def build_pkd_top_medicines(district):
+    start = time.time()
+    medicines, medicine_lookup, match_index = get_medicine_catalog()
+    clinics = get_district_clinics(district)
+    usage_by_medicine = defaultdict(int)
+
+    thirty_days_ago = utc_now() - timedelta(days=30)
+    total_logs_read = 0
+    MAX_LOGS = 500
+
+    for clinic in clinics:
+        if total_logs_read >= MAX_LOGS:
+            break
+
+        try:
+            usage_docs = db.collection("usage_logs") \
+                .where("clinic_id", "==", clinic["clinic_id"]) \
+                .limit(MAX_LOGS) \
+                .stream()
+        except google.api_core.exceptions.ResourceExhausted:
+            print(f"[PKD] Firestore quota error reading usage_logs for {clinic['clinic_id']}")
             continue
-        totals[item_name] = totals.get(item_name, 0) + int(log.get("quantity_used", 0))
 
-    if not totals:
-        return FALLBACK_TOP_PRODUCTS
+        for doc in usage_docs:
+            if total_logs_read >= MAX_LOGS:
+                break
 
-    ranked = sorted(
-        (
-            {"item_name": item_name, "total_used": total_used}
-            for item_name, total_used in totals.items()
-        ),
-        key=lambda item: item["total_used"],
-        reverse=True
+            data = doc.to_dict()
+            timestamp = parse_timestamp(data.get("timestamp") or data.get("created_at"))
+            if not timestamp or timestamp < thirty_days_ago:
+                continue
+
+            standardized = standardize_log_entry(
+                data,
+                medicines=medicines,
+                medicine_lookup=medicine_lookup,
+                match_index=match_index,
+            )
+            quantity = extract_log_quantity(data, ["quantity_used", "qty_used"])
+            if standardized["medicine_id"]:
+                usage_by_medicine[standardized["medicine_id"]] += quantity
+            total_logs_read += 1
+
+    elapsed = time.time() - start
+    print(f"[PKD] top_medicines district={district} logs_read={total_logs_read} time={elapsed:.3f}s")
+
+    top_items = []
+    for rank, (medicine_id, total_used) in enumerate(
+        sorted(
+            usage_by_medicine.items(),
+            key=lambda entry: entry[1],
+            reverse=True,
+        )[:5],
+        start=1,
+    ):
+        medicine = medicine_lookup.get(medicine_id, {})
+        top_items.append({
+            "rank": rank,
+            "medicine_id": medicine_id,
+            "item_name": medicine.get("name", medicine_id),
+            "category": medicine.get("category", "Uncategorized"),
+            "usage_quantity": total_used,
+        })
+
+    return top_items
+
+
+def build_pkd_route_analysis(district, clinic_analysis=None):
+    clinic_analysis = clinic_analysis or build_pkd_clinic_analysis(district)
+    grouped_routes = defaultdict(list)
+
+    for clinic in clinic_analysis:
+        grouped_routes[clinic["route_id"]].append(clinic)
+
+    routes = []
+    for route_id, route_clinics in grouped_routes.items():
+        clinic_count = len(route_clinics)
+        pending_orders = sum(clinic["pending_orders"] for clinic in route_clinics)
+        monthly_usage_logs = sum(
+            clinic["monthly_usage_logs"] for clinic in route_clinics
+        )
+        average_risk_score = round(
+            sum(clinic["risk_score"] for clinic in route_clinics) / clinic_count,
+            2,
+        ) if clinic_count else 0
+        high_risk_clusters = sum(
+            1 for clinic in route_clinics if clinic["risk_level"] == "HIGH"
+        )
+        delivery_priority_score = round(
+            (average_risk_score * 20) + (pending_orders * 3) + (high_risk_clusters * 10),
+            1,
+        )
+
+        routes.append({
+            "route_id": route_id,
+            "clinic_count": clinic_count,
+            "total_clinics": clinic_count,
+            "average_risk_level": risk_level_from_score(round(average_risk_score)),
+            "average_risk_score": average_risk_score,
+            "pending_orders": pending_orders,
+            "delivery_priority_score": delivery_priority_score,
+            "stockout_risk_clusters": high_risk_clusters,
+            "high_risk_clinics": high_risk_clusters,
+            "total_monthly_usage_logs": monthly_usage_logs,
+            "urgent_date": min(
+                clinic["next_order_date"] for clinic in route_clinics
+            ) if route_clinics else None,
+            "clinics": route_clinics,
+        })
+
+    routes.sort(key=lambda route: route["delivery_priority_score"], reverse=True)
+    return routes
+
+
+def build_pkd_insights(district, clinic_analysis=None, route_analysis=None, top_medicines=None):
+    clinic_analysis = clinic_analysis or build_pkd_clinic_analysis(district)
+    route_analysis = route_analysis or build_pkd_route_analysis(
+        district,
+        clinic_analysis=clinic_analysis,
+    )
+    top_medicines = top_medicines or build_pkd_top_medicines(district)
+
+    insights = []
+
+    if route_analysis:
+        top_route = route_analysis[0]
+        insights.append(
+            f"{top_route['route_id']} should be prioritized first with a delivery score of "
+            f"{top_route['delivery_priority_score']}."
+        )
+
+    clinics_stocking_out = sum(
+        1 for clinic in clinic_analysis if clinic["stockout_7d_count"] > 0
+    )
+    if clinics_stocking_out:
+        insights.append(
+            f"{clinics_stocking_out} clinics may stock out within 7 days if no action is taken."
+        )
+
+    if top_medicines:
+        top_medicine = top_medicines[0]
+        insights.append(
+            f"{top_medicine['item_name']} is the top dispensed medicine in {district} "
+            f"with {top_medicine['usage_quantity']} recent uses."
+        )
+
+    high_risk_clinics = [
+        clinic["name"] for clinic in clinic_analysis if clinic["risk_level"] == "HIGH"
+    ]
+    if high_risk_clinics:
+        insights.append(
+            f"High-risk clinics needing close monitoring: {', '.join(high_risk_clinics[:3])}."
+        )
+
+    return insights[:4]
+
+
+def build_pkd_overview(district):
+    medicines, _, _ = get_medicine_catalog()
+    clinic_analysis = build_pkd_clinic_analysis(district)
+    route_analysis = build_pkd_route_analysis(
+        district,
+        clinic_analysis=clinic_analysis,
+    )
+    top_medicines = build_pkd_top_medicines(district)
+    insights = build_pkd_insights(
+        district,
+        clinic_analysis=clinic_analysis,
+        route_analysis=route_analysis,
+        top_medicines=top_medicines,
     )
 
-    return ranked[:5]
+    total_clinics = len(clinic_analysis)
+    clinics_at_risk = sum(
+        1 for clinic in clinic_analysis if clinic["risk_level"] in {"HIGH", "MEDIUM"}
+    )
+    pending_orders = sum(clinic["pending_orders"] for clinic in clinic_analysis)
+    submitted_orders = sum(clinic["submitted_orders"] for clinic in clinic_analysis)
+    total_medicines_tracked = len(medicines)
+    monthly_usage_logs = sum(clinic["monthly_usage_logs"] for clinic in clinic_analysis)
+    active_routes = len(route_analysis)
 
-
-def build_insight_message_payload(stock_summary, top_products):
-    if not top_products:
-        return FALLBACK_INSIGHT_MESSAGE
-
-    top_item = top_products[0]["item_name"]
-    critical = stock_summary.get("critical", 0)
-    low = stock_summary.get("low", 0)
-
-    if critical > 0:
-        return {
-            "message": (
-                f"{top_item} demand is rising while {critical} items are already "
-                "critical. Consider urgent replenishment."
-            )
-        }
-
-    if low > 0:
-        return {
-            "message": (
-                f"{top_item} remains one of the most dispensed products. "
-                "Monitor low stock items and plan the next replenishment soon."
-            )
-        }
+    risk_counts = {
+        "safe": sum(1 for clinic in clinic_analysis if clinic["risk_level"] == "SAFE"),
+        "medium": sum(1 for clinic in clinic_analysis if clinic["risk_level"] == "MEDIUM"),
+        "high": sum(1 for clinic in clinic_analysis if clinic["risk_level"] == "HIGH"),
+    }
 
     return {
-        "message": (
-            f"{top_item} leads current usage, but overall stock levels look stable."
-        )
+        "district": district,
+        "total_clinics": total_clinics,
+        "clinics_at_risk": clinics_at_risk,
+        "high_risk_clinics": risk_counts["high"],
+        "pending_orders": pending_orders,
+        "submitted_orders": submitted_orders,
+        "total_medicines_tracked": total_medicines_tracked,
+        "monthly_usage_logs": monthly_usage_logs,
+        "active_routes": active_routes,
+        "risk_counts": risk_counts,
+        "top_medicines": top_medicines,
+        "insights": insights,
+        "trend": {
+            "high_risk": [
+                max(risk_counts["high"] - 2, 0),
+                max(risk_counts["high"] - 1, 0),
+                risk_counts["high"],
+            ],
+            "orders": [
+                max(submitted_orders - 4, 0),
+                max(submitted_orders - 2, 0),
+                submitted_orders,
+            ],
+        },
     }
 
 @app.route('/login', methods=['POST'])
@@ -259,20 +637,160 @@ def login():
              .where("password", "==", password) \
              .stream()
 
-    for doc in docs:
-        user = doc.to_dict()
-        print(f"[LOGIN] Success: user_id={user_id}, role={user.get('role', 'unknown')}")
-        return jsonify({
-            "success": True,
-            "message": "Login successful",
-            "user_id": user.get("user_id"),
-            "role": user.get("role", "clinic"),
-            "clinic_id": user.get("clinic_id"),
-            "district": user.get("district", "")
-        })
+    user = doc.to_dict()
 
-    print(f"[LOGIN] Failed: invalid credentials for user_id={user_id}")
-    return jsonify({"success": False, "error": "Invalid credentials"}), 401
+    if user.get("password") != password:
+        return jsonify({"error": "Invalid password"}), 401
+
+    return jsonify({
+        "success": True,
+        "role": user.get("role"),
+        "clinic_id": user.get("clinic_id"),
+        "district": user.get("district")
+    })
+
+
+@app.route('/clinics_by_district', methods=['GET'])
+def clinics_by_district():
+    district = (request.args.get('district') or '').strip()
+
+    if not district:
+        return jsonify({"error": "district is required"}), 400
+
+    return jsonify({"clinics": get_district_clinics(district)})
+
+
+@app.route('/pkd_summary', methods=['GET'])
+def pkd_summary():
+    district = (request.args.get('district') or '').strip()
+
+    if not district:
+        return jsonify({"error": "district is required"}), 400
+
+    overview = build_pkd_overview(district)
+
+    return jsonify({
+        "total_clinics": overview["total_clinics"],
+        "high_risk_clinics": overview["high_risk_clinics"],
+        "pending_orders": overview["pending_orders"],
+        "submitted_orders": overview["submitted_orders"]
+    })
+
+
+@app.route('/pkd_clinic_analysis', methods=['GET'])
+def pkd_clinic_analysis():
+    district = (request.args.get('district') or '').strip()
+
+    if not district:
+        return jsonify({"error": "district is required"}), 400
+
+    clinic_analysis = build_pkd_clinic_analysis(district)
+
+    return jsonify({
+        "clinics": clinic_analysis
+    })
+
+
+@app.route('/pkd_route_analysis', methods=['GET'])
+def pkd_route_analysis():
+    district = (request.args.get('district') or '').strip()
+
+    if not district:
+        return jsonify({"error": "district is required"}), 400
+
+    route_results = build_pkd_route_analysis(district)
+
+    return jsonify({"routes": route_results})
+
+
+@app.route('/pkd_alerts', methods=['GET'])
+def pkd_alerts():
+    district = (request.args.get('district') or '').strip()
+
+    if not district:
+        return jsonify({"error": "district is required"}), 400
+
+    return jsonify({"alerts": build_pkd_insights(district)})
+
+
+@app.route('/pkd/overview', methods=['GET'])
+def pkd_overview():
+    district = (request.args.get('district') or '').strip()
+
+    if not district:
+        return jsonify({"error": "district is required", "success": False}), 400
+
+    try:
+        return jsonify(build_pkd_overview(district))
+    except Exception as e:
+        print(f"[PKD] /pkd/overview error for district={district}: {e}")
+        return jsonify({"error": "Failed to load overview", "success": False}), 500
+
+
+@app.route('/pkd/clinic_risks', methods=['GET'])
+def pkd_clinic_risks():
+    district = (request.args.get('district') or '').strip()
+
+    if not district:
+        return jsonify({"error": "district is required", "success": False}), 400
+
+    try:
+        return jsonify({
+            "district": district,
+            "clinics": build_pkd_clinic_analysis(district),
+        })
+    except Exception as e:
+        print(f"[PKD] /pkd/clinic_risks error for district={district}: {e}")
+        return jsonify({"error": "Failed to load clinic risks", "success": False}), 500
+
+
+@app.route('/pkd/routes', methods=['GET'])
+def pkd_routes():
+    district = (request.args.get('district') or '').strip()
+
+    if not district:
+        return jsonify({"error": "district is required", "success": False}), 400
+
+    try:
+        return jsonify({
+            "district": district,
+            "routes": build_pkd_route_analysis(district),
+        })
+    except Exception as e:
+        print(f"[PKD] /pkd/routes error for district={district}: {e}")
+        return jsonify({"error": "Failed to load routes", "success": False}), 500
+
+
+@app.route('/pkd/top_medicines', methods=['GET'])
+def pkd_top_medicines():
+    district = (request.args.get('district') or '').strip()
+
+    if not district:
+        return jsonify({"error": "district is required", "success": False}), 400
+
+    cache_key = f"top_medicines:{district}"
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return jsonify(cached)
+
+    try:
+        medicines = build_pkd_top_medicines(district)
+    except google.api_core.exceptions.ResourceExhausted:
+        return jsonify({
+            "success": False,
+            "error": "quota_exceeded",
+            "message": "Firestore quota temporarily exceeded",
+        })
+    except Exception as e:
+        print(f"[PKD] /pkd/top_medicines error for district={district}: {e}")
+        return jsonify({"error": "Failed to load top medicines", "success": False}), 500
+
+    response_data = {
+        "district": district,
+        "medicines": medicines,
+    }
+    cache_set(cache_key, response_data)
+    return jsonify(response_data)
 
 @app.route('/clinic_info', methods=['GET'])
 def clinic_info():
