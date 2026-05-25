@@ -10,8 +10,14 @@ import time
 import threading
 import logging
 
+from routes.supabase_routes import supabase_bp
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 logger = logging.getLogger(__name__)
+
+app = Flask(__name__)
+CORS(app)
+app.register_blueprint(supabase_bp)
 
 # In-memory TTL cache
 _cache = {}
