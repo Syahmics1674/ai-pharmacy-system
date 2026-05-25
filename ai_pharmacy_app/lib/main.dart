@@ -2,11 +2,69 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'dart:convert';
 import 'package:fl_chart/fl_chart.dart';
+import 'dart:convert';
 import 'dart:typed_data';
 import 'order_history_page.dart';
 import 'pkd_dashboard_page.dart';
+import 'dashboard_page.dart';
+
+// Client-side API response cache
+final _apiCache = <String, _CacheEntry>{};
+final _inflightRequests = <String, Future<Map<String, dynamic>>>{};
+const _defaultCacheTtl = Duration(seconds: 30);
+
+class _CacheEntry {
+  final Map<String, dynamic> data;
+  final DateTime expiresAt;
+  _CacheEntry(this.data, this.expiresAt);
+}
+
+Map<String, dynamic>? _getCached(String key) {
+  final entry = _apiCache[key];
+  if (entry == null) return null;
+  if (DateTime.now().isAfter(entry.expiresAt)) {
+    _apiCache.remove(key);
+    return null;
+  }
+  return entry.data;
+}
+
+void _setCache(String key, Map<String, dynamic> data, {Duration ttl = _defaultCacheTtl}) {
+  _apiCache[key] = _CacheEntry(data, DateTime.now().add(ttl));
+}
+
+String _cacheKey(String url) => url;
+
+Future<Map<String, dynamic>> safeApiGet(String url, {Duration timeout = const Duration(seconds: 8), Duration? cacheTtl}) async {
+  final key = _cacheKey(url);
+  final cached = _getCached(key);
+  if (cached != null) return cached;
+
+  final inflight = _inflightRequests[key];
+  if (inflight != null) return inflight;
+
+  final future = _doApiGet(url, timeout);
+  _inflightRequests[key] = future;
+  try {
+    final result = await future;
+    if (cacheTtl != null) {
+      _setCache(key, result, ttl: cacheTtl);
+    }
+    return result;
+  } finally {
+    _inflightRequests.remove(key);
+  }
+}
+
+Future<Map<String, dynamic>> _doApiGet(String url, Duration timeout) async {
+  final response = await http.get(Uri.parse(url)).timeout(timeout);
+  if (response.statusCode == 200) {
+    return json.decode(response.body) as Map<String, dynamic>;
+  }
+  final body = json.decode(response.body);
+  throw Exception(body['error'] ?? "HTTP ${response.statusCode}");
+}
 
 String medicineIdOf(dynamic item) {
   if (item is Map) {
@@ -42,6 +100,21 @@ int itemQuantityOf(dynamic item, {List<String> keys = const ['qty']}) {
   return 0;
 }
 
+Future<Map<String, dynamic>> safeApiPost(String url, Map<String, dynamic> body, {Duration timeout = const Duration(seconds: 8)}) async {
+  final response = await http
+      .post(
+        Uri.parse(url),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(body),
+      )
+      .timeout(timeout);
+  if (response.statusCode == 200) {
+    return json.decode(response.body) as Map<String, dynamic>;
+  }
+  final errBody = json.decode(response.body);
+  throw Exception(errBody['error'] ?? "HTTP ${response.statusCode}");
+}
+
 void main() {
   runApp(MaterialApp(home: LoginPage()));
 }
@@ -67,90 +140,58 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
   String clinicName = "";
+  String clinicDistrict = "";
 
-  final homeKey = GlobalKey<HomePageState>();
+  final homeKey = GlobalKey<_InventoryPageState>();
   final orderKey = GlobalKey<_OrderPageState>();
+  final dashboardKey = GlobalKey<DashboardPageState>();
 
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
 
-    // 🔥 When user goes back to HomePage → refresh
-    if (index == 0) {
+    if (index == 1) {
       homeKey.currentState?.refreshAll();
     }
 
-    if (index == 3) {
+    if (index == 4) {
       orderKey.currentState?.refreshOrderPage();
+    }
+
+    if (index == 0) {
+      dashboardKey.currentState?.fetchDashboardData();
     }
   }
 
-  Future<void> fetchClinicName() async {
+  Future<void> fetchClinicInfo() async {
     final response = await http.get(
       Uri.parse(
         "http://localhost:5000/clinic_info?clinic_id=${widget.clinicId}",
       ),
-    );
+    ).timeout(const Duration(seconds: 8));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       setState(() {
-        clinicName = data['clinic_name'];
+        clinicName = data['clinic_name'] ?? widget.clinicId;
+        clinicDistrict = data['district'] ?? "";
       });
     }
   }
 
-  void _showLogoutMenu(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: Icon(Icons.logout),
-                title: Text("Logout"),
-                onTap: () {
-                  Navigator.pop(context);
-                  _confirmLogout(context);
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _confirmLogout(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text("Confirm Logout"),
-        content: Text("Are you sure you want to logout?"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => LoginPage()),
-                (route) => false,
-              );
-            },
-            child: Text("Logout"),
-          ),
-        ],
-      ),
+  void _performLogout() {
+    _apiCache.clear();
+    _inflightRequests.clear();
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => LoginPage()),
+      (route) => false,
     );
   }
 
   final List<String> _pageTitles = [
+    "Dashboard",
     "Inventory",
     "Stock Operations",
     "AI Insights",
@@ -160,79 +201,85 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
-    fetchClinicName();
+    fetchClinicInfo();
   }
 
   @override
   Widget build(BuildContext context) {
     final List<Widget> pages = [
-      HomePage(key: homeKey, clinicId: widget.clinicId),
+      DashboardPage(
+        key: dashboardKey,
+        clinicId: widget.clinicId,
+        onLogout: _performLogout,
+        onNavigateInventory: () => setState(() => _selectedIndex = 1),
+        onNavigateOperations: () => setState(() => _selectedIndex = 2),
+        onNavigateOrders: () => setState(() => _selectedIndex = 4),
+        onNavigateReports: () => setState(() => _selectedIndex = 3),
+      ),
+      InventoryPage(key: homeKey, clinicId: widget.clinicId),
       StockOperationsPage(clinicId: widget.clinicId),
       AIInsightsPage(clinicId: widget.clinicId),
       OrderPage(key: orderKey, clinicId: widget.clinicId),
     ];
 
     return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: [
-            // 🔵 LEFT: Clinic Name
-            GestureDetector(
-              onTap: () {
-                _showLogoutMenu(context);
-              },
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  clinicName.isEmpty ? widget.clinicId : clinicName,
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-
-            // 🔥 CENTER TITLE
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+      appBar: _selectedIndex == 0
+          ? null
+          : AppBar(
+              title: Row(
                 children: [
-                  Text(
-                    "AI-Assisted Pharmacy Inventory System",
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                  Text(
-                    _pageTitles[_selectedIndex],
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.white70,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 0.5,
+                  GestureDetector(
+                    onTap: () => setState(() => _selectedIndex = 0),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        clinicName.isEmpty ? widget.clinicId : clinicName,
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          "AI-Assisted Pharmacy Inventory System",
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                        Text(
+                          _pageTitles[_selectedIndex],
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.white70,
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(width: 60),
                 ],
               ),
+              centerTitle: false,
+              backgroundColor: Colors.blueAccent,
             ),
-
-            // 🔥 RIGHT EMPTY (to balance center)
-            SizedBox(width: 60),
-          ],
-        ),
-        centerTitle: false,
-        backgroundColor: Colors.blueAccent,
-      ),
-
       body: pages[_selectedIndex],
-
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
         selectedItemColor: Colors.blue,
         unselectedItemColor: Colors.grey,
         type: BottomNavigationBarType.fixed,
-        items: [
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.dashboard),
+            label: "Dashboard",
+          ),
           BottomNavigationBarItem(
             icon: Icon(Icons.inventory),
             label: "Inventory",
@@ -474,252 +521,366 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
-// ================= MAIN HOME PAGE =================
+// ================= INVENTORY PAGE (ENHANCED) =================
 
-class HomePage extends StatefulWidget {
+class InventoryPage extends StatefulWidget {
   final String clinicId;
 
-  const HomePage({super.key, required this.clinicId});
+  const InventoryPage({super.key, required this.clinicId});
 
   @override
-  HomePageState createState() => HomePageState();
+  _InventoryPageState createState() => _InventoryPageState();
 }
 
-class HomePageState extends State<HomePage> {
-  final String baseUrl = "http://localhost:5000"; // ⚠️ Chrome OK, macOS NOT OK
+class _InventoryPageState extends State<InventoryPage> {
+  final String baseUrl = "http://localhost:5000";
 
   List inventory = [];
-  List suggestions = [];
-  String consolidatedDate = "";
-  String recommendationMessage = "";
-  String? selectedItem;
   bool isLoading = false;
   String clinicName = "";
+
+  String searchQuery = "";
+  String _filterOption = "All";
+
+  List<String> filterOptions = [
+    "All",
+    "Low Stock",
+    "Expired",
+    "Expiring Soon",
+    "Safe",
+  ];
 
   @override
   void initState() {
     super.initState();
     fetchInventory();
-    fetchSuggestions();
-    fetchConsolidation();
   }
 
-  // ############## FETCH APIs ##############
-
   Future<void> fetchInventory() async {
+    setState(() => isLoading = true);
     try {
-      final response = await http.get(
-        Uri.parse("$baseUrl/inventory?clinic_id=${widget.clinicId}"),
-      );
-
-      print("STATUS: ${response.statusCode}");
-      print("BODY: ${response.body}");
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        setState(() {
-          inventory = data['inventory'];
-          clinicName = data["clinic_name"];
-        });
-      }
+      final data = await safeApiGet("$baseUrl/inventory?clinic_id=${widget.clinicId}");
+      setState(() {
+        inventory = data['inventory'] ?? [];
+        clinicName = data["clinic_name"] ?? widget.clinicId;
+      });
     } catch (e) {
       print("ERROR: $e");
     }
-  }
-
-  Future<void> fetchSuggestions() async {
-    final response = await http.get(
-      Uri.parse("$baseUrl/order_suggestions?clinic_id=${widget.clinicId}"),
-    );
-
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      setState(() {
-        suggestions = data['order_suggestions'];
-      });
-    }
-  }
-
-  Future<void> fetchConsolidation() async {
-    final response = await http.get(
-      Uri.parse("$baseUrl/consolidate?clinic_id=${widget.clinicId}"),
-    );
-
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      setState(() {
-        consolidatedDate = data['consolidated_date'];
-        recommendationMessage = data['recommendation_message'] ?? "";
-      });
-    }
+    if (mounted) setState(() => isLoading = false);
   }
 
   void refreshAll() {
     fetchInventory();
-    fetchSuggestions();
-    fetchConsolidation();
   }
 
-  // ############## UI ##############
+  List get _filteredInventory {
+    var items = inventory;
+
+    if (searchQuery.isNotEmpty) {
+      final q = searchQuery.toLowerCase();
+      items = items.where((item) {
+        return itemNameOf(item).toLowerCase().contains(q) ||
+            medicineIdOf(item).toLowerCase().contains(q) ||
+            (item['category'] ?? '').toString().toLowerCase().contains(q) ||
+            (item['batch_no'] ?? '').toString().toLowerCase().contains(q);
+      }).toList();
+    }
+
+    switch (_filterOption) {
+      case "Low Stock":
+        items = items.where((i) => (i['current_stock'] ?? 0) < 100).toList();
+        break;
+      case "Expired":
+        items = items.where((i) => i['expiry_status'] == 'expired').toList();
+        break;
+      case "Expiring Soon":
+        items = items.where(
+            (i) => i['expiry_status'] == 'expiring_soon').toList();
+        break;
+      case "Safe":
+        items = items.where(
+            (i) => i['expiry_status'] == 'safe' || i['expiry_status'] == 'warning').toList();
+        break;
+    }
+
+    items.sort((a, b) {
+      final aExp = a['expiry_status'] ?? 'safe';
+      final bExp = b['expiry_status'] ?? 'safe';
+      if (aExp == 'expired' && bExp != 'expired') return -1;
+      if (aExp != 'expired' && bExp == 'expired') return 1;
+      if (aExp == 'expiring_soon' && bExp != 'expiring_soon' && bExp != 'expired') return -1;
+      if (aExp != 'expiring_soon' && aExp != 'expired' && bExp == 'expiring_soon') return 1;
+      return (a['current_stock'] ?? 0).compareTo(b['current_stock'] ?? 0);
+    });
+
+    return items;
+  }
+
+  int get _expiredCount =>
+      inventory.where((i) => i['expiry_status'] == 'expired').length;
+  int get _expiringSoonCount =>
+      inventory.where((i) => i['expiry_status'] == 'expiring_soon').length;
+  int get _safeCount =>
+      inventory.where((i) => i['expiry_status'] == 'safe' || i['expiry_status'] == 'warning' || i['expiry_status'] == 'unknown').length;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: ListView(
-          children: [
-            // 🔷 INVENTORY CARD
-            Card(
-              elevation: 3,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Inventory",
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 10),
+    final filtered = _filteredInventory;
+    final expiredCount = _expiredCount;
+    final expiringSoonCount = _expiringSoonCount;
+    final safeCount = _safeCount;
 
-                    ...inventory.map(
-                      (item) => Card(
-                        color: item['current_stock'] < 100
-                            ? Colors.red[50]
-                            : Colors.grey[100],
-                        child: ListTile(
-                          title: Text(itemNameOf(item)),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
+    return Scaffold(
+      body: RefreshIndicator(
+        onRefresh: fetchInventory,
+        child: Column(
+          children: [
+            // Search bar
+            Container(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: TextField(
+                decoration: InputDecoration(
+                  hintText: "Search by name, ID, category, batch...",
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  filled: true,
+                  fillColor: Colors.grey[100],
+                ),
+                onChanged: (v) => setState(() => searchQuery = v),
+              ),
+            ),
+
+            // Filters row
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Row(
+                children: [
+                  ...filterOptions.map((f) => Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: FilterChip(
+                          label: Text(f, style: const TextStyle(fontSize: 11)),
+                          selected: _filterOption == f,
+                          onSelected: (_) => setState(() => _filterOption = f),
+                          selectedColor: Colors.blueAccent.withOpacity(0.2),
+                          checkmarkColor: Colors.blueAccent,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      )),
+                ],
+              ),
+            ),
+
+            // Expiry summary
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Row(
+                children: [
+                  _expiryChip("Expired", expiredCount, Colors.red.shade700),
+                  const SizedBox(width: 8),
+                  _expiryChip("Expiring Soon", expiringSoonCount, Colors.orange),
+                  const SizedBox(width: 8),
+                  _expiryChip("Safe", safeCount, Colors.green),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 4),
+
+            // Inventory list
+            Expanded(
+              child: isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : filtered.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Text(itemCategoryOf(item)),
-                              if (item['current_stock'] < 100)
-                                Text(
-                                  "⚠ Low Stock",
-                                  style: TextStyle(
-                                    color: Colors.red,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                              Icon(Icons.inventory_2,
+                                  size: 64, color: Colors.grey[300]),
+                              const SizedBox(height: 16),
+                              Text(
+                                searchQuery.isNotEmpty ||
+                                        _filterOption != "All"
+                                    ? "No medicines match your filter."
+                                    : "No inventory data available.",
+                                style: TextStyle(
+                                    fontSize: 16, color: Colors.grey[500]),
+                              ),
                             ],
                           ),
-                          trailing: Text(
-                            "Stock: ${item['current_stock']}",
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: item['current_stock'] < 100
-                                  ? Colors.red
-                                  : Colors.black,
-                            ),
-                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: filtered.length,
+                          itemBuilder: (ctx, i) {
+                            final item = filtered[i];
+                            final stock = item['current_stock'] ?? 0;
+                            final expiryStatus =
+                                item['expiry_status'] ?? 'unknown';
+                            final daysRemaining =
+                                item['days_remaining'];
+                            final batchNo =
+                                item['batch_no'] ?? '';
+
+                            Color riskColor;
+                            String riskLabel;
+                            if (expiryStatus == 'expired') {
+                              riskColor = Colors.red.shade700;
+                              riskLabel = "Expired";
+                            } else if (expiryStatus == 'expiring_soon') {
+                              riskColor = Colors.red;
+                              riskLabel =
+                                  "$daysRemaining days";
+                            } else if (expiryStatus == 'warning') {
+                              riskColor = Colors.orange;
+                              riskLabel =
+                                  "$daysRemaining days";
+                            } else {
+                              riskColor = Colors.green;
+                              riskLabel = expiryStatus == 'unknown'
+                                  ? "No expiry data"
+                                  : "Safe";
+                            }
+
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            itemNameOf(item),
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 15,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Row(
+                                            children: [
+                                              if (batchNo.isNotEmpty) ...[
+                                                Text(
+                                                  "Batch: $batchNo",
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: Colors.grey[600],
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 12),
+                                              ],
+                                              Text(
+                                                itemCategoryOf(item),
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.grey[600],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          if (stock < 100)
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.only(top: 4),
+                                              child: Text(
+                                                "⚠ Low Stock",
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.red,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
+                                      children: [
+                                        Container(
+                                          padding:
+                                              const EdgeInsets.symmetric(
+                                                  horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: riskColor.withOpacity(0.1),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            riskLabel,
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                              color: riskColor,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          "Stock: $stock",
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                            color: stock < 100
+                                                ? Colors.red
+                                                : Colors.black87,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
                         ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             ),
-
-            SizedBox(height: 16),
-
-            // 🔷 ORDER SUGGESTIONS
-            Card(
-              elevation: 3,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Order Suggestions",
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 10),
-
-                    ...suggestions.map(
-                      (item) => ListTile(
-                        title: Text(itemNameOf(item)),
-                        subtitle: Text(
-                          "Qty: ${item['suggested_qty']} | ${item['priority']}",
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            SizedBox(height: 16),
-
-            // 🔷 NEXT ORDER DATE
-            Card(
-              elevation: 3,
-              color: Colors.blue[50],
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                    Text("Next Order Date", style: TextStyle(fontSize: 18)),
-                    SizedBox(height: 8),
-                    Text(
-                      consolidatedDate.isEmpty ? "-" : consolidatedDate,
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            if (recommendationMessage.isNotEmpty) ...[
-              SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.amber[50],
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.amber.shade200),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.info_outline, color: Colors.blueAccent),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        recommendationMessage,
-                        style: TextStyle(
-                          fontSize: 15,
-                          height: 1.4,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _expiryChip(String label, int count, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            "$count $label",
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: color,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -759,100 +920,68 @@ class _StockOperationsPageState extends State<StockOperationsPage> {
 
   Future<void> stockIn(Map<String, dynamic> item, int qty) async {
     setState(() => isLoading = true);
-
     try {
-      final response = await http.post(
-        Uri.parse("$baseUrl/stock_in"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "clinic_id": widget.clinicId,
-          "medicine_id": medicineIdOf(item),
-          "item_name": itemNameOf(item),
-          "quantity_added": qty,
-        }),
-      );
-
-      final data = json.decode(response.body);
-
-      if (response.statusCode == 200) {
-        // ✅ SUCCESS MESSAGE (HERE, NOT IN BODY)
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Stock-in successful ✅")));
-
-        refreshAll();
-      } else {
-        // ❌ BACKEND ERROR
+      await safeApiPost("$baseUrl/stock_in", {
+        "clinic_id": widget.clinicId,
+        "medicine_id": medicineIdOf(item),
+        "item_name": itemNameOf(item),
+        "quantity_added": qty,
+      });
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(data['error'] ?? "Operation failed ❌")),
+          const SnackBar(content: Text("Stock-in successful ✅")),
         );
       }
+      refreshAll();
     } catch (e) {
-      // ❌ NETWORK ERROR
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Connection error ❌")));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceAll("Exception: ", "") + " ❌")),
+        );
+      }
     }
-
     setState(() => isLoading = false);
   }
 
   Future<void> stockOut(Map<String, dynamic> item, int qty) async {
     setState(() => isLoading = true);
-
     try {
-      final response = await http.post(
-        Uri.parse("$baseUrl/stock_out"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "clinic_id": widget.clinicId,
-          "medicine_id": medicineIdOf(item),
-          "item_name": itemNameOf(item),
-          "quantity_used": qty,
-        }),
-      );
-
-      final data = json.decode(response.body);
-
-      if (response.statusCode == 200) {
-        // ✅ SUCCESS
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Stock-out successful ✅")));
-
-        refreshAll();
-      } else {
-        // ❌ ERROR FROM BACKEND
+      await safeApiPost("$baseUrl/stock_out", {
+        "clinic_id": widget.clinicId,
+        "medicine_id": medicineIdOf(item),
+        "item_name": itemNameOf(item),
+        "quantity_used": qty,
+      });
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(data['error'] ?? "Operation failed ❌")),
+          const SnackBar(content: Text("Stock-out successful ✅")),
         );
       }
+      refreshAll();
     } catch (e) {
-      // ❌ NETWORK ERROR
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Connection error ❌")));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceAll("Exception: ", "") + " ❌")),
+        );
+      }
     }
     setState(() => isLoading = false);
   }
 
   Future<void> fetchInventory() async {
     try {
-      final response = await http.get(
-        Uri.parse("$baseUrl/inventory?clinic_id=${widget.clinicId}"),
-      );
-
-      print("STATUS: ${response.statusCode}");
-      print("BODY: ${response.body}");
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+      final data = await safeApiGet("$baseUrl/inventory?clinic_id=${widget.clinicId}");
+      if (mounted) {
         setState(() {
-          inventory = data['inventory'];
+          inventory = data['inventory'] ?? [];
         });
       }
     } catch (e) {
-      print("ERROR: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to load inventory: $e")),
+        );
+      }
     }
   }
 
@@ -1079,45 +1208,35 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
 
   Future<void> fetchUsage() async {
     try {
-      final res = await http.get(
-        Uri.parse("$baseUrl/ai/overall_usage?clinic_id=${widget.clinicId}"),
-      );
-      if (res.statusCode == 200) {
-        final data = json.decode(res.body);
-        if (mounted) {
-          setState(() {
-            dailyUsage = List<int>.from(data['daily'] ?? []);
-            weeklyUsage = List<int>.from(data['weekly'] ?? []);
-            monthlyUsage = List<int>.from(data['monthly'] ?? []);
-          });
-        }
+      final data = await safeApiGet("$baseUrl/ai/overall_usage?clinic_id=${widget.clinicId}");
+      if (mounted) {
+        setState(() {
+          dailyUsage = List<int>.from(data['daily'] ?? []);
+          weeklyUsage = List<int>.from(data['weekly'] ?? []);
+          monthlyUsage = List<int>.from(data['monthly'] ?? []);
+        });
       }
     } catch (_) {}
   }
 
   Future<void> fetchStockSummary() async {
     try {
-      final res = await http.get(
-        Uri.parse("$baseUrl/ai/stock_summary?clinic_id=${widget.clinicId}"),
-      );
-      if (res.statusCode == 200) {
-        final data = json.decode(res.body);
-        if (mounted) {
-          setState(() {
-            stockSummary = Map<String, dynamic>.from(data);
-          });
-        }
+      final data = await safeApiGet("$baseUrl/ai/stock_summary?clinic_id=${widget.clinicId}");
+      if (mounted) {
+        setState(() {
+          stockSummary = Map<String, dynamic>.from(data);
+        });
       }
     } catch (_) {}
   }
 
   Future<void> fetchTopProducts() async {
     try {
-      final res = await http.get(
+      final response = await http.get(
         Uri.parse("$baseUrl/ai/top_products?clinic_id=${widget.clinicId}"),
-      );
-      if (res.statusCode == 200) {
-        final raw = json.decode(res.body) as List;
+      ).timeout(const Duration(seconds: 8));
+      if (response.statusCode == 200) {
+        final raw = json.decode(response.body) as List;
         if (mounted) {
           setState(() {
             topProducts = raw.cast<Map<String, dynamic>>();
@@ -1129,32 +1248,22 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
 
   Future<void> fetchInsightMessage() async {
     try {
-      final res = await http.get(
-        Uri.parse("$baseUrl/ai/insight_message?clinic_id=${widget.clinicId}"),
-      );
-      if (res.statusCode == 200) {
-        final data = json.decode(res.body);
-        if (mounted) {
-          setState(() {
-            insightMessage = data['message'] ?? "";
-          });
-        }
+      final data = await safeApiGet("$baseUrl/ai/insight_message?clinic_id=${widget.clinicId}");
+      if (mounted) {
+        setState(() {
+          insightMessage = data['message'] ?? "";
+        });
       }
     } catch (_) {}
   }
 
   Future<void> fetchSmartInventory() async {
     try {
-      final res = await http.get(
-        Uri.parse("$baseUrl/ai/smart_inventory?clinic_id=${widget.clinicId}"),
-      );
-      if (res.statusCode == 200) {
-        final data = json.decode(res.body);
-        if (mounted) {
-          setState(() {
-            smartInventory = data['smart_inventory'] ?? [];
-          });
-        }
+      final data = await safeApiGet("$baseUrl/ai/smart_inventory?clinic_id=${widget.clinicId}");
+      if (mounted) {
+        setState(() {
+          smartInventory = data['smart_inventory'] ?? [];
+        });
       }
     } catch (e) {
       print("ERROR Smart Inventory: $e");
@@ -2087,41 +2196,22 @@ class _OrderPageState extends State<OrderPage> {
           "suggested_qty": item['suggested_qty'],
         };
       }).toList();
-      final orderDate = DateTime.now().toIso8601String().split('T').first;
-
-      final url = Uri.parse('$baseUrl/generate_order');
-
-      final response = await http.post(
-        url,
-        headers: {"Content-Type": "application/json"},
-        body: json.encode({
-          "clinic_id": widget.clinicId,
-          "items": generatedItems,
-        }),
-      );
-
-      print("STATUS: ${response.statusCode}");
-      print("BODY: ${response.body}");
-
-      if (response.statusCode == 200) {
-        setState(() {
-          generatedOrders = generatedItems;
-          generatedOrderDate = orderDate;
-        });
-
-        await refreshOrderPage();
-
+      await safeApiPost("$baseUrl/generate_order", {
+        "clinic_id": widget.clinicId,
+        "items": generatedItems,
+      });
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Order generated successfully ✅")),
+          const SnackBar(content: Text("Order generated successfully ✅")),
         );
-      } else {
-        throw Exception("Failed");
       }
+      await refreshOrderPage();
     } catch (e) {
-      print("ERROR: $e");
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Failed to generate order ❌")));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to generate order ❌")),
+        );
+      }
     }
   }
 
@@ -2208,22 +2298,13 @@ class _OrderPageState extends State<OrderPage> {
 
   Future<void> fetchClinicName() async {
     try {
-      final response = await http.get(
-        Uri.parse("$baseUrl/clinic_info?clinic_id=${widget.clinicId}"),
-      );
-
-      if (response.statusCode != 200) return;
-
-      final data = json.decode(response.body);
-
-      if (!mounted) return;
-
-      setState(() {
-        clinicDisplayName = data['clinic_name'] ?? widget.clinicId;
-      });
-    } catch (e) {
-      print("ERROR fetching clinic name: $e");
-    }
+      final data = await safeApiGet("$baseUrl/clinic_info?clinic_id=${widget.clinicId}");
+      if (mounted) {
+        setState(() {
+          clinicDisplayName = data['clinic_name'] ?? widget.clinicId;
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> refreshOrderPage() async {
@@ -2239,74 +2320,57 @@ class _OrderPageState extends State<OrderPage> {
   }
 
   Future<void> fetchSuggestions() async {
-    final response = await http.get(
-      Uri.parse("$baseUrl/order_suggestions?clinic_id=${widget.clinicId}"),
-    );
-
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-
-      setState(() {
-        suggestions = data['order_suggestions'];
-      });
-    }
+    try {
+      final data = await safeApiGet("$baseUrl/order_suggestions?clinic_id=${widget.clinicId}");
+      if (mounted) {
+        setState(() {
+          suggestions = data['order_suggestions'] ?? [];
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> fetchConsolidation() async {
     try {
-      final response = await http.get(
-        Uri.parse("$baseUrl/consolidate?clinic_id=${widget.clinicId}"),
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-
+      final data = await safeApiGet("$baseUrl/consolidate?clinic_id=${widget.clinicId}");
+      if (mounted) {
         setState(() {
           consolidatedDate = data['consolidated_date'] ?? "";
           basedOn = data['based_on'] ?? "";
           details = data['details'] ?? [];
           routeSummary = Map<String, dynamic>.from(
-            data['summary'] ??
-                {
-                  "total_clinics": 0,
-                  "high_priority_count": 0,
-                  "medium_priority_count": 0,
-                  "low_priority_count": 0,
-                },
+            data['summary'] ?? {
+              "total_clinics": 0,
+              "high_priority_count": 0,
+              "medium_priority_count": 0,
+              "low_priority_count": 0,
+            },
           );
           mostUrgentClinic = data['most_urgent_clinic'] ?? "";
           recommendationMessage = data['recommendation_message'] ?? "";
         });
-      } else {
-        clearConsolidationState();
       }
     } catch (e) {
-      print("ERROR fetching consolidation: $e");
       clearConsolidationState();
     }
   }
 
   Future<void> markOrderReceived() async {
     if (lastSubmittedOrder == null) return;
-
-    final url = Uri.parse('$baseUrl/complete_order');
-
-    final response = await http.post(
-      url,
-      headers: {"Content-Type": "application/json"},
-      body: json.encode({"clinic_id": widget.clinicId}),
-    );
-
-    if (response.statusCode == 200) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Order marked as received ✅")));
-
+    try {
+      await safeApiPost("$baseUrl/complete_order", {"clinic_id": widget.clinicId});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Order marked as received ✅")),
+        );
+      }
       await refreshOrderPage();
-    } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Failed ❌")));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed: $e")),
+        );
+      }
     }
   }
 
@@ -2318,37 +2382,25 @@ class _OrderPageState extends State<OrderPage> {
 
   Future<void> fetchLastSubmittedOrder() async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/orders?clinic_id=${widget.clinicId}'),
-      );
-
-      if (response.statusCode != 200) return;
-
-      final data = json.decode(response.body);
+      final data = await safeApiGet('$baseUrl/orders?clinic_id=${widget.clinicId}');
       final List<Map<String, dynamic>> submittedOrders =
           (data['orders'] as List<dynamic>)
               .where((order) => order['status'] == "SUBMITTED")
               .map((order) => Map<String, dynamic>.from(order))
               .toList();
-
       submittedOrders.sort(
         (a, b) => _parseOrderDate(
           b['created_at'],
         ).compareTo(_parseOrderDate(a['created_at'])),
       );
-
       if (!mounted) return;
-
       setState(() {
         lastSubmittedOrder = submittedOrders.isNotEmpty
             ? submittedOrders.first
             : null;
       });
     } catch (e) {
-      print("ERROR fetching last submitted order: $e");
-
       if (!mounted) return;
-
       setState(() {
         lastSubmittedOrder = null;
       });

@@ -5,6 +5,8 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
+import 'main.dart';
+
 class PKDDashboardPage extends StatefulWidget {
   final String district;
 
@@ -19,6 +21,7 @@ class _PKDDashboardPageState extends State<PKDDashboardPage> {
   final TextEditingController searchController = TextEditingController();
 
   bool isLoading = true;
+  bool isLoadingStage2 = true;
   String errorMessage = "";
   int selectedIndex = 0;
 
@@ -44,63 +47,109 @@ class _PKDDashboardPageState extends State<PKDDashboardPage> {
     super.dispose();
   }
 
+  Future<Map<String, dynamic>> _safeGet(String url, {Duration timeout = const Duration(seconds: 15)}) async {
+    final response = await http.get(Uri.parse(url)).timeout(timeout);
+    if (response.statusCode == 200) {
+      return json.decode(response.body) as Map<String, dynamic>;
+    }
+    throw Exception("HTTP ${response.statusCode}");
+  }
+
+  Future<Map<String, dynamic>> _safeGetOrEmpty(String url) async {
+    try {
+      return await _safeGet(url);
+    } catch (_) {
+      return {};
+    }
+  }
+
   Future<void> refreshDashboard() async {
+    if (!mounted) return;
     setState(() {
       isLoading = true;
+      isLoadingStage2 = true;
       errorMessage = "";
+    });
+
+    // Safety timeout: force-stop loading after 25 seconds
+    Future.delayed(const Duration(seconds: 25), () {
+      if (mounted && isLoading) {
+        setState(() {
+          isLoading = false;
+          isLoadingStage2 = false;
+          if (errorMessage.isEmpty) {
+            errorMessage = "Dashboard load timed out. Tap Retry.";
+          }
+        });
+      }
     });
 
     try {
       final encodedDistrict = Uri.encodeComponent(widget.district);
+
+      // Stage 1: Try consolidated endpoint first
+      try {
+        final consolidated = await _safeGet("$baseUrl/pkd/dashboard_summary?district=$encodedDistrict");
+        if (mounted) {
+          setState(() {
+            overview = Map<String, dynamic>.from(consolidated['overview'] ?? {});
+            clinics = (consolidated['clinics'] as List<dynamic>? ?? [])
+                .map((c) => Map<String, dynamic>.from(c as Map))
+                .toList();
+            routes = (consolidated['routes'] as List<dynamic>? ?? [])
+                .map((r) => Map<String, dynamic>.from(r as Map))
+                .toList();
+            final rawTopMeds = consolidated['overview']?['top_medicines'] as List<dynamic>? ?? [];
+            topMedicines = rawTopMeds
+                .map((m) => Map<String, dynamic>.from(m as Map))
+                .toList();
+            isLoading = false;
+            isLoadingStage2 = false;
+          });
+          return;
+        }
+      } catch (_) {
+        // Fall through to individual endpoints
+      }
+
+      // Stage 2: Individual endpoints in parallel, each tolerated individually
       final responses = await Future.wait([
-        http.get(Uri.parse("$baseUrl/pkd/overview?district=$encodedDistrict")),
-        http.get(
-          Uri.parse("$baseUrl/pkd/clinic_risks?district=$encodedDistrict"),
-        ),
-        http.get(Uri.parse("$baseUrl/pkd/routes?district=$encodedDistrict")),
-        http.get(
-          Uri.parse("$baseUrl/pkd/top_medicines?district=$encodedDistrict"),
-        ),
+        _safeGetOrEmpty("$baseUrl/pkd/overview?district=$encodedDistrict"),
+        _safeGetOrEmpty("$baseUrl/pkd/clinic_risks?district=$encodedDistrict"),
+        _safeGetOrEmpty("$baseUrl/pkd/routes?district=$encodedDistrict"),
+        _safeGetOrEmpty("$baseUrl/pkd/top_medicines?district=$encodedDistrict"),
       ]);
 
       if (!mounted) return;
 
-      final decodedResponses = responses
-          .map((response) => json.decode(response.body) as Map<String, dynamic>)
-          .toList();
-
-      if (responses.any((response) => response.statusCode != 200)) {
-        final failedIndex = responses.indexWhere(
-          (response) => response.statusCode != 200,
-        );
-        setState(() {
-          isLoading = false;
-          errorMessage =
-              (decodedResponses[failedIndex]["error"] ??
-                      "Failed to load PKD dashboard")
-                  .toString();
-        });
-        return;
-      }
+      final ov = responses[0];
+      final clinicData = responses[1];
+      final routeData = responses[2];
+      final medData = responses[3];
+      final anyData = ov.isNotEmpty || clinicData.isNotEmpty || routeData.isNotEmpty || medData.isNotEmpty;
 
       setState(() {
-        overview = Map<String, dynamic>.from(decodedResponses[0]);
-        clinics = (decodedResponses[1]["clinics"] as List<dynamic>? ?? [])
-            .map((clinic) => Map<String, dynamic>.from(clinic as Map))
+        overview = Map<String, dynamic>.from(ov);
+        clinics = (clinicData["clinics"] as List<dynamic>? ?? [])
+            .map((c) => Map<String, dynamic>.from(c as Map))
             .toList();
-        routes = (decodedResponses[2]["routes"] as List<dynamic>? ?? [])
-            .map((route) => Map<String, dynamic>.from(route as Map))
+        routes = (routeData["routes"] as List<dynamic>? ?? [])
+            .map((r) => Map<String, dynamic>.from(r as Map))
             .toList();
-        topMedicines =
-            (decodedResponses[3]["medicines"] as List<dynamic>? ?? [])
-                .map((medicine) => Map<String, dynamic>.from(medicine as Map))
-                .toList();
+        topMedicines = (medData["medicines"] as List<dynamic>? ?? [])
+            .map((m) => Map<String, dynamic>.from(m as Map))
+            .toList();
         isLoading = false;
+        isLoadingStage2 = false;
+        if (!anyData) {
+          errorMessage = "Unable to load dashboard data. Tap Retry.";
+        }
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() {
         isLoading = false;
+        isLoadingStage2 = false;
         errorMessage = "Unable to connect to backend";
       });
     }
@@ -231,6 +280,11 @@ class _PKDDashboardPageState extends State<PKDDashboardPage> {
                   onPressed: refreshDashboard,
                   icon: const Icon(Icons.refresh_rounded),
                 ),
+                IconButton(
+                  onPressed: _confirmLogout,
+                  icon: const Icon(Icons.logout_rounded),
+                  tooltip: "Logout",
+                ),
               ],
             ),
       body: SafeArea(child: page),
@@ -251,6 +305,37 @@ class _PKDDashboardPageState extends State<PKDDashboardPage> {
           ),
         ),
       ],
+    );
+  }
+
+  void _confirmLogout() {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Logout"),
+        content: const Text("Are you sure you want to logout?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text("Cancel"),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _performLogout();
+            },
+            child: const Text("Logout"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _performLogout() {
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+      (route) => false,
     );
   }
 
@@ -293,6 +378,10 @@ class _PKDDashboardPageState extends State<PKDDashboardPage> {
             ),
           ),
           const Spacer(),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _buildLogoutTile(),
+          ),
           _buildSidebarFooter(),
         ],
       ),
@@ -361,6 +450,36 @@ class _PKDDashboardPageState extends State<PKDDashboardPage> {
               style: TextStyle(
                 color: isSelected ? headlineColor : bodyColor,
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLogoutTile() {
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: _confirmLogout,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEF5A5A).withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: const Color(0xFFEF5A5A).withValues(alpha: 0.18),
+          ),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.logout_rounded, color: Color(0xFFEF5A5A)),
+            SizedBox(width: 12),
+            Text(
+              "Logout",
+              style: TextStyle(
+                color: Color(0xFFEF5A5A),
+                fontWeight: FontWeight.w700,
               ),
             ),
           ],
@@ -448,19 +567,19 @@ class _PKDDashboardPageState extends State<PKDDashboardPage> {
       ),
       _MetricCardData(
         "Pending Orders",
-        (overview["pending_orders"] ?? 0).toString(),
+        (overview["total_pending_orders"] ?? 0).toString(),
         Icons.pending_actions_outlined,
         const Color(0xFFF5A524),
       ),
       _MetricCardData(
         "Medicines Tracked",
-        (overview["total_medicines_tracked"] ?? 0).toString(),
+        (overview["medicines_tracked"] ?? 0).toString(),
         Icons.medication_outlined,
         const Color(0xFF2FBF71),
       ),
       _MetricCardData(
         "Monthly Usage Logs",
-        (overview["monthly_usage_logs"] ?? 0).toString(),
+        (overview["total_monthly_logs"] ?? 0).toString(),
         Icons.timeline_outlined,
         const Color(0xFF9A6CFF),
       ),
@@ -520,7 +639,7 @@ class _PKDDashboardPageState extends State<PKDDashboardPage> {
   }
 
   Widget _buildHeroCard() {
-    final highRisk = overview["high_risk_clinics"] ?? 0;
+    final highRisk = overview["clinics_at_risk"] ?? overview["high_risk_clinics"] ?? 0;
     final activeRoutes = overview["active_routes"] ?? 0;
     return Container(
       padding: const EdgeInsets.all(22),
@@ -816,7 +935,7 @@ class _PKDDashboardPageState extends State<PKDDashboardPage> {
         ? 1
         : topMedicines
               .map(
-                (medicine) => _asInt(medicine["usage_quantity"], fallback: 1),
+                (medicine) => _asInt(medicine["total_used"], fallback: 1),
               )
               .reduce(math.max);
 
@@ -839,7 +958,7 @@ class _PKDDashboardPageState extends State<PKDDashboardPage> {
           else
             ...topMedicines.map((medicine) {
               final rank = _asInt(medicine["rank"]);
-              final usage = _asInt(medicine["usage_quantity"]);
+              final usage = _asInt(medicine["total_used"]);
               final progress = highestUsage == 0 ? 0.0 : usage / highestUsage;
 
               return Padding(
@@ -1303,7 +1422,7 @@ class _PKDDashboardPageState extends State<PKDDashboardPage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      "${clinic["district"] ?? widget.district} • ${clinic["route_id"] ?? "Unassigned"}",
+                      "${clinic["district"] ?? clinic["clinic_id"] ?? widget.district} • ${clinic["route_id"] ?? "Unassigned"}",
                       style: TextStyle(color: bodyColor, fontSize: 13),
                     ),
                   ],
