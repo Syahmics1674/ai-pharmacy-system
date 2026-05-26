@@ -12,6 +12,27 @@ import logging
 
 from routes.supabase_routes import supabase_bp
 
+# Allow import from ai_prediction parent directory
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'ai_prediction')))
+
+AI_FEATURES_AVAILABLE = True
+AI_IMPORT_ERROR = None
+
+try:
+    from ai_engine import generate_forecast, detect_anomalies, calculate_smart_inventory
+except ModuleNotFoundError as exc:
+    AI_FEATURES_AVAILABLE = False
+    AI_IMPORT_ERROR = str(exc)
+    generate_forecast = None
+    detect_anomalies = None
+    calculate_smart_inventory = None
+
+try:
+    from weather_service import get_7_day_weather
+except ModuleNotFoundError:
+    def get_7_day_weather():
+        return {"max_rain_mm": 0.0}
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 logger = logging.getLogger(__name__)
 
