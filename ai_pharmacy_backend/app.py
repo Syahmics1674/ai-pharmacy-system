@@ -83,12 +83,12 @@ CACHE_TTL = 300  # 5 minutes
 
 def cache_get(key):
     entry = _cache.get(key)
-    if entry and time.time() - entry["time"] < CACHE_TTL:
+    if entry and time.time() - entry["time"] < entry["ttl"]:
         return entry["data"]
     return None
 
-def cache_set(key, data):
-    _cache[key] = {"data": data, "time": time.time()}
+def cache_set(key, data, ttl_seconds=None):
+    _cache[key] = {"data": data, "time": time.time(), "ttl": ttl_seconds or CACHE_TTL}
 
 # ============================================================
 # CLINIC NETWORK — Coordinates, Haversine, Weather
