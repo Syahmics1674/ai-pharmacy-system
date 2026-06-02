@@ -8,6 +8,7 @@ import 'dart:typed_data';
 import 'order_history_page.dart';
 import 'pkd_dashboard_page.dart';
 import 'dashboard_page.dart';
+import 'live_inventory_page.dart';
 
 // Client-side API response cache
 final _apiCache = <String, _CacheEntry>{};
@@ -78,6 +79,31 @@ String itemNameOf(dynamic item) {
     return (item['item_name'] ?? item['name'] ?? 'Unknown Medicine').toString();
   }
   return 'Unknown Medicine';
+}
+
+String liveInventoryDisplayName(Map item) {
+  final fullBrandName = (item['full_brand_name'] ?? '').toString().trim();
+  if (fullBrandName.isNotEmpty) return fullBrandName;
+
+  final brandName = (item['brand_name'] ?? '').toString().trim();
+  if (brandName.isNotEmpty) return brandName;
+
+  final matchName = (item['match_name'] ?? '').toString().trim();
+  if (matchName.isNotEmpty) return matchName;
+
+  final genericName = (item['generic_name'] ?? '').toString().trim();
+  if (genericName.isNotEmpty) {
+    final strength = (item['strength'] ?? '').toString().trim();
+    final dosageForm = (item['dosage_form'] ?? '').toString().trim();
+    return [genericName, strength, dosageForm]
+        .where((p) => p.isNotEmpty)
+        .join(' ');
+  }
+
+  final itemCode = (item['item_code'] ?? '').toString().trim();
+  if (itemCode.isNotEmpty) return itemCode;
+
+  return 'Unknown';
 }
 
 String itemCategoryOf(dynamic item) {
@@ -151,16 +177,16 @@ class _MainScreenState extends State<MainScreen> {
       _selectedIndex = index;
     });
 
-    if (index == 1) {
+    if (index == 0) {
+      dashboardKey.currentState?.fetchDashboardData();
+    }
+
+    if (index == 2) {
       homeKey.currentState?.refreshAll();
     }
 
-    if (index == 4) {
+    if (index == 5) {
       orderKey.currentState?.refreshOrderPage();
-    }
-
-    if (index == 0) {
-      dashboardKey.currentState?.fetchDashboardData();
     }
   }
 
@@ -192,6 +218,7 @@ class _MainScreenState extends State<MainScreen> {
 
   final List<String> _pageTitles = [
     "Dashboard",
+    "Live Inventory",
     "Inventory",
     "Stock Operations",
     "AI Insights",
@@ -211,11 +238,12 @@ class _MainScreenState extends State<MainScreen> {
         key: dashboardKey,
         clinicId: widget.clinicId,
         onLogout: _performLogout,
-        onNavigateInventory: () => setState(() => _selectedIndex = 1),
-        onNavigateOperations: () => setState(() => _selectedIndex = 2),
-        onNavigateOrders: () => setState(() => _selectedIndex = 4),
-        onNavigateReports: () => setState(() => _selectedIndex = 3),
+        onNavigateInventory: () => setState(() => _selectedIndex = 2),
+        onNavigateOperations: () => setState(() => _selectedIndex = 3),
+        onNavigateOrders: () => setState(() => _selectedIndex = 5),
+        onNavigateReports: () => setState(() => _selectedIndex = 4),
       ),
+      LiveInventoryPage(clinicId: widget.clinicId),
       InventoryPage(key: homeKey, clinicId: widget.clinicId),
       StockOperationsPage(clinicId: widget.clinicId),
       AIInsightsPage(clinicId: widget.clinicId),
@@ -279,6 +307,10 @@ class _MainScreenState extends State<MainScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.dashboard),
             label: "Dashboard",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.medication),
+            label: "Live",
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.inventory),

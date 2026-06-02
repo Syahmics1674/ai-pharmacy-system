@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import 'main.dart';
+import 'services/live_inventory_service.dart';
 
 class PKDDashboardPage extends StatefulWidget {
   final String district;
@@ -34,6 +35,14 @@ class _PKDDashboardPageState extends State<PKDDashboardPage> {
   String selectedRoute = "All";
   String selectedDistrict = "All";
   String selectedRisk = "All";
+
+  // PKD live inventory state
+  String? selectedPKDClinicId;
+  List<dynamic> pkdInventoryItems = [];
+  int pkdTotalItems = 0;
+  int pkdTotalQty = 0;
+  int pkdLowStock = 0;
+  bool pkdInventoryLoading = false;
 
   @override
   void initState() {
@@ -254,6 +263,26 @@ class _PKDDashboardPageState extends State<PKDDashboardPage> {
       values.length,
       (index) => FlSpot(index.toDouble(), values[index].toDouble()),
     );
+  }
+
+  Future<void> _loadPKDInventory() async {
+    setState(() => pkdInventoryLoading = true);
+    final items = await LiveInventoryService.fetchLiveInventory(
+      clinicId: selectedPKDClinicId,
+    );
+    if (!mounted) return;
+    setState(() {
+      pkdInventoryItems = items;
+      pkdTotalItems = items.length;
+      pkdTotalQty = 0;
+      pkdLowStock = 0;
+      for (final item in items) {
+        final qty = (item['quantity'] ?? 0) as num;
+        pkdTotalQty += qty.toInt();
+        if (qty < 20) pkdLowStock++;
+      }
+      pkdInventoryLoading = false;
+    });
   }
 
   @override
@@ -546,9 +575,140 @@ class _PKDDashboardPageState extends State<PKDDashboardPage> {
         return _buildClinicsPage();
       case 2:
         return _buildRoutesPage();
+      case 3:
+        return _buildPKDInventoryPage();
       default:
         return _buildOverviewPage();
     }
+  }
+
+  Widget _buildPKDInventoryPage() {
+    final clinics = this.clinics;
+    final clinicOptions = <String, String>{};
+    clinicOptions[""] = "All Clinics";
+    for (final c in clinics) {
+      final id = (c["clinic_id"] ?? "").toString();
+      final name = (c["name"] ?? id).toString();
+      if (id.isNotEmpty) clinicOptions[id] = name;
+    }
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      children: [
+        _buildSectionTitle("Live Inventory"),
+        const SizedBox(height: 12),
+        // District summary cards
+        Row(
+          children: [
+            _buildSummaryCard("Total Items", "$pkdTotalItems", Colors.blue),
+            const SizedBox(width: 10),
+            _buildSummaryCard("Total Quantity", "$pkdTotalQty", Colors.green),
+            const SizedBox(width: 10),
+            _buildSummaryCard("Low Stock", "$pkdLowStock", Colors.red),
+          ],
+        ),
+        const SizedBox(height: 16),
+        // Clinic dropdown
+        DropdownButtonFormField<String>(
+          value: selectedPKDClinicId ?? "",
+          decoration: const InputDecoration(
+            labelText: "Select Clinic",
+            prefixIcon: Icon(Icons.local_hospital_outlined),
+            border: OutlineInputBorder(),
+          ),
+          items: clinicOptions.entries
+              .map((e) => DropdownMenuItem(
+                    value: e.key,
+                    child: Text(e.value),
+                  ))
+              .toList(),
+          onChanged: (val) {
+            setState(() => selectedPKDClinicId = val);
+            _loadPKDInventory();
+          },
+        ),
+        const SizedBox(height: 12),
+        // Inventory list
+        if (pkdInventoryLoading)
+          const Center(child: CircularProgressIndicator())
+        else if (pkdInventoryItems.isEmpty)
+          _buildEmptyState("No inventory data for selected clinic.")
+        else
+          ...pkdInventoryItems.map((item) {
+            final qty = ((item['quantity'] ?? 0) as num).toInt();
+            final color = qty > 50
+                ? const Color(0xFF2FBF71)
+                : qty >= 20
+                    ? const Color(0xFFF5A524)
+                    : const Color(0xFFEF5A5A);
+            return Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 6, height: 48,
+                      decoration: BoxDecoration(
+                        color: color,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            liveInventoryDisplayName(item),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      children: [
+                        Text("$qty",
+                            style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: color)),
+                        if (qty < 20)
+                          const Icon(Icons.warning_amber_rounded,
+                              color: Color(0xFFEF5A5A), size: 18),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+      ],
+    );
+  }
+
+  Widget _buildSummaryCard(String label, String value, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: surfaceColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: Column(
+          children: [
+            Text(value,
+                style: TextStyle(
+                    fontSize: 22, fontWeight: FontWeight.bold, color: color)),
+            const SizedBox(height: 4),
+            Text(label,
+                style: TextStyle(color: bodyColor, fontSize: 12),
+                textAlign: TextAlign.center),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildOverviewPage() {
@@ -1738,6 +1898,7 @@ class _PKDDashboardPageState extends State<PKDDashboardPage> {
     _NavItem("Overview", Icons.dashboard_customize_outlined),
     _NavItem("Clinics", Icons.local_hospital_outlined),
     _NavItem("Routes", Icons.route_outlined),
+    _NavItem("Live Inventory", Icons.medication_outlined),
   ];
 }
 

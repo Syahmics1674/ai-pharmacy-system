@@ -89,13 +89,25 @@ def get_joined_inventory(clinic_id=None):
         joined.append({
             "item_code": item_code,
             "quantity": inv_item.get("quantity", 0),
+
             "medicine_name": med.get("medicine_name") or inv_item.get("medicine_name"),
+
+            "match_name": med.get("match_name"),
+            "brand_name": med.get("brand_name"),
+            "full_brand_name": med.get("full_brand_name"),
+
             "strength": med.get("strength"),
             "generic_name": med.get("generic_name"),
             "dosage_form": med.get("dosage_form"),
+
             "updated_at": inv_item.get("updated_at") or med.get("updated_at"),
         })
     _cache_set(cache_key, joined, ttl=_DEFAULT_TTL)
+    print(
+        f"Inventory rows={len(inventory)}, "
+        f"Medicine rows={len(medicines)}, "
+        f"Joined rows={len(joined)}"
+    )
     return joined
 
 def clear_cache():
