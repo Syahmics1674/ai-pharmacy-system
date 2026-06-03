@@ -149,6 +149,23 @@ def update_inventory_quantity(clinic_id, item_code, quantity):
     _rest_patch("inventory", params, data)
 
 
+def add_dispense_transaction(clinic_id, item_code=None, matched_name=None, quantity_change=0, action="stock_out", device_id=None, local_created_at=None, cloud_created_at=None):
+    payload = {
+        "clinic_id": clinic_id,
+        "item_code": item_code,
+        "matched_name": matched_name,
+        "quantity_change": quantity_change,
+        "action": action,
+    }
+    if device_id:
+        payload["device_id"] = device_id
+    if local_created_at:
+        payload["local_created_at"] = local_created_at
+    if cloud_created_at:
+        payload["cloud_created_at"] = cloud_created_at
+    return _rest_post("dispense_transactions", data=payload)
+
+
 def fetch_clinic(clinic_id):
     if not clinic_id:
         return {}

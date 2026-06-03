@@ -7,6 +7,7 @@ from services.supabase_service import (
     fetch_dispense_transactions,
     fetch_medicines,
     fetch_clinic,
+    add_dispense_transaction,
 )
 from migrate_inventory import (
     build_match_index,
@@ -138,23 +139,6 @@ def ai_unavailable_response():
         )
     }), 503
 
-
-def get_usage_logs_for_clinic(clinic_id):
-    query = db.collection("usage_logs")
-
-    if clinic_id:
-        query = query.where("clinic_id", "==", clinic_id)
-
-    logs = []
-    for doc in query.stream():
-        data = doc.to_dict()
-        logs.append({
-            "item_name": data.get("item_name"),
-            "quantity_used": int(data.get("quantity_used", 0)),
-            "timestamp": data.get("timestamp")
-        })
-
-    return logs
 
 
 def get_inventory_for_clinic(clinic_id):
@@ -1289,6 +1273,9 @@ def get_order_suggestions():
         return jsonify({"error": f"Order suggestions failed: {str(e)}"}), 500
 
 @app.route('/usage_logs', methods=['GET'])
+# TODO(firestore-retirement): Remove this endpoint. Supabase dispense_transactions
+# is now the source of truth for usage data. The POST /stock_out endpoint and
+# /ai/* endpoints already read from dispense_transactions. No Flutter callers.
 @cached(ttl_seconds=300)
 def get_usage_logs():
     clinic_id = request.args.get('clinic_id')
@@ -1317,6 +1304,9 @@ def get_usage_logs():
         return jsonify({"error": f"Usage logs failed: {str(e)}"}), 500
 
 @app.route('/usage_logs', methods=['POST'])
+# TODO(firestore-retirement): Remove this endpoint. The POST /stock_out endpoint
+# now writes to Supabase dispense_transactions directly. No Flutter callers for
+# this specific route.
 def add_usage_log():
     data = request.get_json()
     clinic_id = data.get("clinic_id")
@@ -1396,12 +1386,25 @@ def stock_out():
             db.collection("inventory").document(doc.id).update({"current_stock": new_stock})
         if not found:
             return jsonify({"error": "Item not found in inventory"}), 404
-        db.collection("usage_logs").add({
-            "clinic_id": clinic_id,
-            "item_name": item_name,
-            "quantity_used": quantity_used,
-            "timestamp": datetime.utcnow()
-        })
+        try:
+            add_dispense_transaction(
+                clinic_id=clinic_id,
+                item_code=data.get("item_code"),
+                matched_name=item_name,
+                quantity_change=-quantity_used,
+                action="stock_out",
+                local_created_at=datetime.utcnow().isoformat(),
+                cloud_created_at=datetime.utcnow().isoformat(),
+            )
+        except Exception:
+            print(f"[WARN] Supabase dispense_transactions insert failed (RLS?), "
+                  f"falling back to Firestore usage_logs for {clinic_id}/{item_name}")
+            db.collection("usage_logs").add({
+                "clinic_id": clinic_id,
+                "item_name": item_name,
+                "quantity_used": quantity_used,
+                "timestamp": datetime.utcnow()
+            })
         return jsonify({"message": "Stock-out successful"})
     except Exception as e:
         return jsonify({"error": f"Stock-out failed: {str(e)}"}), 500
@@ -1447,17 +1450,11 @@ def ai_anomalies():
         cached_data = cache_get(cache_key)
         if cached_data:
             return jsonify(cached_data)
-        docs = db.collection("usage_logs") \
-                 .where("clinic_id", "==", clinic_id) \
-                 .stream()
-        usage_data = []
-        for doc in docs:
-            data = doc.to_dict()
-            usage_data.append({
-                "item_name": data.get("item_name"),
-                "quantity_used": data.get("quantity_used", 0),
-                "timestamp": data.get("timestamp")
-            })
+        dispense_txns = fetch_dispense_transactions(clinic_id=clinic_id, limit=1000)
+        usage_data = [
+            {"item_name": u["item_name"], "quantity_used": u["quantity_used"], "timestamp": u["timestamp"]}
+            for u in dispense_txns_to_usage_list(dispense_txns)
+        ]
         anomalies_report = []
         item_groups = {}
         for entry in usage_data:
