@@ -263,8 +263,6 @@ class DashboardPageState extends State<DashboardPage> {
   Widget _buildSummaryCards() {
     final total = summary['total_medicines'] ?? 0;
     final lowStock = summary['low_stock_count'] ?? 0;
-    final expiringSoon = summary['expiring_soon_count'] ?? 0;
-    final pendingOrders = summary['pending_orders_count'] ?? 0;
 
     return Row(
       children: [
@@ -318,8 +316,8 @@ class DashboardPageState extends State<DashboardPage> {
 
   Widget _buildAlertsPanel() {
     final lowStock = summary['low_stock_count'] ?? 0;
-    final expiringSoon = summary['expiring_soon_count'] ?? 0;
-    final expired = summary['expired_count'] ?? 0;
+    final moderate = summary['moderate_count'] ?? 0;
+    final adequate = summary['adequate_count'] ?? 0;
     final pendingOrders = summary['pending_orders_count'] ?? 0;
 
     final alerts = <Map<String, dynamic>>[];
@@ -327,24 +325,24 @@ class DashboardPageState extends State<DashboardPage> {
       alerts.add({
         "icon": Icons.inventory,
         "label": "$lowStock items low on stock",
-        "color": Colors.orange,
-        "bg": Colors.orange.withOpacity(0.1),
-      });
-    }
-    if (expiringSoon > 0) {
-      alerts.add({
-        "icon": Icons.schedule,
-        "label": "$expiringSoon items expiring soon",
         "color": Colors.red,
         "bg": Colors.red.withOpacity(0.1),
       });
     }
-    if (expired > 0) {
+    if (moderate > 0) {
       alerts.add({
-        "icon": Icons.dangerous,
-        "label": "$expired items expired",
-        "color": Colors.red.shade700,
-        "bg": Colors.red.shade50,
+        "icon": Icons.remove_shopping_cart,
+        "label": "$moderate items at moderate stock",
+        "color": Colors.orange,
+        "bg": Colors.orange.withOpacity(0.1),
+      });
+    }
+    if (adequate > 0) {
+      alerts.add({
+        "icon": Icons.check_circle,
+        "label": "$adequate items adequately stocked",
+        "color": Colors.green,
+        "bg": Colors.green.withOpacity(0.1),
       });
     }
     if (pendingOrders > 0) {
@@ -625,11 +623,10 @@ class DashboardPageState extends State<DashboardPage> {
 
   Widget _buildInventoryHealth() {
     final health = summary['inventory_health'] as Map<String, dynamic>? ?? {};
-    final healthy = health['healthy'] ?? 0;
     final low = health['low'] ?? 0;
-    final expired = health['expired'] ?? 0;
-    final expiringSoon = health['expiring_soon'] ?? 0;
-    final total = healthy + low + expired + expiringSoon;
+    final moderate = health['moderate'] ?? 0;
+    final adequate = health['adequate'] ?? 0;
+    final total = low + moderate + adequate;
 
     if (total == 0) {
       return const SizedBox.shrink();
@@ -654,35 +651,29 @@ class DashboardPageState extends State<DashboardPage> {
                 height: 24,
                 child: Row(
                   children: [
-                    if (healthy > 0)
+                    if (adequate > 0)
                       Expanded(
-                        flex: healthy,
+                        flex: adequate,
                         child: Container(color: Colors.green),
+                      ),
+                    if (moderate > 0)
+                      Expanded(
+                        flex: moderate,
+                        child: Container(color: Colors.orange),
                       ),
                     if (low > 0)
                       Expanded(
                         flex: low,
-                        child: Container(color: Colors.orange),
-                      ),
-                    if (expiringSoon > 0)
-                      Expanded(
-                        flex: expiringSoon,
-                        child: Container(color: Colors.red.shade300),
-                      ),
-                    if (expired > 0)
-                      Expanded(
-                        flex: expired,
-                        child: Container(color: Colors.red.shade700),
+                        child: Container(color: Colors.red),
                       ),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 12),
-            _healthLegend("Healthy", healthy, Colors.green),
-            _healthLegend("Low Stock", low, Colors.orange),
-            _healthLegend("Expiring Soon", expiringSoon, Colors.red.shade300),
-            _healthLegend("Expired", expired, Colors.red.shade700),
+            _healthLegend("Adequate", adequate, Colors.green),
+            _healthLegend("Moderate", moderate, Colors.orange),
+            _healthLegend("Low Stock", low, Colors.red),
           ],
         ),
       ),

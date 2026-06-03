@@ -1108,9 +1108,8 @@ def dashboard_summary():
 
         inventory_items = []
         low_stock_count = 0
-        expiring_soon_count = 0
-        expired_count = 0
-        healthy_count = 0
+        moderate_count = 0
+        adequate_count = 0
 
         for item in supabase_items:
             item_name = item['item_name']
@@ -1118,12 +1117,13 @@ def dashboard_summary():
             inventory_items.append({
                 "item_name": item_name,
                 "current_stock": stock,
-                "expiry_status": "unknown"
             })
-            if stock < 100:
+            if stock < 20:
                 low_stock_count += 1
+            elif stock < 50:
+                moderate_count += 1
             else:
-                healthy_count += 1
+                adequate_count += 1
 
         pending_orders_count = 0
         for doc in db.collection("orders") \
@@ -1175,8 +1175,8 @@ def dashboard_summary():
         top_products = build_top_products_payload(usage_logs_data)
         stock_summary = {
             "critical": low_stock_count,
-            "low": sum(1 for i in inventory_items if 100 <= i["current_stock"] < 200),
-            "safe": healthy_count
+            "low": moderate_count,
+            "safe": adequate_count
         }
         insight_message_data = build_insight_message_payload(stock_summary, top_products)
 
@@ -1200,15 +1200,13 @@ def dashboard_summary():
             "current_time": now.strftime("%H:%M:%S"),
             "total_medicines": len(inventory_items),
             "low_stock_count": low_stock_count,
-            "expiring_soon_count": expiring_soon_count,
-            "expired_count": expired_count,
-            "healthy_count": healthy_count,
+            "moderate_count": moderate_count,
+            "adequate_count": adequate_count,
             "pending_orders_count": pending_orders_count,
             "inventory_health": {
-                "healthy": healthy_count - expired_count - expiring_soon_count,
                 "low": low_stock_count,
-                "expired": expired_count,
-                "expiring_soon": expiring_soon_count,
+                "moderate": moderate_count,
+                "adequate": adequate_count,
             },
             "recent_activity": recent_activity,
             "insight_message": insight_message_data.get("message", ""),
@@ -1216,128 +1214,6 @@ def dashboard_summary():
         })
     except Exception as e:
         return jsonify({"error": f"Dashboard summary failed: {str(e)}"}), 500
-
-        if stock < 100:
-            low_stock_count += 1
-        else:
-            healthy_count += 1
-
-        if status == "expired":
-            expired_count += 1
-        elif status == "expiring_soon":
-            expiring_soon_count += 1
-
-    pending_orders_count = 0
-    for doc in db.collection("orders") \
-            .where("clinic_id", "==", clinic_id) \
-            .stream():
-        data = doc.to_dict()
-        if data.get("status") in ("PENDING", "SUBMITTED"):
-            pending_orders_count += 1
-
-    recent_activity = []
-    seen = set()
-
-    for doc in db.collection("stock_in_logs") \
-            .where("clinic_id", "==", clinic_id) \
-            .stream():
-        data = doc.to_dict()
-        key = doc.id
-        if key in seen:
-            continue
-        seen.add(key)
-        recent_activity.append({
-            "type": "stock_in",
-            "item_name": data.get("item_name"),
-            "quantity": data.get("quantity_added") or data.get("qty_added") or 0,
-            "timestamp": str(data.get("timestamp")) if data.get("timestamp") else None,
-        })
-
-    for doc in db.collection("usage_logs") \
-            .where("clinic_id", "==", clinic_id) \
-            .stream():
-        data = doc.to_dict()
-        key = doc.id
-        if key in seen:
-            continue
-        seen.add(key)
-        recent_activity.append({
-            "type": "stock_out",
-            "item_name": data.get("item_name"),
-            "quantity": data.get("quantity_used") or 0,
-            "timestamp": str(data.get("timestamp")) if data.get("timestamp") else None,
-        })
-
-    for doc in db.collection("orders") \
-            .where("clinic_id", "==", clinic_id) \
-            .stream():
-        data = doc.to_dict()
-        key = doc.id
-        if key in seen:
-            continue
-        seen.add(key)
-        recent_activity.append({
-            "type": "order",
-            "status": data.get("status", "PENDING"),
-            "timestamp": str(data.get("created_at")) if data.get("created_at") else None,
-        })
-
-    def parse_ts(entry):
-        ts = entry.get("timestamp")
-        if not ts:
-            return ""
-        return ts
-
-    recent_activity.sort(key=parse_ts, reverse=True)
-    recent_activity = recent_activity[:20]
-
-    logs = []
-    for doc in db.collection("usage_logs") \
-            .where("clinic_id", "==", clinic_id) \
-            .stream():
-        logs.append(doc.to_dict())
-    top_products = build_top_products_payload(logs)
-    stock_summary = {
-        "critical": low_stock_count,
-        "low": sum(1 for i in inventory_items if 100 <= i["current_stock"] < 200),
-        "safe": healthy_count
-    }
-    insight_message_data = build_insight_message_payload(stock_summary, top_products)
-
-    now = datetime.utcnow()
-    days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-    current_hour = now.hour
-    if current_hour < 12:
-        greeting = "Good Morning"
-    elif current_hour < 17:
-        greeting = "Good Afternoon"
-    else:
-        greeting = "Good Evening"
-
-    return jsonify({
-        "clinic_id": clinic_id,
-        "clinic_name": clinic_name,
-        "district": district,
-        "greeting": greeting,
-        "current_date": now.strftime("%Y-%m-%d"),
-        "current_day": days[now.weekday()],
-        "current_time": now.strftime("%H:%M:%S"),
-        "total_medicines": len(inventory_items),
-        "low_stock_count": low_stock_count,
-        "expiring_soon_count": expiring_soon_count,
-        "expired_count": expired_count,
-        "healthy_count": healthy_count,
-        "pending_orders_count": pending_orders_count,
-        "inventory_health": {
-            "healthy": healthy_count - expired_count - expiring_soon_count,
-            "low": low_stock_count,
-            "expired": expired_count,
-            "expiring_soon": expiring_soon_count,
-        },
-        "recent_activity": recent_activity,
-        "insight_message": insight_message_data.get("message", ""),
-        "top_products": top_products,
-    })
 
 
 @app.route('/order_suggestions', methods=['GET'])
