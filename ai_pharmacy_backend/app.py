@@ -288,7 +288,7 @@ def build_top_products_payload(logs):
 
 def build_top_products_from_dispense(dispense_txns):
     if not dispense_txns:
-        return FALLBACK_TOP_PRODUCTS
+        return []
 
     medicines = fetch_medicines()
     medicine_map = {}
@@ -311,7 +311,7 @@ def build_top_products_from_dispense(dispense_txns):
         totals[name] = totals.get(name, 0) + 1
 
     if not totals:
-        return FALLBACK_TOP_PRODUCTS
+        return []
 
     ranked = sorted(
         ({"item_name": name, "total_used": count} for name, count in totals.items()),
