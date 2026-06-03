@@ -1102,32 +1102,26 @@ def dashboard_summary():
         clinic_name = clinic_data.get("name", clinic_id)
         district = clinic_data.get("district", "")
 
+        supabase_items = get_inventory_for_clinic(clinic_id)
+
         inventory_items = []
         low_stock_count = 0
         expiring_soon_count = 0
         expired_count = 0
         healthy_count = 0
 
-        for doc in db.collection("inventory") \
-                .where("clinic_id", "==", clinic_id) \
-                .stream():
-            data = doc.to_dict()
-            stock = data.get("current_stock", 0)
-            expiry_info = compute_expiry_info(data)
-            status = expiry_info["expiry_status"]
+        for item in supabase_items:
+            item_name = item['item_name']
+            stock = item['current_stock']
             inventory_items.append({
-                "item_name": data.get("item_name"),
+                "item_name": item_name,
                 "current_stock": stock,
-                "expiry_status": status
+                "expiry_status": "unknown"
             })
             if stock < 100:
                 low_stock_count += 1
             else:
                 healthy_count += 1
-            if status == "expired":
-                expired_count += 1
-            elif status == "expiring_soon":
-                expiring_soon_count += 1
 
         pending_orders_count = 0
         for doc in db.collection("orders") \
