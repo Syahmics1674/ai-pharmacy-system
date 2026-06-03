@@ -1,7 +1,13 @@
 from flask import Flask, request, jsonify
 from consolidation import consolidate_order_date
 from firebase_config import db
-from services.supabase_service import get_joined_inventory, update_inventory_quantity
+from services.supabase_service import (
+    get_joined_inventory,
+    update_inventory_quantity,
+    fetch_dispense_transactions,
+    fetch_medicines,
+    fetch_clinic,
+)
 from migrate_inventory import (
     build_match_index,
     list_medicines,
@@ -275,6 +281,42 @@ def build_top_products_payload(logs):
         ),
         key=lambda item: item["total_used"],
         reverse=True
+    )
+
+    return ranked[:5]
+
+
+def build_top_products_from_dispense(dispense_txns):
+    if not dispense_txns:
+        return FALLBACK_TOP_PRODUCTS
+
+    medicines = fetch_medicines()
+    medicine_map = {}
+    for m in medicines:
+        code = m.get("item_code")
+        if code:
+            medicine_map[code] = (
+                m.get("full_brand_name")
+                or m.get("brand_name")
+                or m.get("match_name")
+                or code
+            )
+
+    totals = {}
+    for txn in dispense_txns:
+        code = txn.get("item_code")
+        if not code:
+            continue
+        name = medicine_map.get(code, txn.get("matched_name", code))
+        totals[name] = totals.get(name, 0) + 1
+
+    if not totals:
+        return FALLBACK_TOP_PRODUCTS
+
+    ranked = sorted(
+        ({"item_name": name, "total_used": count} for name, count in totals.items()),
+        key=lambda x: x["total_used"],
+        reverse=True,
     )
 
     return ranked[:5]
@@ -1099,9 +1141,8 @@ def dashboard_summary():
     if not clinic_id:
         return jsonify({"error": "clinic_id is required"}), 400
     try:
-        clinic_doc = db.collection("clinics").document(clinic_id).get()
-        clinic_data = clinic_doc.to_dict() if clinic_doc.exists else {}
-        clinic_name = clinic_data.get("name", clinic_id)
+        clinic_data = fetch_clinic(clinic_id)
+        clinic_name = clinic_data.get("clinic_name") or clinic_data.get("name", clinic_id)
         district = clinic_data.get("district", "")
 
         supabase_items = get_inventory_for_clinic(clinic_id)
@@ -1133,13 +1174,11 @@ def dashboard_summary():
             if data.get("status") in ("PENDING", "SUBMITTED"):
                 pending_orders_count += 1
 
-        usage_logs_data = []
         stock_in_data = []
         for doc in db.collection("usage_logs") \
                 .where("clinic_id", "==", clinic_id) \
                 .stream():
             data = doc.to_dict()
-            usage_logs_data.append(data)
             stock_in_data.append({
                 "type": "stock_out",
                 "item_name": data.get("item_name"),
@@ -1172,7 +1211,8 @@ def dashboard_summary():
         recent_activity.sort(key=lambda e: e.get("timestamp") or "", reverse=True)
         recent_activity = recent_activity[:20]
 
-        top_products = build_top_products_payload(usage_logs_data)
+        dispense_txns = fetch_dispense_transactions(clinic_id=clinic_id, limit=1000)
+        top_products = build_top_products_from_dispense(dispense_txns)
         stock_summary = {
             "critical": low_stock_count,
             "low": moderate_count,

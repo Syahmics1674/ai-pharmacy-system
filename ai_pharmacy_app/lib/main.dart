@@ -175,7 +175,6 @@ class _MainScreenState extends State<MainScreen>
   String clinicDistrict = "";
   bool _isSyncing = false;
 
-  final homeKey = GlobalKey<_InventoryPageState>();
   final orderKey = GlobalKey<_OrderPageState>();
   final dashboardKey = GlobalKey<DashboardPageState>();
 
@@ -188,11 +187,7 @@ class _MainScreenState extends State<MainScreen>
       dashboardKey.currentState?.fetchDashboardData();
     }
 
-    if (index == 2) {
-      homeKey.currentState?.refreshAll();
-    }
-
-    if (index == 5) {
+    if (index == 4) {
       orderKey.currentState?.refreshOrderPage();
     }
   }
@@ -226,7 +221,6 @@ class _MainScreenState extends State<MainScreen>
 
   final List<String> _pageTitles = [
     "Dashboard",
-    "Live Inventory",
     "Inventory",
     "Stock Operations",
     "AI Insights",
@@ -273,13 +267,12 @@ class _MainScreenState extends State<MainScreen>
         key: dashboardKey,
         clinicId: widget.clinicId,
         onLogout: _performLogout,
-        onNavigateInventory: () => setState(() => _selectedIndex = 2),
-        onNavigateOperations: () => setState(() => _selectedIndex = 3),
-        onNavigateOrders: () => setState(() => _selectedIndex = 5),
-        onNavigateReports: () => setState(() => _selectedIndex = 4),
+        onNavigateInventory: () => setState(() => _selectedIndex = 1),
+        onNavigateOperations: () => setState(() => _selectedIndex = 2),
+        onNavigateOrders: () => setState(() => _selectedIndex = 4),
+        onNavigateReports: () => setState(() => _selectedIndex = 3),
       ),
       LiveInventoryPage(clinicId: widget.clinicId),
-      InventoryPage(key: homeKey, clinicId: widget.clinicId),
       StockOperationsPage(clinicId: widget.clinicId),
       AIInsightsPage(clinicId: widget.clinicId),
       OrderPage(key: orderKey, clinicId: widget.clinicId),
@@ -342,10 +335,6 @@ class _MainScreenState extends State<MainScreen>
           BottomNavigationBarItem(
             icon: Icon(Icons.dashboard),
             label: "Dashboard",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.medication),
-            label: "Live",
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.inventory),
@@ -588,370 +577,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
-// ================= INVENTORY PAGE (ENHANCED) =================
 
-class InventoryPage extends StatefulWidget {
-  final String clinicId;
-
-  const InventoryPage({super.key, required this.clinicId});
-
-  @override
-  _InventoryPageState createState() => _InventoryPageState();
-}
-
-class _InventoryPageState extends State<InventoryPage> {
-  final String baseUrl = "http://localhost:5000";
-
-  List inventory = [];
-  bool isLoading = false;
-  String clinicName = "";
-
-  String searchQuery = "";
-  String _filterOption = "All";
-
-  List<String> filterOptions = [
-    "All",
-    "Low Stock",
-    "Expired",
-    "Expiring Soon",
-    "Safe",
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    fetchInventory();
-  }
-
-  Future<void> fetchInventory() async {
-    setState(() => isLoading = true);
-    try {
-      final data = await safeApiGet("$baseUrl/inventory?clinic_id=${widget.clinicId}");
-      setState(() {
-        inventory = data['inventory'] ?? [];
-        clinicName = data["clinic_name"] ?? widget.clinicId;
-      });
-    } catch (e) {
-      print("ERROR: $e");
-    }
-    if (mounted) setState(() => isLoading = false);
-  }
-
-  void refreshAll() {
-    fetchInventory();
-  }
-
-  List get _filteredInventory {
-    var items = inventory;
-
-    if (searchQuery.isNotEmpty) {
-      final q = searchQuery.toLowerCase();
-      items = items.where((item) {
-        return itemNameOf(item).toLowerCase().contains(q) ||
-            medicineIdOf(item).toLowerCase().contains(q) ||
-            (item['category'] ?? '').toString().toLowerCase().contains(q) ||
-            (item['batch_no'] ?? '').toString().toLowerCase().contains(q);
-      }).toList();
-    }
-
-    switch (_filterOption) {
-      case "Low Stock":
-        items = items.where((i) => (i['current_stock'] ?? 0) < 100).toList();
-        break;
-      case "Expired":
-        items = items.where((i) => i['expiry_status'] == 'expired').toList();
-        break;
-      case "Expiring Soon":
-        items = items.where(
-            (i) => i['expiry_status'] == 'expiring_soon').toList();
-        break;
-      case "Safe":
-        items = items.where(
-            (i) => i['expiry_status'] == 'safe' || i['expiry_status'] == 'warning').toList();
-        break;
-    }
-
-    items.sort((a, b) {
-      final aExp = a['expiry_status'] ?? 'safe';
-      final bExp = b['expiry_status'] ?? 'safe';
-      if (aExp == 'expired' && bExp != 'expired') return -1;
-      if (aExp != 'expired' && bExp == 'expired') return 1;
-      if (aExp == 'expiring_soon' && bExp != 'expiring_soon' && bExp != 'expired') return -1;
-      if (aExp != 'expiring_soon' && aExp != 'expired' && bExp == 'expiring_soon') return 1;
-      return (a['current_stock'] ?? 0).compareTo(b['current_stock'] ?? 0);
-    });
-
-    return items;
-  }
-
-  int get _expiredCount =>
-      inventory.where((i) => i['expiry_status'] == 'expired').length;
-  int get _expiringSoonCount =>
-      inventory.where((i) => i['expiry_status'] == 'expiring_soon').length;
-  int get _safeCount =>
-      inventory.where((i) => i['expiry_status'] == 'safe' || i['expiry_status'] == 'warning' || i['expiry_status'] == 'unknown').length;
-
-  @override
-  Widget build(BuildContext context) {
-    final filtered = _filteredInventory;
-    final expiredCount = _expiredCount;
-    final expiringSoonCount = _expiringSoonCount;
-    final safeCount = _safeCount;
-
-    return Scaffold(
-      body: RefreshIndicator(
-        onRefresh: fetchInventory,
-        child: Column(
-          children: [
-            // Search bar
-            Container(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: "Search by name, ID, category, batch...",
-                  prefixIcon: const Icon(Icons.search),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                  filled: true,
-                  fillColor: Colors.grey[100],
-                ),
-                onChanged: (v) => setState(() => searchQuery = v),
-              ),
-            ),
-
-            // Filters row
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              child: Row(
-                children: [
-                  ...filterOptions.map((f) => Padding(
-                        padding: const EdgeInsets.only(right: 6),
-                        child: FilterChip(
-                          label: Text(f, style: const TextStyle(fontSize: 11)),
-                          selected: _filterOption == f,
-                          onSelected: (_) => setState(() => _filterOption = f),
-                          selectedColor: Colors.blueAccent.withOpacity(0.2),
-                          checkmarkColor: Colors.blueAccent,
-                          visualDensity: VisualDensity.compact,
-                        ),
-                      )),
-                ],
-              ),
-            ),
-
-            // Expiry summary
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              child: Row(
-                children: [
-                  _expiryChip("Expired", expiredCount, Colors.red.shade700),
-                  const SizedBox(width: 8),
-                  _expiryChip("Expiring Soon", expiringSoonCount, Colors.orange),
-                  const SizedBox(width: 8),
-                  _expiryChip("Safe", safeCount, Colors.green),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 4),
-
-            // Inventory list
-            Expanded(
-              child: isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : filtered.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.inventory_2,
-                                  size: 64, color: Colors.grey[300]),
-                              const SizedBox(height: 16),
-                              Text(
-                                searchQuery.isNotEmpty ||
-                                        _filterOption != "All"
-                                    ? "No medicines match your filter."
-                                    : "No inventory data available.",
-                                style: TextStyle(
-                                    fontSize: 16, color: Colors.grey[500]),
-                              ),
-                            ],
-                          ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: filtered.length,
-                          itemBuilder: (ctx, i) {
-                            final item = filtered[i];
-                            final stock = item['current_stock'] ?? 0;
-                            final expiryStatus =
-                                item['expiry_status'] ?? 'unknown';
-                            final daysRemaining =
-                                item['days_remaining'];
-                            final batchNo =
-                                item['batch_no'] ?? '';
-
-                            Color riskColor;
-                            String riskLabel;
-                            if (expiryStatus == 'expired') {
-                              riskColor = Colors.red.shade700;
-                              riskLabel = "Expired";
-                            } else if (expiryStatus == 'expiring_soon') {
-                              riskColor = Colors.red;
-                              riskLabel =
-                                  "$daysRemaining days";
-                            } else if (expiryStatus == 'warning') {
-                              riskColor = Colors.orange;
-                              riskLabel =
-                                  "$daysRemaining days";
-                            } else {
-                              riskColor = Colors.green;
-                              riskLabel = expiryStatus == 'unknown'
-                                  ? "No expiry data"
-                                  : "Safe";
-                            }
-
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(12),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            itemNameOf(item),
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 15,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Row(
-                                            children: [
-                                              if (batchNo.isNotEmpty) ...[
-                                                Text(
-                                                  "Batch: $batchNo",
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    color: Colors.grey[600],
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 12),
-                                              ],
-                                              Text(
-                                                itemCategoryOf(item),
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  color: Colors.grey[600],
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          if (stock < 100)
-                                            Padding(
-                                              padding:
-                                                  const EdgeInsets.only(top: 4),
-                                              child: Text(
-                                                "⚠ Low Stock",
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  color: Colors.red,
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                    Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.end,
-                                      children: [
-                                        Container(
-                                          padding:
-                                              const EdgeInsets.symmetric(
-                                                  horizontal: 8, vertical: 3),
-                                          decoration: BoxDecoration(
-                                            color: riskColor.withOpacity(0.1),
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                          ),
-                                          child: Text(
-                                            riskLabel,
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w600,
-                                              color: riskColor,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Text(
-                                          "Stock: $stock",
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
-                                            color: stock < 100
-                                                ? Colors.red
-                                                : Colors.black87,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _expiryChip(String label, int count, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            "$count $label",
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 // ================= STOCK OPERATIONS PAGE =================
 

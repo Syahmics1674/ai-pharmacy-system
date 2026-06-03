@@ -149,6 +149,22 @@ def update_inventory_quantity(clinic_id, item_code, quantity):
     _rest_patch("inventory", params, data)
 
 
+def fetch_clinic(clinic_id):
+    if not clinic_id:
+        return {}
+    cache_key = f"supabase_clinic_{clinic_id}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+    try:
+        data = _rest_get("clinics", params={"clinic_id": f"eq.{clinic_id}"})
+        result = data[0] if data else {}
+    except Exception:
+        result = {}
+    _cache_set(cache_key, result, ttl=_DEFAULT_TTL)
+    return result
+
+
 def clear_cache():
     with _cache_lock:
         _cache.clear()
