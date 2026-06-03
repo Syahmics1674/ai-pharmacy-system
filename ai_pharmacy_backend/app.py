@@ -1354,23 +1354,20 @@ def get_order_suggestions():
         clinic_doc = db.collection("clinics").document(clinic_id).get()
         if clinic_doc.exists and clinic_doc.to_dict().get("has_pending_order"):
             return jsonify({"clinic_id": clinic_id, "order_suggestions": []})
-        docs = db.collection("inventory") \
-                 .where("clinic_id", "==", clinic_id) \
-                 .stream()
+        inv_items = get_inventory_for_clinic(clinic_id)
         suggestions = []
-        for doc in docs:
-            data = doc.to_dict()
-            stock = data.get("current_stock", 0)
-            item = data.get("item_name")
+        for item in inv_items:
+            stock = item["current_stock"]
+            item_name = item["item_name"]
             if stock < 100:
                 suggestions.append({
-                    "item_name": item,
+                    "item_name": item_name,
                     "suggested_qty": 200 - stock,
                     "priority": "HIGH"
                 })
             elif stock < 200:
                 suggestions.append({
-                    "item_name": item,
+                    "item_name": item_name,
                     "suggested_qty": 300 - stock,
                     "priority": "MEDIUM"
                 })
