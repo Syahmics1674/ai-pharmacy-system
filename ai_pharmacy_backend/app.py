@@ -1066,7 +1066,7 @@ def get_inventory():
             inventory_list.append({
                 "id": doc.id,
                 "item_name": data.get("item_name"),
-                "medicine_id": data.get("medicine_id", ""),
+                "item_code": data.get("medicine_id", ""),
                 "current_stock": data.get("current_stock", 0),
                 "category": data.get("category", ""),
                 "batch_no": data.get("batch_no", ""),

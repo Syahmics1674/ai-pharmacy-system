@@ -70,7 +70,11 @@ Future<Map<String, dynamic>> _doApiGet(String url, Duration timeout) async {
 
 String medicineIdOf(dynamic item) {
   if (item is Map) {
-    return (item['medicine_id'] ?? '').toString();
+    return (
+      item['item_code'] ??
+      item['medicine_id'] ??
+      ''
+    ).toString();
   }
   return '';
 }
@@ -971,9 +975,7 @@ class _StockOperationsPageState extends State<StockOperationsPage> {
     if (itemKey == null) return null;
 
     for (final dynamic entry in inventory) {
-      final key = medicineIdOf(entry).isNotEmpty
-          ? medicineIdOf(entry)
-          : itemNameOf(entry);
+      final key = medicineIdOf(entry);
       if (key == itemKey) {
         return Map<String, dynamic>.from(entry as Map);
       }
@@ -986,7 +988,7 @@ class _StockOperationsPageState extends State<StockOperationsPage> {
     try {
       await safeApiPost("$baseUrl/stock_in", {
         "clinic_id": widget.clinicId,
-        "medicine_id": medicineIdOf(item),
+        "item_code": medicineIdOf(item),
         "item_name": itemNameOf(item),
         "quantity_added": qty,
       });
@@ -1011,7 +1013,7 @@ class _StockOperationsPageState extends State<StockOperationsPage> {
     try {
       await safeApiPost("$baseUrl/stock_out", {
         "clinic_id": widget.clinicId,
-        "medicine_id": medicineIdOf(item),
+        "item_code": medicineIdOf(item),
         "item_name": itemNameOf(item),
         "quantity_used": qty,
       });
@@ -1079,9 +1081,7 @@ class _StockOperationsPageState extends State<StockOperationsPage> {
                 initialValue: selectedItem,
                 items: inventory.map<DropdownMenuItem<String>>((item) {
                   return DropdownMenuItem<String>(
-                    value: medicineIdOf(item).isNotEmpty
-                        ? medicineIdOf(item)
-                        : itemNameOf(item),
+                    value: medicineIdOf(item),
                     child: Text(itemNameOf(item)),
                   );
                 }).toList(),
@@ -1165,7 +1165,7 @@ class _StockOperationsPageState extends State<StockOperationsPage> {
 
                 await stockIn({
                   "item_name": name,
-                  "medicine_id": "",
+                  "item_code": "",
                 }, qty); // reuse existing API
 
                 Navigator.pop(context);
@@ -2253,7 +2253,7 @@ class _OrderPageState extends State<OrderPage> {
     try {
       final generatedItems = suggestions.map<Map<String, dynamic>>((item) {
         return {
-          "medicine_id": medicineIdOf(item),
+          "item_code": medicineIdOf(item),
           "item_name": itemNameOf(item),
           "qty": item['suggested_qty'],
           "suggested_qty": item['suggested_qty'],
