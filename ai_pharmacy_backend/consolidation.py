@@ -1,5 +1,6 @@
 from firebase_config import db
 from datetime import datetime
+from services.supabase_service import get_joined_inventory
 
 
 def get_route_id(clinic_id):
@@ -34,16 +35,13 @@ def get_clinic_name(clinic_id):
 
 
 def get_suggested_order_date(clinic_id):
-    docs = db.collection("inventory") \
-        .where("clinic_id", "==", clinic_id) \
-        .stream()
+    joined = get_joined_inventory(clinic_id=clinic_id)
 
     highest_priority = None
     earliest_date = None
 
-    for doc in docs:
-        data = doc.to_dict()
-        stock = data.get("current_stock", 0)
+    for item in joined:
+        stock = int(item.get("quantity", 0))
 
         if stock < 100:
             priority = "HIGH"
@@ -52,7 +50,7 @@ def get_suggested_order_date(clinic_id):
         else:
             continue
 
-        date = datetime.utcnow() 
+        date = datetime.utcnow()
 
         if priority == "HIGH":
             if highest_priority != "HIGH":

@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 from consolidation import consolidate_order_date
 from firebase_config import db
-from services.supabase_service import get_joined_inventory
+from services.supabase_service import get_joined_inventory, update_inventory_quantity
 from migrate_inventory import (
     build_match_index,
     list_medicines,
@@ -1747,11 +1747,15 @@ def complete_order():
             .where("clinic_id", "==", clinic_id) \
             .where("status", "==", "SUBMITTED") \
             .stream()
+        joined_supabase = get_joined_inventory(clinic_id=clinic_id)
+        supabase_qty_map = {item["item_code"]: int(item["quantity"]) for item in joined_supabase}
+
         for doc in orders:
             order_data = doc.to_dict()
             items = order_data.get("items", [])
             for item in items:
                 item_name = item.get("item_name")
+                item_code = item.get("item_code", "")
                 qty = item.get("qty", 0)
                 inv_docs = db.collection("inventory") \
                     .where("clinic_id", "==", clinic_id) \
@@ -1766,6 +1770,10 @@ def complete_order():
                         "qty_added": qty,
                         "timestamp": datetime.utcnow()
                     })
+                if item_code:
+                    current_supabase_qty = supabase_qty_map.get(item_code, 0)
+                    new_supabase_qty = current_supabase_qty + qty
+                    update_inventory_quantity(clinic_id, item_code, new_supabase_qty)
             doc.reference.update({"status": "RECEIVED"})
         db.collection("clinics").document(clinic_id).update({"has_pending_order": False})
         return jsonify({"message": "Order received & inventory updated"})
