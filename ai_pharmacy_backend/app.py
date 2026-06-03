@@ -1177,16 +1177,15 @@ def dashboard_summary():
             if data.get("status") in ("PENDING", "SUBMITTED"):
                 pending_orders_count += 1
 
+        dispense_txns = fetch_dispense_transactions(clinic_id=clinic_id, limit=1000)
+        usage_list = dispense_txns_to_usage_list(dispense_txns)
         stock_in_data = []
-        for doc in db.collection("usage_logs") \
-                .where("clinic_id", "==", clinic_id) \
-                .stream():
-            data = doc.to_dict()
+        for u in usage_list:
             stock_in_data.append({
                 "type": "stock_out",
-                "item_name": data.get("item_name"),
-                "quantity": data.get("quantity_used") or 0,
-                "timestamp": str(data.get("timestamp")) if data.get("timestamp") else None,
+                "item_name": u["item_name"],
+                "quantity": u["quantity_used"],
+                "timestamp": str(u["timestamp"]) if u["timestamp"] else None,
             })
 
         for doc in db.collection("stock_in_logs") \
@@ -1214,7 +1213,6 @@ def dashboard_summary():
         recent_activity.sort(key=lambda e: e.get("timestamp") or "", reverse=True)
         recent_activity = recent_activity[:20]
 
-        dispense_txns = fetch_dispense_transactions(clinic_id=clinic_id, limit=1000)
         top_products = build_top_products_from_dispense(dispense_txns)
         stock_summary = {
             "critical": low_stock_count,
