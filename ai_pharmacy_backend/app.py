@@ -1618,13 +1618,8 @@ def ai_smart_inventory():
     if not clinic_id:
         return jsonify({"error": "Missing clinic_id"}), 400
     try:
-        inv_docs = db.collection("inventory") \
-                     .where("clinic_id", "==", clinic_id) \
-                     .stream()
-        my_inventory = {}
-        for doc in inv_docs:
-            d = doc.to_dict()
-            my_inventory[d.get('item_name')] = d.get('current_stock', 0)
+        inv_items = get_inventory_for_clinic(clinic_id)
+        my_inventory = {item['item_name']: item['current_stock'] for item in inv_items}
         weather_data = get_7_day_weather()
         usage_docs = db.collection("usage_logs") \
                        .where("clinic_id", "==", clinic_id) \
