@@ -228,6 +228,43 @@ def build_overall_usage_payload(logs):
     }
 
 
+def dispense_txns_to_usage_list(dispense_txns):
+    if not dispense_txns:
+        return []
+
+    medicines = fetch_medicines()
+    medicine_map = {}
+    for m in medicines:
+        code = m.get("item_code")
+        if code:
+            medicine_map[code] = (
+                m.get("full_brand_name")
+                or m.get("brand_name")
+                or m.get("match_name")
+                or code
+            )
+
+    usage = []
+    for txn in dispense_txns:
+        ts = txn.get("local_created_at")
+        qty = abs(int(txn.get("quantity_change", 0)))
+        if not ts or qty == 0:
+            continue
+        code = txn.get("item_code", "")
+        name = medicine_map.get(code, txn.get("matched_name", code))
+        try:
+            parsed_ts = datetime.fromisoformat(ts)
+        except (ValueError, TypeError):
+            continue
+        usage.append({
+            "item_name": name,
+            "quantity_used": qty,
+            "timestamp": parsed_ts,
+        })
+
+    return usage
+
+
 def build_stock_summary_payload(inventory_items):
     if not inventory_items:
         return FALLBACK_STOCK_SUMMARY
@@ -1385,17 +1422,12 @@ def ai_forecast():
         cached_data = cache_get(cache_key)
         if cached_data:
             return jsonify(cached_data)
-        docs = db.collection("usage_logs") \
-                 .where("clinic_id", "==", clinic_id) \
-                 .where("item_name", "==", item_name) \
-                 .stream()
-        usage_data = []
-        for doc in docs:
-            data = doc.to_dict()
-            usage_data.append({
-                "quantity_used": data.get("quantity_used", 0),
-                "timestamp": data.get("timestamp")
-            })
+        dispense_txns = fetch_dispense_transactions(clinic_id=clinic_id, limit=1000)
+        usage_data = [
+            {"quantity_used": u["quantity_used"], "timestamp": u["timestamp"]}
+            for u in dispense_txns_to_usage_list(dispense_txns)
+            if u["item_name"] == item_name
+        ]
         forecast = generate_forecast(usage_data, predict_days=7)
         result = {"clinic_id": clinic_id, "item_name": item_name, "forecast_7_days": forecast}
         cache_set(cache_key, result, ttl_seconds=60)
@@ -1453,7 +1485,8 @@ def ai_anomalies():
 @cached(ttl_seconds=300)
 def ai_overall_usage():
     clinic_id = request.args.get('clinic_id')
-    logs = get_usage_logs_for_clinic(clinic_id)
+    dispense_txns = fetch_dispense_transactions(clinic_id=clinic_id, limit=1000)
+    logs = dispense_txns_to_usage_list(dispense_txns)
     return jsonify(build_overall_usage_payload(logs))
 
 
@@ -1496,16 +1529,14 @@ def ai_smart_inventory():
         inv_items = get_inventory_for_clinic(clinic_id)
         my_inventory = {item['item_name']: item['current_stock'] for item in inv_items}
         weather_data = get_7_day_weather()
-        usage_docs = db.collection("usage_logs") \
-                       .where("clinic_id", "==", clinic_id) \
-                       .stream()
+        dispense_txns = fetch_dispense_transactions(clinic_id=clinic_id, limit=1000)
+        usage_list = dispense_txns_to_usage_list(dispense_txns)
         my_usage = {}
-        for doc in usage_docs:
-            d = doc.to_dict()
-            item = d.get('item_name')
+        for u in usage_list:
+            item = u["item_name"]
             if item not in my_usage:
                 my_usage[item] = []
-            my_usage[item].append(d)
+            my_usage[item].append(u)
         smart_list = []
         for item, stock in my_inventory.items():
             logs = my_usage.get(item, [])
