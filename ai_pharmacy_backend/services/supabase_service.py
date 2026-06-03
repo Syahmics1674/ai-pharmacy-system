@@ -81,7 +81,7 @@ def fetch_dispense_transactions(clinic_id=None, limit=100):
     cached = _cache_get(cache_key)
     if cached is not None:
         return cached
-    params = {"limit": limit, "order": "created_at.desc.nullslast"}
+    params = {"limit": limit, "order": "cloud_created_at.desc.nullslast"}
     if clinic_id:
         params["clinic_id"] = f"eq.{clinic_id}"
     data = _safe_rest_get("dispense_transactions", params=params)
