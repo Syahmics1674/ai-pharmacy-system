@@ -610,7 +610,7 @@ class _PKDDashboardPageState extends State<PKDDashboardPage> {
         const SizedBox(height: 16),
         // Clinic dropdown
         DropdownButtonFormField<String>(
-          value: selectedPKDClinicId ?? "",
+          initialValue: selectedPKDClinicId ?? "",
           decoration: const InputDecoration(
             labelText: "Select Clinic",
             prefixIcon: Icon(Icons.local_hospital_outlined),

@@ -1001,7 +1001,7 @@ class _StockOperationsPageState extends State<StockOperationsPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString().replaceAll("Exception: ", "") + " ❌")),
+          SnackBar(content: Text("${e.toString().replaceAll("Exception: ", "")} ❌")),
         );
       }
     }
@@ -1026,7 +1026,7 @@ class _StockOperationsPageState extends State<StockOperationsPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString().replaceAll("Exception: ", "") + " ❌")),
+          SnackBar(content: Text("${e.toString().replaceAll("Exception: ", "")} ❌")),
         );
       }
     }
