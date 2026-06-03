@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from consolidation import consolidate_order_date
-from firebase_config import db  
+from firebase_config import db
+from services.supabase_service import get_joined_inventory
 from migrate_inventory import (
     build_match_index,
     list_medicines,
@@ -159,19 +160,18 @@ def get_usage_logs_for_clinic(clinic_id):
 
 
 def get_inventory_for_clinic(clinic_id):
-    query = db.collection("inventory")
-
-    if clinic_id:
-        query = query.where("clinic_id", "==", clinic_id)
-
+    joined = get_joined_inventory(clinic_id=clinic_id)
     items = []
-    for doc in query.stream():
-        data = doc.to_dict()
+    for item in joined:
         items.append({
-            "item_name": data.get("item_name"),
-            "current_stock": int(data.get("current_stock", 0))
+            "item_name": (
+                item.get("full_brand_name")
+                or item.get("brand_name")
+                or item.get("match_name")
+                or item.get("item_code", "")
+            ),
+            "current_stock": int(item.get("quantity", 0)),
         })
-
     return items
 
 
