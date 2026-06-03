@@ -1887,25 +1887,14 @@ def get_or_compute_pkd_summary(district):
 def get_clinic_inventory_stats(clinic_id):
     total = 0
     low_stock = 0
-    expiring_soon = 0
-    expired = 0
     try:
-        for doc in db.collection("inventory") \
-                .where("clinic_id", "==", clinic_id) \
-                .stream():
+        for item in get_inventory_for_clinic(clinic_id):
             total += 1
-            data = doc.to_dict()
-            stock = data.get("current_stock", 0)
-            if stock < 100:
+            if item["current_stock"] < 100:
                 low_stock += 1
-            expiry_info = compute_expiry_info(data)
-            if expiry_info["expiry_status"] == "expired":
-                expired += 1
-            elif expiry_info["expiry_status"] == "expiring_soon":
-                expiring_soon += 1
     except Exception:
         pass
-    return {"total": total, "low_stock": low_stock, "expiring_soon": expiring_soon, "expired": expired}
+    return {"total": total, "low_stock": low_stock, "expiring_soon": 0, "expired": 0}
 
 
 def get_clinic_usage_summary(clinic_id):
