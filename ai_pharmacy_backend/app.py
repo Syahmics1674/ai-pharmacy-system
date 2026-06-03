@@ -1264,8 +1264,8 @@ def get_order_suggestions():
     if not clinic_id:
         return jsonify({"error": "clinic_id is required"}), 400
     try:
-        clinic_doc = db.collection("clinics").document(clinic_id).get()
-        if clinic_doc.exists and clinic_doc.to_dict().get("has_pending_order"):
+        clinic_data = fetch_clinic(clinic_id)
+        if clinic_data.get("has_pending_order"):
             return jsonify({"clinic_id": clinic_id, "order_suggestions": []})
         inv_items = get_inventory_for_clinic(clinic_id)
         suggestions = []
