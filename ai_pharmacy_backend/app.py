@@ -1056,25 +1056,27 @@ def get_inventory():
     if not clinic_id:
         return jsonify({"error": "clinic_id is required"}), 400
     try:
-        docs = db.collection("inventory") \
-                 .where("clinic_id", "==", clinic_id) \
-                 .stream()
+        joined = get_joined_inventory(clinic_id=clinic_id)
         inventory_list = []
-        for doc in docs:
-            data = doc.to_dict()
-            expiry_info = compute_expiry_info(data)
+        for item in joined:
+            display = (
+                item.get("full_brand_name")
+                or item.get("brand_name")
+                or item.get("match_name")
+                or item.get("item_code", "")
+            )
             inventory_list.append({
-                "id": doc.id,
-                "item_name": data.get("item_name"),
-                "item_code": data.get("medicine_id", ""),
-                "current_stock": data.get("current_stock", 0),
-                "category": data.get("category", ""),
-                "batch_no": data.get("batch_no", ""),
-                "expiry_date": str(data.get("expiry_date")) if data.get("expiry_date") else None,
-                "stock_level": data.get("stock_level", ""),
-                "last_updated": str(data.get("last_updated")) if data.get("last_updated") else None,
-                "days_remaining": expiry_info["days_remaining"],
-                "expiry_status": expiry_info["expiry_status"],
+                "id": "",
+                "item_name": display,
+                "item_code": item.get("item_code", ""),
+                "current_stock": int(item.get("quantity", 0)),
+                "category": "",
+                "batch_no": "",
+                "expiry_date": None,
+                "stock_level": "",
+                "last_updated": item.get("updated_at", ""),
+                "days_remaining": None,
+                "expiry_status": "unknown",
             })
         clinic_doc = db.collection("clinics").document(clinic_id).get()
         clinic_data = clinic_doc.to_dict() if clinic_doc.exists else {}
