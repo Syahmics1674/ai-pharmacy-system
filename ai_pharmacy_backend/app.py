@@ -121,14 +121,6 @@ FALLBACK_STOCK_SUMMARY = {
     "safe": 12
 }
 
-FALLBACK_TOP_PRODUCTS = [
-    {"item_name": "Paracetamol", "total_used": 120},
-    {"item_name": "Amoxicillin", "total_used": 95},
-    {"item_name": "Cephalexin 250mg", "total_used": 81},
-    {"item_name": "Uphamol", "total_used": 74},
-    {"item_name": "Metformin", "total_used": 63}
-]
-
 FALLBACK_INSIGHT_MESSAGE = {
     "message": "Paracetamol demand is increasing. Consider increasing stock."
 }
@@ -258,32 +250,6 @@ def build_stock_summary_payload(inventory_items):
         "low": low,
         "safe": safe
     }
-
-
-def build_top_products_payload(logs):
-    if not logs:
-        return FALLBACK_TOP_PRODUCTS
-
-    totals = {}
-    for log in logs:
-        item_name = log.get("item_name")
-        if not item_name:
-            continue
-        totals[item_name] = totals.get(item_name, 0) + int(log.get("quantity_used", 0))
-
-    if not totals:
-        return FALLBACK_TOP_PRODUCTS
-
-    ranked = sorted(
-        (
-            {"item_name": item_name, "total_used": total_used}
-            for item_name, total_used in totals.items()
-        ),
-        key=lambda item: item["total_used"],
-        reverse=True
-    )
-
-    return ranked[:5]
 
 
 def build_top_products_from_dispense(dispense_txns):
@@ -1503,18 +1469,18 @@ def ai_stock_summary():
 @cached(ttl_seconds=300)
 def ai_top_products():
     clinic_id = request.args.get('clinic_id')
-    logs = get_usage_logs_for_clinic(clinic_id)
-    return jsonify(build_top_products_payload(logs))
+    dispense_txns = fetch_dispense_transactions(clinic_id=clinic_id, limit=1000)
+    return jsonify(build_top_products_from_dispense(dispense_txns))
 
 
 @app.route('/ai/insight_message', methods=['GET'])
 @cached(ttl_seconds=300)
 def ai_insight_message():
     clinic_id = request.args.get('clinic_id')
-    logs = get_usage_logs_for_clinic(clinic_id)
     inventory_items = get_inventory_for_clinic(clinic_id)
     stock_summary = build_stock_summary_payload(inventory_items)
-    top_products = build_top_products_payload(logs)
+    dispense_txns = fetch_dispense_transactions(clinic_id=clinic_id, limit=1000)
+    top_products = build_top_products_from_dispense(dispense_txns)
     return jsonify(build_insight_message_payload(stock_summary, top_products))
 
 @app.route('/ai/smart_inventory', methods=['GET'])
