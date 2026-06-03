@@ -8,6 +8,8 @@ from services.supabase_service import (
     fetch_medicines,
     fetch_clinic,
     add_dispense_transaction,
+    fetch_clinics_by_district,
+    update_clinic,
 )
 from migrate_inventory import (
     build_match_index,
@@ -1010,14 +1012,13 @@ def pkd_alerts():
 def clinic_info():
     clinic_id = request.args.get('clinic_id')
     try:
-        doc = db.collection("clinics").document(clinic_id).get()
-        if not doc.exists:
+        clinic_data = fetch_clinic(clinic_id)
+        if not clinic_data:
             return jsonify({"error": "Clinic not found"}), 404
-        data = doc.to_dict()
         return jsonify({
             "clinic_id": clinic_id,
-            "clinic_name": data.get("name", clinic_id),
-            "district": data.get("district", "")
+            "clinic_name": clinic_data.get("clinic_name") or clinic_data.get("name", clinic_id),
+            "district": clinic_data.get("district", "")
         })
     except Exception as e:
         return jsonify({"error": f"Clinic info failed: {str(e)}"}), 500
@@ -1107,9 +1108,8 @@ def get_inventory():
                 "days_remaining": None,
                 "expiry_status": "unknown",
             })
-        clinic_doc = db.collection("clinics").document(clinic_id).get()
-        clinic_data = clinic_doc.to_dict() if clinic_doc.exists else {}
-        clinic_name = clinic_data.get("name", clinic_id)
+        clinic_data = fetch_clinic(clinic_id)
+        clinic_name = clinic_data.get("clinic_name") or clinic_data.get("name", clinic_id)
         district = clinic_data.get("district", "")
         return jsonify({
             "clinic_id": clinic_id,
@@ -1614,7 +1614,7 @@ def generate_order():
             "created_at": datetime.utcnow()
         }
         db.collection("orders").add(order_data)
-        db.collection("clinics").document(clinic_id).update({"has_pending_order": True})
+        update_clinic(clinic_id, {"has_pending_order": True})
         return jsonify({"message": "Order generated successfully"})
     except Exception as e:
         return jsonify({"error": f"Order generation failed: {str(e)}"}), 500
@@ -1683,7 +1683,7 @@ def complete_order():
                     new_supabase_qty = current_supabase_qty + qty
                     update_inventory_quantity(clinic_id, item_code, new_supabase_qty)
             doc.reference.update({"status": "RECEIVED"})
-        db.collection("clinics").document(clinic_id).update({"has_pending_order": False})
+        update_clinic(clinic_id, {"has_pending_order": False})
         return jsonify({"message": "Order received & inventory updated"})
     except Exception as e:
         return jsonify({"error": f"Complete order failed: {str(e)}"}), 500
@@ -1703,7 +1703,7 @@ def update_order_status():
             if order.exists:
                 clinic_id = order.to_dict().get("clinic_id")
                 if clinic_id:
-                    db.collection("clinics").document(clinic_id).update({"has_pending_order": True})
+                    update_clinic(clinic_id, {"has_pending_order": True})
         return jsonify({"message": "Order status updated"})
     except Exception as e:
         return jsonify({"error": f"Update failed: {str(e)}"}), 500
@@ -1715,14 +1715,13 @@ def get_district_clinics(district):
     if not district:
         return []
     clinics = []
-    for doc in db.collection("clinics").where("district", "==", district).stream():
-        data = doc.to_dict()
+    for row in fetch_clinics_by_district(district):
         clinics.append({
-            "clinic_id": doc.id,
-            "name": data.get("name", doc.id),
-            "district": data.get("district", district),
-            "route_id": data.get("route_id", ""),
-            "has_pending_order": data.get("has_pending_order", False),
+            "clinic_id": row["clinic_id"],
+            "name": row.get("clinic_name") or row.get("name", row["clinic_id"]),
+            "district": row.get("district", district),
+            "route_id": row.get("route_id", ""),
+            "has_pending_order": row.get("has_pending_order", False),
         })
     return clinics
 

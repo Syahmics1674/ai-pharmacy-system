@@ -1,37 +1,24 @@
-from firebase_config import db
 from datetime import datetime
-from services.supabase_service import get_joined_inventory
+from services.supabase_service import get_joined_inventory, fetch_clinic
 
 
 def get_route_id(clinic_id):
-    doc = db.collection("clinics").document(clinic_id).get()
-
-    if doc.exists:
-        return doc.to_dict().get("route_id")
-
-    return None
+    data = fetch_clinic(clinic_id)
+    return data.get("route_id")
 
 
 def get_clinics_in_route(route_id):
-    clinics = []
-
-    docs = db.collection("clinics") \
-             .where("route_id", "==", route_id) \
-             .stream()
-
-    for doc in docs:
-        clinics.append(doc.id)
-
-    return clinics
+    from services.supabase_service import _rest_get
+    try:
+        data = _rest_get("clinics", params={"route_id": f"eq.{route_id}"})
+        return [row["clinic_id"] for row in data]
+    except Exception:
+        return []
 
 
 def get_clinic_name(clinic_id):
-    doc = db.collection("clinics").document(clinic_id).get()
-
-    if doc.exists:
-        return doc.to_dict().get("name", clinic_id)
-
-    return clinic_id
+    data = fetch_clinic(clinic_id)
+    return data.get("clinic_name") or data.get("name", clinic_id)
 
 
 def get_suggested_order_date(clinic_id):
@@ -92,13 +79,10 @@ def build_recommendation_message(based_on, summary):
 
 
 def consolidate_order_date(current_clinic_id):
-
-    clinic_doc = db.collection("clinics").document(current_clinic_id).get()
-
-    if clinic_doc.exists:
-        if clinic_doc.to_dict().get("has_pending_order"):
-            print("⛔ Order already pending → skip consolidation")
-            return None
+    clinic_data = fetch_clinic(current_clinic_id)
+    if clinic_data.get("has_pending_order"):
+        print("⛔ Order already pending → skip consolidation")
+        return None
 
     route_id = get_route_id(current_clinic_id)
 

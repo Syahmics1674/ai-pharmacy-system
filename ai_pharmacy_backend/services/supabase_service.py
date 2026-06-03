@@ -182,6 +182,31 @@ def fetch_clinic(clinic_id):
     return result
 
 
+def fetch_clinics_by_district(district):
+    if not district:
+        return []
+    cache_key = f"supabase_clinics_district_{district}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+    try:
+        data = _rest_get("clinics", params={"district": f"eq.{district}"})
+    except Exception:
+        data = []
+    _cache_set(cache_key, data, ttl=_DEFAULT_TTL)
+    return data
+
+
+def update_clinic(clinic_id, data):
+    if not clinic_id or not data:
+        return
+    params = {"clinic_id": f"eq.{clinic_id}"}
+    try:
+        _rest_patch("clinics", params, data)
+    except Exception:
+        pass
+
+
 def clear_cache():
     with _cache_lock:
         _cache.clear()
