@@ -1197,9 +1197,9 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
       children: [
         Expanded(
           child: _buildStatCard(
-            "Critical",
+            "Low Stock",
             "$critical",
-            "Items at risk",
+            "Items below threshold",
             Colors.redAccent,
             Icons.error_outline_rounded,
           ),
@@ -1207,9 +1207,9 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
         const SizedBox(width: 12),
         Expanded(
           child: _buildStatCard(
-            "Low Stock",
+            "Moderate",
             "$low",
-            "Items running low",
+            "Items at moderate level",
             Colors.orangeAccent,
             Icons.warning_amber_rounded,
           ),
@@ -1217,7 +1217,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
         const SizedBox(width: 12),
         Expanded(
           child: _buildStatCard(
-            "Safe",
+            "Adequate",
             "$safe",
             "Items well-stocked",
             Colors.greenAccent,

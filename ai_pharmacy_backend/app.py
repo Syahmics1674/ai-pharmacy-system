@@ -246,9 +246,9 @@ def build_stock_summary_payload(inventory_items):
 
     for item in inventory_items:
         stock = item["current_stock"]
-        if stock < 100:
+        if stock < 20:
             critical += 1
-        elif stock < 200:
+        elif stock < 50:
             low += 1
         else:
             safe += 1
