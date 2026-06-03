@@ -9,6 +9,7 @@ import 'order_history_page.dart';
 import 'pkd_dashboard_page.dart';
 import 'dashboard_page.dart';
 import 'live_inventory_page.dart';
+import 'services/sync_service.dart';
 
 // Client-side API response cache
 final _apiCache = <String, _CacheEntry>{};
@@ -163,10 +164,12 @@ class MainScreen extends StatefulWidget {
   _MainScreenState createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class _MainScreenState extends State<MainScreen>
+    with WidgetsBindingObserver {
   int _selectedIndex = 0;
   String clinicName = "";
   String clinicDistrict = "";
+  bool _isSyncing = false;
 
   final homeKey = GlobalKey<_InventoryPageState>();
   final orderKey = GlobalKey<_OrderPageState>();
@@ -209,6 +212,7 @@ class _MainScreenState extends State<MainScreen> {
   void _performLogout() {
     _apiCache.clear();
     _inflightRequests.clear();
+    SyncService.clear();
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (_) => LoginPage()),
@@ -228,7 +232,34 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     fetchClinicInfo();
+    _initSync();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _runSync();
+    }
+  }
+
+  Future<void> _initSync() async {
+    await SyncService.initialize(widget.clinicId);
+    await _runSync();
+  }
+
+  Future<void> _runSync() async {
+    if (_isSyncing) return;
+    setState(() => _isSyncing = true);
+    await SyncService.fullSync(widget.clinicId);
+    if (mounted) setState(() => _isSyncing = false);
   }
 
   @override

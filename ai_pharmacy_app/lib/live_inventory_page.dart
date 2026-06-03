@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'main.dart';
 import 'services/live_inventory_service.dart';
+import 'services/sync_service.dart';
 import 'dispense_history_page.dart';
 
 class LiveInventoryPage extends StatefulWidget {
@@ -17,6 +18,7 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
   List<dynamic> _inventory = [];
   List<dynamic> _filtered = [];
   bool _isLoading = true;
+  bool _isOffline = false;
   String _search = "";
   String _filterChip = "All";
   String _sortOption = "Name A-Z";
@@ -51,16 +53,41 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
   }
 
   Future<void> _load() async {
-    setState(() => _isLoading = true);
-    final data = await LiveInventoryService.fetchLiveInventory(
-      clinicId: widget.clinicId,
-    );
-    if (!mounted) return;
     setState(() {
-      _inventory = data;
-      _applyFilter();
-      _isLoading = false;
+      _isLoading = true;
+      _isOffline = false;
     });
+
+    bool loaded = false;
+    try {
+      final data = await LiveInventoryService.fetchLiveInventory(
+        clinicId: widget.clinicId,
+      );
+      if (!mounted) return;
+      if (data.isNotEmpty) {
+        setState(() {
+          _inventory = data;
+          _applyFilter();
+          _isLoading = false;
+        });
+        loaded = true;
+      }
+    } catch (_) {}
+
+    if (!loaded && mounted) {
+      final localData = await SyncService.getLocalInventory(
+        clinicId: widget.clinicId,
+      );
+      if (!mounted) return;
+      setState(() {
+        _inventory = localData;
+        _isOffline = true;
+        _applyFilter();
+        _isLoading = false;
+      });
+    } else if (!loaded) {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   void _applyFilter() {
@@ -163,7 +190,10 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _load,
+            onPressed: () async {
+              await SyncService.fullSync(widget.clinicId ?? '');
+              _load();
+            },
           ),
         ],
         bottom: TabBar(
@@ -219,6 +249,26 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
     }
     return Column(
       children: [
+        if (_isOffline)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+            color: Colors.orange.shade100,
+            child: Row(
+              children: [
+                Icon(Icons.wifi_off, size: 16, color: Colors.orange.shade800),
+                const SizedBox(width: 8),
+                Text(
+                  "Offline Mode — showing local data",
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.orange.shade900,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
         // Search bar
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
@@ -246,6 +296,21 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
               _buildSummaryChip("Moderate", _moderateCount, const Color(0xFFF5A524)),
               const SizedBox(width: 8),
               _buildSummaryChip("Adequate", _adequateCount, const Color(0xFF2FBF71)),
+              const Spacer(),
+              if (!_isOffline)
+                FutureBuilder<String>(
+                  future: SyncService.lastSyncTime(),
+                  builder: (_, snap) {
+                    final label = snap.data ?? '';
+                    final short = label.length > 19
+                        ? label.substring(0, 19).replaceFirst('T', ' ')
+                        : label;
+                    return Text(
+                      "Sync: $short",
+                      style: TextStyle(fontSize: 10, color: Colors.grey[500]),
+                    );
+                  },
+                ),
             ],
           ),
         ),

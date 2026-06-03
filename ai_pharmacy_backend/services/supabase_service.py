@@ -35,6 +35,20 @@ def _rest_get(table, params=None, timeout=10.0):
     response.raise_for_status()
     return response.json()
 
+def _rest_post(table, data, timeout=10.0):
+    url = f"{SUPABASE_URL}/rest/v1/{table}"
+    response = httpx.post(url, headers=_SUPABASE_HEADERS, json=data, timeout=timeout)
+    response.raise_for_status()
+    return response.json()
+
+def _rest_patch(table, params, data, timeout=10.0):
+    url = f"{SUPABASE_URL}/rest/v1/{table}"
+    response = httpx.patch(
+        url, headers=_SUPABASE_HEADERS, params=params, json=data, timeout=timeout
+    )
+    response.raise_for_status()
+    return response.json()
+
 def _safe_rest_get(table, params=None, timeout=10.0):
     try:
         return _rest_get(table, params=params, timeout=timeout)
@@ -109,6 +123,31 @@ def get_joined_inventory(clinic_id=None):
         f"Joined rows={len(joined)}"
     )
     return joined
+
+def upsert_dispense_transactions(transactions):
+    if not transactions:
+        return []
+    synced_ids = []
+    for txn in transactions:
+        try:
+            _rest_post("dispense_transactions", txn)
+            synced_ids.append(txn.get("id"))
+        except Exception:
+            pass
+    return synced_ids
+
+
+def update_inventory_quantity(clinic_id, item_code, quantity):
+    params = {
+        "clinic_id": f"eq.{clinic_id}",
+        "item_code": f"eq.{item_code}",
+    }
+    data = {
+        "quantity": quantity,
+        "updated_at": time.strftime("%Y-%m-%dT%H:%M:%S.000000+00:00", time.gmtime()),
+    }
+    _rest_patch("inventory", params, data)
+
 
 def clear_cache():
     with _cache_lock:
