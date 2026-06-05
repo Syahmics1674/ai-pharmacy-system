@@ -11,6 +11,7 @@ import 'pkd_dashboard_page.dart';
 import 'dashboard_page.dart';
 import 'live_inventory_page.dart';
 import 'services/sync_service.dart';
+import 'config/api_config.dart';
 
 // Client-side API response cache
 final _apiCache = <String, _CacheEntry>{};
@@ -218,7 +219,7 @@ class _MainScreenState extends State<MainScreen>
   Future<void> fetchClinicInfo() async {
     final response = await http.get(
       Uri.parse(
-        "http://localhost:5000/clinic_info?clinic_id=${widget.clinicId}",
+        "${ApiConfig.baseUrl}/clinic_info?clinic_id=${widget.clinicId}",
       ),
     ).timeout(const Duration(seconds: 8));
 
@@ -393,7 +394,7 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final String baseUrl = "http://localhost:5000";
+  final String baseUrl = ApiConfig.baseUrl;
   final List<String> loginRoles = ["Clinic", "PKD"];
 
   TextEditingController userController = TextEditingController();
@@ -624,7 +625,7 @@ class StockOperationsPage extends StatefulWidget {
 }
 
 class _StockOperationsPageState extends State<StockOperationsPage> {
-  final String baseUrl = "http://localhost:5000";
+  final String baseUrl = ApiConfig.baseUrl;
   bool isLoading = false;
   List inventory = [];
   String? selectedItem;
@@ -893,7 +894,7 @@ class AIInsightsPage extends StatefulWidget {
 }
 
 class _AIInsightsPageState extends State<AIInsightsPage> {
-  final String baseUrl = "http://localhost:5000";
+  final String baseUrl = ApiConfig.baseUrl;
   final List<Color> chartGradient = [
     const Color(0xff23b6e6),
     const Color(0xff02d39a),
@@ -2929,7 +2930,7 @@ class OrderPage extends StatefulWidget {
 }
 
 class _OrderPageState extends State<OrderPage> {
-  final String baseUrl = "http://localhost:5000";
+  final String baseUrl = ApiConfig.baseUrl;
 
   List suggestions = [];
   String consolidatedDate = "";

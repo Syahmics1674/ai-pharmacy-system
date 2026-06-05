@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
+import '../config/api_config.dart';
 
 class SyncResult {
   final bool online;
@@ -21,7 +22,7 @@ class SyncResult {
 }
 
 class SyncService {
-  static const String _baseUrl = "http://localhost:5000";
+  static const String _baseUrl = ApiConfig.baseUrl;
   static Database? _database;
   static String? _deviceId;
 

@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
+import 'config/api_config.dart';
+
 String orderItemNameOf(dynamic item) {
   if (item is Map) {
     return (item['item_name'] ?? item['name'] ?? 'Unknown Medicine').toString();
@@ -29,7 +31,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
   List orders = [];
   bool isLoading = true;
 
-  final String baseUrl = "http://127.0.0.1:5000";
+  final String baseUrl = ApiConfig.baseUrl;
 
   @override
   void initState() {

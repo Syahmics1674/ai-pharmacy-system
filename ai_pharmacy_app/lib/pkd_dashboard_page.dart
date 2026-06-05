@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'config/api_config.dart';
 import 'main.dart';
 import 'services/live_inventory_service.dart';
 
@@ -19,7 +20,7 @@ class PKDDashboardPage extends StatefulWidget {
 }
 
 class _PKDDashboardPageState extends State<PKDDashboardPage> {
-  final String baseUrl = "http://localhost:5000";
+  final String baseUrl = ApiConfig.baseUrl;
   final TextEditingController searchController = TextEditingController();
 
   bool isLoading = true;
