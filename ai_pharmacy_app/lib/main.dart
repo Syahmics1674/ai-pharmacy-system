@@ -5,6 +5,7 @@ import 'package:printing/printing.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'order_history_page.dart';
 import 'pkd_dashboard_page.dart';
 import 'dashboard_page.dart';
@@ -146,8 +147,30 @@ Future<Map<String, dynamic>> safeApiPost(String url, Map<String, dynamic> body, 
   throw Exception(errBody['error'] ?? "HTTP ${response.statusCode}");
 }
 
-void main() {
-  runApp(MaterialApp(home: LoginPage()));
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final SharedPreferences prefs = await SharedPreferences.getInstance();
+  final String? role = prefs.getString("role");
+
+  Widget initialPage = const LoginPage();
+
+  if (role == "pkd") {
+    final String district = prefs.getString("district") ?? "";
+    if (district.isNotEmpty) {
+      initialPage = PKDDashboardPage(district: district);
+    }
+  } else if (role == "clinic") {
+    final String clinicId = prefs.getString("clinic_id") ?? "";
+    if (clinicId.isNotEmpty) {
+      initialPage = MainScreen(clinicId: clinicId);
+    }
+  }
+
+  runApp(MaterialApp(
+    title: 'AI Pharmacy',
+    home: initialPage,
+    debugShowCheckedModeBanner: false,
+  ));
 }
 
 class MyApp extends StatelessWidget {
@@ -208,10 +231,13 @@ class _MainScreenState extends State<MainScreen>
     }
   }
 
-  void _performLogout() {
+  Future<void> _performLogout() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
     _apiCache.clear();
     _inflightRequests.clear();
     SyncService.clear();
+    if (!mounted) return;
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (_) => LoginPage()),
@@ -414,7 +440,12 @@ class _LoginPageState extends State<LoginPage> {
           return;
         }
 
+        final SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString("role", role);
+
         if (role == "pkd") {
+          await prefs.setString("district", (data["district"] ?? "").toString());
+          if (!mounted) return;
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
@@ -426,6 +457,8 @@ class _LoginPageState extends State<LoginPage> {
           return;
         }
 
+        await prefs.setString("clinic_id", (data["clinic_id"] ?? "").toString());
+        if (!mounted) return;
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -683,9 +716,8 @@ class _StockOperationsPageState extends State<StockOperationsPage> {
   }
 
   void refreshAll() {
-    // For now just placeholder
-    //// Later we will connect to real data
-    print("Refreshing data...");
+    fetchInventory();
+    SyncService.fullSync(widget.clinicId);
   }
 
   // ############## DIALOG ##############
@@ -697,58 +729,62 @@ class _StockOperationsPageState extends State<StockOperationsPage> {
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: Text(type == "in" ? "Stock In" : "Stock Out"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<String>(
-                hint: Text("Select Item"),
-                initialValue: selectedItem,
-                items: inventory.map<DropdownMenuItem<String>>((item) {
-                  return DropdownMenuItem<String>(
-                    value: medicineIdOf(item),
-                    child: Text(itemNameOf(item)),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    selectedItem = value;
-                  });
-                },
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text(type == "in" ? "Stock In" : "Stock Out"),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<String>(
+                    hint: Text("Select Item"),
+                    value: selectedItem,
+                    items: inventory.map<DropdownMenuItem<String>>((item) {
+                      return DropdownMenuItem<String>(
+                        value: medicineIdOf(item),
+                        child: Text(itemNameOf(item)),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setDialogState(() {
+                        selectedItem = value;
+                      });
+                    },
+                  ),
+
+                  TextField(
+                    controller: qtyController,
+                    decoration: InputDecoration(labelText: "Quantity"),
+                    keyboardType: TextInputType.number,
+                  ),
+                ],
               ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text("Cancel"),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final item = findInventoryItem(selectedItem);
+                    final qty = int.tryParse(qtyController.text) ?? 0;
 
-              TextField(
-                controller: qtyController,
-                decoration: InputDecoration(labelText: "Quantity"),
-                keyboardType: TextInputType.number,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text("Cancel"),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final item = findInventoryItem(selectedItem);
-                final qty = int.tryParse(qtyController.text) ?? 0;
+                    if (item == null || qty <= 0) return;
 
-                if (item == null || qty <= 0) return;
+                    if (type == "in") {
+                      stockIn(item, qty);
+                    } else {
+                      stockOut(item, qty);
+                    }
 
-                if (type == "in") {
-                  stockIn(item, qty);
-                } else {
-                  stockOut(item, qty);
-                }
-
-                selectedItem = null;
-                Navigator.pop(context);
-              },
-              child: Text("Submit"),
-            ),
-          ],
+                    selectedItem = null;
+                    Navigator.pop(context);
+                  },
+                  child: Text("Submit"),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -876,6 +912,13 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
   // Medicine list data
   List<dynamic> smartInventory = [];
   String searchQuery = "";
+  int currentPage = 1;
+  static const int itemsPerPage = 10;
+
+  // Historical Inventory Trend data
+  Map<String, List<double>> inventoryHistory = {};
+  List<String> historyDates = [];
+  String? selectedHistoryMedicine;
 
   @override
   void initState() {
@@ -891,6 +934,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
       fetchTopProducts(),
       fetchInsightMessage(),
       fetchSmartInventory(),
+      fetchInventoryHistory(),
     ]);
     if (mounted) setState(() => isLoading = false);
   }
@@ -952,10 +996,38 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
       if (mounted) {
         setState(() {
           smartInventory = data['smart_inventory'] ?? [];
+          currentPage = 1;
         });
       }
     } catch (e) {
       print("ERROR Smart Inventory: $e");
+    }
+  }
+
+  Future<void> fetchInventoryHistory() async {
+    try {
+      final data = await safeApiGet("$baseUrl/ai/inventory_history?clinic_id=${widget.clinicId}");
+      if (mounted && data['success'] == true) {
+        final rawHistory = data['history'] as Map<String, dynamic>? ?? {};
+        final dates = List<String>.from(data['dates'] ?? []);
+        
+        final parsedHistory = <String, List<double>>{};
+        rawHistory.forEach((key, val) {
+          if (val is List) {
+            parsedHistory[key] = val.map((e) => (e as num).toDouble()).toList();
+          }
+        });
+
+        setState(() {
+          inventoryHistory = parsedHistory;
+          historyDates = dates;
+          if (parsedHistory.isNotEmpty && (selectedHistoryMedicine == null || !parsedHistory.containsKey(selectedHistoryMedicine))) {
+            selectedHistoryMedicine = parsedHistory.keys.first;
+          }
+        });
+      }
+    } catch (e) {
+      print("ERROR Fetching Inventory History: $e");
     }
   }
 
@@ -1009,6 +1081,13 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
             const SizedBox(height: 20),
 
             // ═══════════════════════════════════
+            // 30-DAY HISTORICAL INVENTORY
+            // ═══════════════════════════════════
+            _buildHistoricalTrendsSection(),
+
+            const SizedBox(height: 20),
+
+            // ═══════════════════════════════════
             // STOCK SUMMARY CARDS
             // ═══════════════════════════════════
             _buildStockSummarySection(),
@@ -1053,9 +1132,63 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
               "Sorted by depletion risk — tap for details",
               style: TextStyle(color: Colors.blueGrey, fontSize: 12),
             ),
-            const SizedBox(height: 12),
+            Builder(
+              builder: (context) {
+                final totalFilteredItems = _filteredInventory.length;
+                final totalPages = (totalFilteredItems / itemsPerPage).ceil() == 0 ? 1 : (totalFilteredItems / itemsPerPage).ceil();
+                final safePage = (currentPage ?? 1).clamp(1, totalPages);
+                final startIndex = (safePage - 1) * itemsPerPage;
+                final endIndex = startIndex + itemsPerPage > totalFilteredItems ? totalFilteredItems : startIndex + itemsPerPage;
+                final paginatedItems = _filteredInventory.isEmpty ? [] : _filteredInventory.sublist(startIndex, endIndex);
 
-            ..._filteredInventory.map((item) => _buildMedicineTile(item)),
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ...paginatedItems.map((item) => _buildMedicineTile(item)),
+                    if (totalFilteredItems > itemsPerPage) ...[
+                      const SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 16),
+                            color: safePage > 1 ? Colors.cyanAccent : Colors.grey,
+                            onPressed: safePage > 1
+                                ? () => setState(() => currentPage = safePage - 1)
+                                : null,
+                          ),
+                          const SizedBox(width: 12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1E293B),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: Colors.white12),
+                            ),
+                            child: Text(
+                              "Page $safePage of $totalPages",
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          IconButton(
+                            icon: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                            color: safePage < totalPages ? Colors.cyanAccent : Colors.grey,
+                            onPressed: safePage < totalPages
+                                ? () => setState(() => currentPage = safePage + 1)
+                                : null,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                );
+              },
+            ),
 
             if (_filteredInventory.isEmpty)
               Container(
@@ -1075,6 +1208,20 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
 
   // ---- OVERALL USAGE SECTION ----
   Widget _buildOverallUsageSection() {
+    final today = DateTime.now();
+
+    List<String> dailyLabels = List.generate(7, (i) {
+      final date = today.subtract(Duration(days: 6 - i));
+      return _getDayOfWeekName(date.weekday);
+    });
+
+    List<String> weeklyLabels = const ["W-3", "W-2", "W-1", "This W"];
+
+    List<String> monthlyLabels = List.generate(3, (i) {
+      final date = DateTime(today.year, today.month - (2 - i), 1);
+      return _getMonthName(date.month);
+    });
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -1104,11 +1251,11 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: _buildMiniChart("Daily (7 days)", dailyUsage, Colors.cyanAccent)),
+              Expanded(child: _buildMiniChart("Daily (7 days)", dailyUsage, dailyLabels, Colors.cyanAccent)),
               const SizedBox(width: 12),
-              Expanded(child: _buildMiniChart("Weekly (4 weeks)", weeklyUsage, Colors.amberAccent)),
+              Expanded(child: _buildMiniChart("Weekly (4 weeks)", weeklyUsage, weeklyLabels, Colors.amberAccent)),
               const SizedBox(width: 12),
-              Expanded(child: _buildMiniChart("Monthly (3 months)", monthlyUsage, Colors.greenAccent)),
+              Expanded(child: _buildMiniChart("Monthly (3 months)", monthlyUsage, monthlyLabels, Colors.greenAccent)),
             ],
           ),
         ],
@@ -1116,10 +1263,252 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
     );
   }
 
-  Widget _buildMiniChart(String label, List<int> values, Color color) {
+  String _getDayOfWeekName(int weekday) {
+    switch (weekday) {
+      case 1: return "Mon";
+      case 2: return "Tue";
+      case 3: return "Wed";
+      case 4: return "Thu";
+      case 5: return "Fri";
+      case 6: return "Sat";
+      case 7: return "Sun";
+      default: return "";
+    }
+  }
+
+  String _getMonthName(int month) {
+    int normalized = month;
+    while (normalized <= 0) normalized += 12;
+    while (normalized > 12) normalized -= 12;
+    switch (normalized) {
+      case 1: return "Jan";
+      case 2: return "Feb";
+      case 3: return "Mar";
+      case 4: return "Apr";
+      case 5: return "May";
+      case 6: return "Jun";
+      case 7: return "Jul";
+      case 8: return "Aug";
+      case 9: return "Sep";
+      case 10: return "Oct";
+      case 11: return "Nov";
+      case 12: return "Dec";
+      default: return "";
+    }
+  }
+
+  // ---- HISTORICAL TRENDS SECTION ----
+  Widget _buildHistoricalTrendsSection() {
+    if (inventoryHistory.isEmpty || historyDates.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final selectedPoints = inventoryHistory[selectedHistoryMedicine] ?? [];
+    
+    double maxY = 10;
+    if (selectedPoints.isNotEmpty) {
+      final maxVal = selectedPoints.reduce((a, b) => a > b ? a : b);
+      maxY = maxVal < 50 ? 50.0 : maxVal * 1.2;
+    }
+
+    List<FlSpot> spots = [];
+    for (int i = 0; i < selectedPoints.length; i++) {
+      spots.add(FlSpot(i.toDouble(), selectedPoints[i]));
+    }
+
+    const double safetyThreshold = 20.0;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.history_toggle_off_rounded, color: Colors.cyanAccent, size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                "30-Day Inventory History",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Spacer(),
+              // Styled Dropdown
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0F172A),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.cyanAccent.withOpacity(0.3)),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: selectedHistoryMedicine,
+                    dropdownColor: const Color(0xFF0F172A),
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.cyanAccent, size: 16),
+                    style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                    items: inventoryHistory.keys.map((String key) {
+                      return DropdownMenuItem<String>(
+                        value: key,
+                        child: SizedBox(
+                          width: 130,
+                          child: Text(
+                            key,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (String? val) {
+                      if (val != null) {
+                        setState(() {
+                          selectedHistoryMedicine = val;
+                        });
+                      }
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (spots.isEmpty)
+            Container(
+              height: 180,
+              alignment: Alignment.center,
+              child: const Text(
+                "No historical data for selected medicine.",
+                style: TextStyle(color: Colors.white38),
+              ),
+            )
+          else
+            SizedBox(
+              height: 180,
+              child: LineChart(
+                LineChartData(
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    getDrawingHorizontalLine: (v) => FlLine(color: Colors.white10, strokeWidth: 1, dashArray: [5, 5]),
+                  ),
+                  titlesData: FlTitlesData(
+                    show: true,
+                    rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 28,
+                        interval: 5,
+                        getTitlesWidget: (value, meta) {
+                          int idx = value.toInt();
+                          if (idx < 0 || idx >= historyDates.length) {
+                            return const SizedBox.shrink();
+                          }
+                          String rawDate = historyDates[idx];
+                          try {
+                            DateTime dt = DateTime.parse(rawDate);
+                            String formatted = "${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}";
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 8.0),
+                              child: Text(formatted, style: const TextStyle(color: Colors.blueGrey, fontSize: 9)),
+                            );
+                          } catch (_) {
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 8.0),
+                              child: Text(rawDate.length > 5 ? rawDate.substring(5) : rawDate, style: const TextStyle(color: Colors.blueGrey, fontSize: 9)),
+                            );
+                          }
+                        },
+                      ),
+                    ),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        interval: maxY / 4 > 0 ? maxY / 4 : 10,
+                        getTitlesWidget: (value, meta) {
+                          return Text(value.toInt().toString(), style: const TextStyle(color: Colors.blueGrey, fontSize: 9));
+                        },
+                        reservedSize: 28,
+                      ),
+                    ),
+                  ),
+                  borderData: FlBorderData(show: false),
+                  minX: 0,
+                  maxX: (selectedPoints.length - 1).toDouble(),
+                  minY: 0,
+                  maxY: maxY,
+                  extraLinesData: ExtraLinesData(
+                    horizontalLines: [
+                      HorizontalLine(
+                        y: safetyThreshold,
+                        color: Colors.redAccent.withOpacity(0.4),
+                        strokeWidth: 1.2,
+                        dashArray: [5, 5],
+                        label: HorizontalLineLabel(
+                          show: true,
+                          alignment: Alignment.topRight,
+                          style: TextStyle(
+                            color: Colors.redAccent.withOpacity(0.6),
+                            fontSize: 8,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          labelResolver: (line) => "Safety Limit (20)",
+                        ),
+                      ),
+                    ],
+                  ),
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: spots,
+                      isCurved: true,
+                      curveSmoothness: 0.2,
+                      gradient: LinearGradient(colors: chartGradient),
+                      barWidth: 3,
+                      isStrokeCapRound: true,
+                      dotData: FlDotData(
+                        show: true,
+                        getDotPainter: (spot, percent, barData, index) {
+                          bool showDot = index == 0 || index == spots.length - 1 || index % 5 == 0;
+                          return FlDotCirclePainter(
+                            radius: showDot ? 3 : 0,
+                            color: Colors.cyanAccent,
+                            strokeWidth: showDot ? 2 : 0,
+                            strokeColor: const Color(0xFF1E293B),
+                          );
+                        },
+                      ),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        gradient: LinearGradient(
+                          colors: chartGradient.map((c) => c.withOpacity(0.12)).toList(),
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMiniChart(String label, List<int> values, List<String> xLabels, Color color) {
     if (values.isEmpty) {
       return Container(
-        height: 120,
+        height: 140,
         decoration: BoxDecoration(
           color: const Color(0xFF0F172A),
           borderRadius: BorderRadius.circular(12),
@@ -1131,24 +1520,58 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
     }
 
     final maxVal = values.reduce((a, b) => a > b ? a : b).toDouble();
-    final effectiveMax = maxVal < 1 ? 1.0 : maxVal * 1.2;
+    final effectiveMax = maxVal < 1 ? 1.0 : maxVal * 1.25;
 
     return Column(
       children: [
         SizedBox(
-          height: 100,
+          height: 120,
           child: BarChart(
             BarChartData(
               alignment: BarChartAlignment.spaceAround,
               maxY: effectiveMax,
-              barTouchData: BarTouchData(enabled: false),
+              barTouchData: BarTouchData(
+                enabled: true,
+                touchTooltipData: BarTouchTooltipData(
+                  tooltipBgColor: const Color(0xFF1E293B),
+                  tooltipBorder: const BorderSide(color: Colors.white10),
+                  tooltipPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  tooltipMargin: 4,
+                  getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                    return BarTooltipItem(
+                      "${rod.toY.toInt()} units",
+                      const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                    );
+                  },
+                ),
+              ),
               titlesData: FlTitlesData(
                 show: true,
                 bottomTitles: AxisTitles(
-                  sideTitles: SideTitles(showTitles: false),
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 20,
+                    getTitlesWidget: (value, meta) {
+                      final idx = value.toInt();
+                      if (idx >= 0 && idx < xLabels.length) {
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 4.0),
+                          child: Text(xLabels[idx], style: const TextStyle(color: Colors.blueGrey, fontSize: 8, fontWeight: FontWeight.bold)),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
+                  ),
                 ),
                 leftTitles: AxisTitles(
-                  sideTitles: SideTitles(showTitles: false),
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 22,
+                    interval: effectiveMax / 2 > 0 ? effectiveMax / 2 : 10,
+                    getTitlesWidget: (value, meta) {
+                      return Text(value.toInt().toString(), style: const TextStyle(color: Colors.blueGrey, fontSize: 8));
+                    },
+                  ),
                 ),
                 topTitles: AxisTitles(
                   sideTitles: SideTitles(showTitles: false),
@@ -1158,7 +1581,11 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                 ),
               ),
               borderData: FlBorderData(show: false),
-              gridData: FlGridData(show: false),
+              gridData: FlGridData(
+                show: true,
+                drawVerticalLine: false,
+                getDrawingHorizontalLine: (value) => FlLine(color: Colors.white10, strokeWidth: 0.8),
+              ),
               barGroups: List.generate(values.length, (i) {
                 return BarChartGroupData(
                   x: i,
@@ -1166,9 +1593,9 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                     BarChartRodData(
                       toY: values[i].toDouble(),
                       color: color,
-                      width: 8,
+                      width: 10,
                       borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(4),
+                        top: Radius.circular(3),
                       ),
                     ),
                   ],
@@ -1177,10 +1604,10 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
             ),
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         Text(
           label,
-          style: TextStyle(color: Colors.blueGrey, fontSize: 10, fontWeight: FontWeight.w500),
+          style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w600),
           textAlign: TextAlign.center,
         ),
       ],
@@ -1202,6 +1629,16 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
             "Items below threshold",
             Colors.redAccent,
             Icons.error_outline_rounded,
+            () {
+              _showStockTrendPopup(
+                "Low Stock",
+                Colors.redAccent,
+                (item) {
+                  final stock = item['current_stock'] ?? 0;
+                  return stock < 20;
+                },
+              );
+            },
           ),
         ),
         const SizedBox(width: 12),
@@ -1212,6 +1649,16 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
             "Items at moderate level",
             Colors.orangeAccent,
             Icons.warning_amber_rounded,
+            () {
+              _showStockTrendPopup(
+                "Moderate Stock",
+                Colors.orangeAccent,
+                (item) {
+                  final stock = item['current_stock'] ?? 0;
+                  return stock >= 20 && stock < 50;
+                },
+              );
+            },
           ),
         ),
         const SizedBox(width: 12),
@@ -1222,48 +1669,505 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
             "Items well-stocked",
             Colors.greenAccent,
             Icons.check_circle_outline_rounded,
+            () {
+              _showStockTrendPopup(
+                "Adequate Stock",
+                Colors.greenAccent,
+                (item) {
+                  final stock = item['current_stock'] ?? 0;
+                  return stock >= 50;
+                },
+              );
+            },
           ),
         ),
       ],
     );
   }
 
-  Widget _buildStatCard(String title, String value, String subtitle, Color color, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
+  Widget _buildStatCard(String title, String value, String subtitle, Color color, IconData icon, VoidCallback onTap) {
+    return Card(
+      color: Colors.transparent,
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.3)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        splashColor: color.withOpacity(0.12),
+        highlightColor: color.withOpacity(0.06),
+        child: Ink(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E293B),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: color.withOpacity(0.3)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, color: color, size: 18),
-              const SizedBox(width: 6),
+              Row(
+                children: [
+                  Icon(icon, color: color, size: 18),
+                  const SizedBox(width: 6),
+                  Text(
+                    title,
+                    style: const TextStyle(color: Colors.blueGrey, fontSize: 11, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
               Text(
-                title,
-                style: TextStyle(color: Colors.blueGrey, fontSize: 11, fontWeight: FontWeight.bold),
+                value,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: const TextStyle(color: Colors.white38, fontSize: 11),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          Text(
-            value,
-            style: TextStyle(
-              color: color,
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  void _showStockTrendPopup(String categoryName, Color categoryColor, bool Function(dynamic) filterFn) {
+    final filteredList = smartInventory.where(filterFn).toList();
+
+    final List<Color> lineColors = [
+      Colors.cyanAccent,
+      Colors.pinkAccent,
+      Colors.amberAccent,
+      Colors.lightGreenAccent,
+      Colors.deepOrangeAccent,
+      Colors.purpleAccent,
+      Colors.blueAccent,
+      Colors.tealAccent,
+    ];
+
+    String? selectedPopupMed = filteredList.isNotEmpty ? itemNameOf(filteredList.first) : null;
+    int legendPage = 0;
+    const int legendItemsPerPage = 12;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Dialog(
+              backgroundColor: const Color(0xFF0F172A),
+              insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+                side: BorderSide(color: categoryColor.withOpacity(0.3), width: 1.5),
+              ),
+              child: Container(
+                width: double.infinity,
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.85,
+                ),
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: categoryColor.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(Icons.trending_up_rounded, color: categoryColor, size: 24),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "$categoryName Medicines",
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                "${filteredList.length} items total",
+                                style: const TextStyle(
+                                  color: Colors.blueGrey,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded, color: Colors.white54),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                    const Divider(color: Colors.white12, height: 24),
+
+                    if (filteredList.isNotEmpty) ...[
+                      Builder(
+                        builder: (context) {
+                          final totalLegendPages = (filteredList.length / legendItemsPerPage).ceil();
+                          final correctedLegendPage = legendPage.clamp(0, totalLegendPages - 1 >= 0 ? totalLegendPages - 1 : 0);
+                          final startIndex = correctedLegendPage * legendItemsPerPage;
+                          final endIndex = (startIndex + legendItemsPerPage).clamp(0, filteredList.length);
+                          final pageItems = filteredList.sublist(startIndex, endIndex);
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Consolidated 30-Day Inventory History Row with Dropdown selector
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.history_toggle_off_rounded, color: Colors.cyanAccent, size: 12),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        "Consolidated 30-Day History",
+                                        style: TextStyle(color: categoryColor, fontSize: 11, fontWeight: FontWeight.w600),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF1E293B),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: Colors.cyanAccent.withOpacity(0.3), width: 1),
+                                      ),
+                                      child: DropdownButtonHideUnderline(
+                                        child: DropdownButton<String>(
+                                          value: selectedPopupMed,
+                                          isDense: true,
+                                          dropdownColor: const Color(0xFF1E293B),
+                                          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.cyanAccent, size: 16),
+                                          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                                          borderRadius: BorderRadius.circular(12),
+                                          onChanged: (String? newValue) {
+                                            setDialogState(() {
+                                              selectedPopupMed = newValue;
+                                              if (newValue != null) {
+                                                final index = filteredList.indexWhere((item) => itemNameOf(item) == newValue);
+                                                if (index != -1) {
+                                                  legendPage = index ~/ legendItemsPerPage;
+                                                }
+                                              }
+                                            });
+                                          },
+                                          items: filteredList.map<DropdownMenuItem<String>>((dynamic item) {
+                                            final name = itemNameOf(item);
+                                            return DropdownMenuItem<String>(
+                                              value: name,
+                                              child: ConstrainedBox(
+                                                constraints: const BoxConstraints(maxWidth: 150),
+                                                child: Text(
+                                                  name,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: const TextStyle(fontSize: 11, color: Colors.white),
+                                                ),
+                                              ),
+                                            );
+                                          }).toList(),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Container(
+                                height: 300,
+                                padding: const EdgeInsets.fromLTRB(4, 12, 12, 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF0F172A),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.white10),
+                                ),
+                                child: _buildPopupChartAll(filteredList, lineColors, selectedPopupMed),
+                              ),
+                              const SizedBox(height: 16),
+
+                              // Interactive Legend Wrap
+                              Wrap(
+                                spacing: 12,
+                                runSpacing: 8,
+                                children: List.generate(pageItems.length, (pageIndex) {
+                                  final actualIndex = startIndex + pageIndex;
+                                  final item = pageItems[pageIndex];
+                                  final name = itemNameOf(item);
+                                  final color = lineColors[actualIndex % lineColors.length];
+                                  final isSelected = selectedPopupMed == name;
+                                  return GestureDetector(
+                                    onTap: () {
+                                      setDialogState(() {
+                                        selectedPopupMed = name;
+                                      });
+                                    },
+                                    child: MouseRegion(
+                                      cursor: SystemMouseCursors.click,
+                                      child: AnimatedContainer(
+                                        duration: const Duration(milliseconds: 150),
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: isSelected ? color.withOpacity(0.12) : Colors.transparent,
+                                          borderRadius: BorderRadius.circular(6),
+                                          border: Border.all(
+                                            color: isSelected ? color.withOpacity(0.4) : Colors.transparent,
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Container(
+                                              width: 8,
+                                              height: 8,
+                                              decoration: BoxDecoration(
+                                                color: isSelected ? color : color.withOpacity(0.4),
+                                                shape: BoxShape.circle,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              name,
+                                              style: TextStyle(
+                                                color: isSelected ? Colors.white : Colors.white54,
+                                                fontSize: 11,
+                                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }),
+                              ),
+
+                              // Legend pagination buttons
+                              if (totalLegendPages > 1) ...[
+                                const SizedBox(height: 12),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    IconButton(
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                      icon: const Icon(Icons.arrow_left_rounded, color: Colors.cyanAccent, size: 28),
+                                      onPressed: correctedLegendPage > 0
+                                          ? () {
+                                              setDialogState(() {
+                                                legendPage = correctedLegendPage - 1;
+                                              });
+                                            }
+                                          : null,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      "Legend Page ${correctedLegendPage + 1} of $totalLegendPages",
+                                      style: const TextStyle(color: Colors.blueGrey, fontSize: 11, fontWeight: FontWeight.bold),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    IconButton(
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                      icon: const Icon(Icons.arrow_right_rounded, color: Colors.cyanAccent, size: 28),
+                                      onPressed: correctedLegendPage < totalLegendPages - 1
+                                          ? () {
+                                              setDialogState(() {
+                                                legendPage = correctedLegendPage + 1;
+                                              });
+                                            }
+                                          : null,
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ],
+                          );
+                        },
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildPopupChartAll(List<dynamic> filteredList, List<Color> assignedColors, String? selectedPopupMed) {
+    final List<LineChartBarData> fadedLines = [];
+    LineChartBarData? highlightedLine;
+    double overallMaxY = 10;
+
+    for (int i = 0; i < filteredList.length; i++) {
+      final item = filteredList[i];
+      final name = itemNameOf(item);
+      final points = inventoryHistory[name] ?? [];
+      final color = assignedColors[i % assignedColors.length];
+      final isSelected = selectedPopupMed == null || name == selectedPopupMed;
+
+      if (points.isNotEmpty) {
+        final maxVal = points.reduce((a, b) => a > b ? a : b);
+        if (maxVal > overallMaxY) {
+          overallMaxY = maxVal;
+        }
+      }
+
+      List<FlSpot> spots = [];
+      for (int day = 0; day < points.length; day++) {
+        spots.add(FlSpot(day.toDouble(), points[day]));
+      }
+
+      if (spots.isNotEmpty) {
+        final lineBar = LineChartBarData(
+          spots: spots,
+          isCurved: true,
+          curveSmoothness: 0.2,
+          color: isSelected ? color : color.withOpacity(0.08),
+          barWidth: isSelected ? 4 : 1.5,
+          isStrokeCapRound: true,
+          dotData: FlDotData(
+            show: isSelected,
+            getDotPainter: (spot, percent, barData, index) {
+              bool showDot = index == 0 || index == spots.length - 1 || index % 5 == 0;
+              return FlDotCirclePainter(
+                radius: showDot ? 2.5 : 0,
+                color: color,
+                strokeWidth: showDot ? 1.5 : 0,
+                strokeColor: const Color(0xFF1E293B),
+              );
+            },
+          ),
+          belowBarData: BarAreaData(show: false),
+        );
+
+        if (isSelected) {
+          highlightedLine = lineBar;
+        } else {
+          fadedLines.add(lineBar);
+        }
+      }
+    }
+
+    if (fadedLines.isEmpty && highlightedLine == null) {
+      return const Center(
+        child: Text(
+          "Insufficient historical data to graph 30-day history.",
+          style: TextStyle(color: Colors.white54, fontSize: 12),
+        ),
+      );
+    }
+
+    final List<LineChartBarData> linesData = [...fadedLines];
+    if (highlightedLine != null) {
+      linesData.add(highlightedLine);
+    }
+
+    final maxY = overallMaxY * 1.2 > 10 ? overallMaxY * 1.2 : 10.0;
+    const double safetyThreshold = 20.0;
+
+    return LineChart(
+      LineChartData(
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          getDrawingHorizontalLine: (v) => FlLine(color: Colors.white10, strokeWidth: 1, dashArray: [5, 5]),
+        ),
+        titlesData: FlTitlesData(
+          show: true,
+          rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 28,
+              interval: 5,
+              getTitlesWidget: (value, meta) {
+                int idx = value.toInt();
+                if (idx < 0 || idx >= historyDates.length) {
+                  return const SizedBox.shrink();
+                }
+                String rawDate = historyDates[idx];
+                try {
+                  DateTime dt = DateTime.parse(rawDate);
+                  String formatted = "${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}";
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Text(formatted, style: const TextStyle(color: Colors.blueGrey, fontSize: 9)),
+                  );
+                } catch (_) {
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Text(rawDate.length > 5 ? rawDate.substring(5) : rawDate, style: const TextStyle(color: Colors.blueGrey, fontSize: 9)),
+                  );
+                }
+              },
             ),
           ),
-          const SizedBox(height: 2),
-          Text(
-            subtitle,
-            style: TextStyle(color: Colors.white38, fontSize: 11),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              interval: maxY / 4 > 0 ? maxY / 4 : 10,
+              getTitlesWidget: (value, meta) {
+                return Text(value.toInt().toString(), style: const TextStyle(color: Colors.blueGrey, fontSize: 9));
+              },
+              reservedSize: 28,
+            ),
           ),
-        ],
+        ),
+        borderData: FlBorderData(show: false),
+        minX: 0,
+        maxX: (historyDates.length - 1).toDouble() > 0 ? (historyDates.length - 1).toDouble() : 29,
+        minY: 0,
+        maxY: maxY,
+        extraLinesData: ExtraLinesData(
+          horizontalLines: [
+            HorizontalLine(
+              y: safetyThreshold,
+              color: Colors.redAccent.withOpacity(0.4),
+              strokeWidth: 1.2,
+              dashArray: [5, 5],
+              label: HorizontalLineLabel(
+                show: true,
+                alignment: Alignment.topRight,
+                style: TextStyle(
+                  color: Colors.redAccent.withOpacity(0.6),
+                  fontSize: 8,
+                  fontWeight: FontWeight.bold,
+                ),
+                labelResolver: (line) => "Safety Limit (20)",
+              ),
+            ),
+          ],
+        ),
+        lineBarsData: linesData,
       ),
     );
   }
@@ -1428,7 +2332,10 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
   // ---- SEARCH BAR ----
   Widget _buildSearchBar() {
     return TextField(
-      onChanged: (v) => setState(() => searchQuery = v.trim()),
+      onChanged: (v) => setState(() {
+        searchQuery = v.trim();
+        currentPage = 1;
+      }),
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         hintText: "Search medicine...",
@@ -1708,6 +2615,49 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                 ],
               ),
             ),
+
+            const SizedBox(height: 20),
+
+            // Cumulative Stock Burn-Down Chart
+            Container(
+              height: 260,
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E293B),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.white12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.trending_down_rounded, color: Colors.redAccent, size: 18),
+                      const SizedBox(width: 8),
+                      const Text(
+                        "7-Day Stock Depletion (Burn-Down)",
+                        style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.redAccent.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
+                        ),
+                        child: const Text(
+                          "Depletion Curve",
+                          style: TextStyle(color: Colors.redAccent, fontSize: 10, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Expanded(child: _buildBurnDownChart(currentStock, forecastData)),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -1830,6 +2780,132 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
               show: true,
               gradient: LinearGradient(
                 colors: chartGradient.map((c) => c.withOpacity(0.2)).toList(),
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBurnDownChart(int currentStock, List<int> forecastData) {
+    if (forecastData.isEmpty) {
+      return const Center(
+        child: Text("No forecast data to calculate depletion.", style: TextStyle(color: Colors.white54)),
+      );
+    }
+
+    // Calculate burn down points starting from currentStock
+    List<double> burnDownValues = [currentStock.toDouble()];
+    double runningStock = currentStock.toDouble();
+    for (int i = 0; i < forecastData.length; i++) {
+      runningStock = runningStock - forecastData[i];
+      if (runningStock < 0) runningStock = 0;
+      burnDownValues.add(runningStock);
+    }
+
+    double maxY = currentStock.toDouble();
+    maxY = maxY < 50 ? 50 : maxY * 1.2;
+
+    List<FlSpot> spots = [];
+    for (int i = 0; i < burnDownValues.length; i++) {
+      spots.add(FlSpot(i.toDouble(), burnDownValues[i]));
+    }
+
+    // Draw safety threshold line at Y = 20
+    const double safetyThreshold = 20.0;
+
+    return LineChart(
+      LineChartData(
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          getDrawingHorizontalLine: (v) => FlLine(color: Colors.white10, strokeWidth: 1, dashArray: [5, 5]),
+        ),
+        titlesData: FlTitlesData(
+          show: true,
+          rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 32,
+              interval: 1,
+              getTitlesWidget: (value, meta) {
+                if (value.toInt() == 0) {
+                  return const Padding(
+                    padding: EdgeInsets.only(top: 8.0),
+                    child: Text("Today", style: TextStyle(color: Colors.blueGrey, fontSize: 10, fontWeight: FontWeight.bold)),
+                  );
+                }
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Text("Day ${value.toInt()}", style: const TextStyle(color: Colors.blueGrey, fontSize: 10)),
+                );
+              },
+            ),
+          ),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              interval: maxY / 4,
+              getTitlesWidget: (value, meta) {
+                return Text(value.toInt().toString(), style: const TextStyle(color: Colors.blueGrey, fontSize: 10));
+              },
+              reservedSize: 30,
+            ),
+          ),
+        ),
+        borderData: FlBorderData(show: false),
+        minX: 0,
+        maxX: forecastData.length.toDouble(),
+        minY: 0,
+        maxY: maxY,
+        extraLinesData: ExtraLinesData(
+          horizontalLines: [
+            HorizontalLine(
+              y: safetyThreshold,
+              color: Colors.amberAccent.withOpacity(0.6),
+              strokeWidth: 1.5,
+              dashArray: [6, 4],
+              label: HorizontalLineLabel(
+                show: true,
+                alignment: Alignment.topRight,
+                style: TextStyle(
+                  color: Colors.amberAccent.withOpacity(0.8),
+                  fontSize: 8,
+                  fontWeight: FontWeight.bold,
+                ),
+                labelResolver: (line) => "Safety Limit (20)",
+              ),
+            ),
+          ],
+        ),
+        lineBarsData: [
+          LineChartBarData(
+            spots: spots,
+            isCurved: false, // Depletion is linear/stepwise
+            color: Colors.redAccent,
+            barWidth: 4,
+            isStrokeCapRound: true,
+            dotData: FlDotData(
+              show: true,
+              getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
+                radius: 4,
+                color: Colors.redAccent,
+                strokeWidth: 2,
+                strokeColor: const Color(0xFF1E293B),
+              ),
+            ),
+            belowBarData: BarAreaData(
+              show: true,
+              gradient: LinearGradient(
+                colors: [
+                  Colors.redAccent.withOpacity(0.2),
+                  Colors.redAccent.withOpacity(0.0),
+                ],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
