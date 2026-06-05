@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
+import 'config/api_config.dart';
+
 String dashItemNameOf(dynamic item) {
   if (item is Map) {
     return (item['item_name'] ?? item['name'] ?? 'Unknown').toString();
@@ -42,7 +44,7 @@ class DashboardPage extends StatefulWidget {
 }
 
 class DashboardPageState extends State<DashboardPage> {
-  final String baseUrl = "http://localhost:5000";
+  final String baseUrl = ApiConfig.baseUrl;
   bool isLoading = true;
   bool isLoadingSection2 = true;
 
