@@ -1123,7 +1123,6 @@ def get_inventory():
 
 
 @app.route('/dashboard/summary', methods=['GET'])
-@cached(ttl_seconds=300)
 def dashboard_summary():
     clinic_id = request.args.get('clinic_id')
     if not clinic_id:
