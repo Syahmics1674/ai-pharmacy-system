@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../config/api_config.dart';
 
 class LiveInventoryService {
-  static const String baseUrl = "http://localhost:5000";
+  static const String baseUrl = ApiConfig.baseUrl;
 
   static Future<List<dynamic>> fetchLiveInventory({String? clinicId}) async {
     try {
