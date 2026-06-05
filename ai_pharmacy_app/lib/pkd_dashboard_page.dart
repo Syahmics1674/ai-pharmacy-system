@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'main.dart';
 import 'services/live_inventory_service.dart';
@@ -360,7 +361,10 @@ class _PKDDashboardPageState extends State<PKDDashboardPage> {
     );
   }
 
-  void _performLogout() {
+  Future<void> _performLogout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+    if (!mounted) return;
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (_) => const LoginPage()),

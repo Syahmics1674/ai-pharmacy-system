@@ -10,6 +10,7 @@ from services.supabase_service import (
     add_dispense_transaction,
     fetch_clinics_by_district,
     update_clinic,
+    clear_cache,
 )
 from migrate_inventory import (
     build_match_index,
@@ -1334,6 +1335,22 @@ def stock_in():
     if clinic_id is None or item_name is None or quantity_added is None:
         return jsonify({"error": "Missing data"}), 400
     try:
+        # 1. Update Supabase true inventory first
+        item_code = data.get("item_code")
+        supabase_updated = False
+        if item_code:
+            try:
+                joined_items = get_joined_inventory(clinic_id=clinic_id)
+                target_item = next((item for item in joined_items if item.get("item_code") == item_code), None)
+                if target_item:
+                    current_qty = int(target_item.get("quantity", 0))
+                    new_qty = current_qty + quantity_added
+                    update_inventory_quantity(clinic_id, item_code, new_qty)
+                    supabase_updated = True
+            except Exception as se:
+                print(f"[WARN] Supabase quantity update failed for stock_in: {str(se)}")
+
+        # 2. Update Firestore inventory for backwards compatibility
         docs = db.collection("inventory") \
                  .where("clinic_id", "==", clinic_id) \
                  .where("item_name", "==", item_name) \
@@ -1346,17 +1363,28 @@ def stock_in():
             new_stock = current_stock + quantity_added
             db.collection("inventory").document(doc.id).update({"current_stock": new_stock})
         if not found:
+            # If not found in Firestore, add it for compatibility
             db.collection("inventory").add({
                 "clinic_id": clinic_id,
                 "item_name": item_name,
                 "current_stock": quantity_added
             })
+
+        if not found and not supabase_updated:
+            return jsonify({"error": "Item not found in inventory"}), 404
+
+        # Log the stock-in transaction
         db.collection("stock_in_logs").add({
             "clinic_id": clinic_id,
             "item_name": item_name,
             "quantity_added": quantity_added,
             "timestamp": datetime.utcnow()
         })
+
+        # Clear Caches
+        clear_cache()
+        _cache.clear()
+
         return jsonify({"message": "Stock-in successful"})
     except Exception as e:
         return jsonify({"error": f"Stock-in failed: {str(e)}"}), 500
@@ -1371,6 +1399,24 @@ def stock_out():
         return jsonify({"error": "Missing data"}), 400
     quantity_used = int(quantity_used)
     try:
+        # 1. Update Supabase true inventory first
+        item_code = data.get("item_code")
+        supabase_updated = False
+        if item_code:
+            try:
+                joined_items = get_joined_inventory(clinic_id=clinic_id)
+                target_item = next((item for item in joined_items if item.get("item_code") == item_code), None)
+                if target_item:
+                    current_qty = int(target_item.get("quantity", 0))
+                    if current_qty < quantity_used:
+                        return jsonify({"error": f"Not enough stock in Supabase (Current: {current_qty})"}), 400
+                    new_qty = current_qty - quantity_used
+                    update_inventory_quantity(clinic_id, item_code, new_qty)
+                    supabase_updated = True
+            except Exception as se:
+                print(f"[WARN] Supabase quantity update failed for stock_out: {str(se)}")
+
+        # 2. Update Firestore inventory for backwards compatibility
         docs = db.collection("inventory") \
                  .where("clinic_id", "==", clinic_id) \
                  .where("item_name", "==", item_name) \
@@ -1380,12 +1426,15 @@ def stock_out():
             found = True
             data_db = doc.to_dict()
             current_stock = data_db.get("current_stock", 0)
-            if current_stock < quantity_used:
-                return jsonify({"error": "Not enough stock"}), 400
-            new_stock = current_stock - quantity_used
+            if not supabase_updated and current_stock < quantity_used:
+                return jsonify({"error": "Not enough stock in Firestore"}), 400
+            new_stock = max(0, current_stock - quantity_used)
             db.collection("inventory").document(doc.id).update({"current_stock": new_stock})
-        if not found:
+
+        if not found and not supabase_updated:
             return jsonify({"error": "Item not found in inventory"}), 404
+
+        # 3. Add dispense transaction to Supabase / Firestore
         try:
             add_dispense_transaction(
                 clinic_id=clinic_id,
@@ -1405,6 +1454,11 @@ def stock_out():
                 "quantity_used": quantity_used,
                 "timestamp": datetime.utcnow()
             })
+
+        # Clear Caches
+        clear_cache()
+        _cache.clear()
+
         return jsonify({"message": "Stock-out successful"})
     except Exception as e:
         return jsonify({"error": f"Stock-out failed: {str(e)}"}), 500
@@ -1557,6 +1611,93 @@ def ai_smart_inventory():
         return jsonify({"clinic_id": clinic_id, "smart_inventory": smart_list})
     except Exception as e:
         return jsonify({"error": f"Smart inventory failed: {str(e)}"}), 500
+
+@app.route('/ai/inventory_history', methods=['GET'])
+@cached(ttl_seconds=300)
+def ai_inventory_history():
+    clinic_id = request.args.get('clinic_id')
+    if not clinic_id:
+        return jsonify({"error": "clinic_id is required"}), 400
+    try:
+        # 1. Fetch current inventory (from Supabase via join)
+        joined = get_joined_inventory(clinic_id=clinic_id)
+        current_inventory = {}
+        for item in joined:
+            display_name = (
+                item.get("full_brand_name")
+                or item.get("brand_name")
+                or item.get("match_name")
+                or item.get("item_code", "")
+            )
+            current_inventory[display_name] = int(item.get("quantity", 0))
+
+        # 2. Fetch the last 2000 dispense transactions
+        dispense_txns = fetch_dispense_transactions(clinic_id=clinic_id, limit=2000)
+
+        # 3. Retrieve medicine catalog for code matching in transactions
+        medicines = fetch_medicines()
+        medicine_map = {}
+        for m in medicines:
+            code = m.get("item_code")
+            if code:
+                medicine_map[code] = (
+                    m.get("full_brand_name")
+                    or m.get("brand_name")
+                    or m.get("match_name")
+                    or code
+                )
+
+        # 4. Group net changes by medicine name and local date
+        txns_by_med_date = defaultdict(lambda: defaultdict(int))
+        for txn in dispense_txns:
+            ts_str = txn.get("local_created_at") or txn.get("cloud_created_at")
+            if not ts_str:
+                continue
+            try:
+                dt = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+                date_str = dt.strftime("%Y-%m-%d")
+            except Exception:
+                continue
+
+            code = txn.get("item_code", "")
+            name = medicine_map.get(code, txn.get("matched_name", code))
+            qty_change = int(txn.get("quantity_change", 0))
+            txns_by_med_date[name][date_str] += qty_change
+
+        # 5. Build dates range (past 30 days) in chronological order
+        today = datetime.now(timezone.utc).date()
+        dates = [today - timedelta(days=i) for i in range(30)]
+        chronological_dates = list(reversed(dates))
+        date_strs = [d.strftime("%Y-%m-%d") for d in chronological_dates]
+
+        # 6. Trace historical inventory back day-by-day
+        history = {}
+        all_meds = set(current_inventory.keys()).union(txns_by_med_date.keys())
+        
+        for med_name in all_meds:
+            med_history = [0.0] * 30
+            current_stock = current_inventory.get(med_name, 0)
+            running_stock = float(current_stock)
+            
+            # Walk backwards from today (i = 29) to oldest day (i = 0)
+            for i in range(29, -1, -1):
+                date_str = date_strs[i]
+                med_history[i] = running_stock
+                # Stock before this day is running_stock minus net change of this day
+                net_change = txns_by_med_date[med_name][date_str]
+                running_stock = running_stock - net_change
+                if running_stock < 0:
+                    running_stock = 0.0
+            
+            history[med_name] = med_history
+
+        return jsonify({
+            "success": True,
+            "dates": date_strs,
+            "history": history
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": f"Failed to compute inventory history: {str(e)}"}), 500
 
 @app.route('/pkd/request_transfer', methods=['POST'])
 def pkd_request_transfer():

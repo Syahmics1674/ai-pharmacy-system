@@ -39,6 +39,8 @@ def _rest_post(table, data, timeout=10.0):
     url = f"{SUPABASE_URL}/rest/v1/{table}"
     response = httpx.post(url, headers=_SUPABASE_HEADERS, json=data, timeout=timeout)
     response.raise_for_status()
+    if response.status_code == 204 or not response.content:
+        return {}
     return response.json()
 
 def _rest_patch(table, params, data, timeout=10.0):
@@ -47,6 +49,8 @@ def _rest_patch(table, params, data, timeout=10.0):
         url, headers=_SUPABASE_HEADERS, params=params, json=data, timeout=timeout
     )
     response.raise_for_status()
+    if response.status_code == 204 or not response.content:
+        return {}
     return response.json()
 
 def _safe_rest_get(table, params=None, timeout=10.0):
