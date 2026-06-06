@@ -79,11 +79,6 @@ def build_recommendation_message(based_on, summary):
 
 
 def consolidate_order_date(current_clinic_id):
-    clinic_data = fetch_clinic(current_clinic_id)
-    if clinic_data.get("has_pending_order"):
-        print("⛔ Order already pending → skip consolidation")
-        return None
-
     route_id = get_route_id(current_clinic_id)
 
     if not route_id:

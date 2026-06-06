@@ -156,6 +156,7 @@ def get_inventory_for_clinic(clinic_id):
                 or item.get("item_code", "")
             ),
             "current_stock": int(item.get("quantity", 0)),
+            "item_code": item.get("item_code", ""),
         })
     return items
 
@@ -1123,7 +1124,6 @@ def get_inventory():
 
 
 @app.route('/dashboard/summary', methods=['GET'])
-@cached(ttl_seconds=300)
 def dashboard_summary():
     clinic_id = request.args.get('clinic_id')
     if not clinic_id:
@@ -1243,7 +1243,6 @@ def dashboard_summary():
 
 
 @app.route('/order_suggestions', methods=['GET'])
-@cached(ttl_seconds=180)
 def get_order_suggestions():
     clinic_id = request.args.get('clinic_id')
     if not clinic_id:
@@ -1261,13 +1260,15 @@ def get_order_suggestions():
                 suggestions.append({
                     "item_name": item_name,
                     "suggested_qty": 200 - stock,
-                    "priority": "HIGH"
+                    "priority": "HIGH",
+                    "item_code": item.get("item_code", ""),
                 })
             elif stock < 200:
                 suggestions.append({
                     "item_name": item_name,
                     "suggested_qty": 300 - stock,
-                    "priority": "MEDIUM"
+                    "priority": "MEDIUM",
+                    "item_code": item.get("item_code", ""),
                 })
         return jsonify({"clinic_id": clinic_id, "order_suggestions": suggestions})
     except Exception as e:
@@ -1762,7 +1763,6 @@ def generate_order():
 
 
 @app.route('/orders', methods=['GET'])
-@cached(ttl_seconds=180)
 def get_orders():
     clinic_id = request.args.get('clinic_id')
     if not clinic_id:
@@ -1799,33 +1799,27 @@ def complete_order():
         joined_supabase = get_joined_inventory(clinic_id=clinic_id)
         supabase_qty_map = {item["item_code"]: int(item["quantity"]) for item in joined_supabase}
 
+        failed_items = []
         for doc in orders:
             order_data = doc.to_dict()
             items = order_data.get("items", [])
             for item in items:
-                item_name = item.get("item_name")
                 item_code = item.get("item_code", "")
                 qty = item.get("qty", 0)
-                inv_docs = db.collection("inventory") \
-                    .where("clinic_id", "==", clinic_id) \
-                    .where("item_name", "==", item_name) \
-                    .stream()
-                for inv_doc in inv_docs:
-                    current_stock = inv_doc.to_dict().get("current_stock", 0)
-                    inv_doc.reference.update({"current_stock": current_stock + qty})
-                    db.collection("stock_in_logs").add({
-                        "clinic_id": clinic_id,
-                        "item_name": item_name,
-                        "qty_added": qty,
-                        "timestamp": datetime.utcnow()
-                    })
                 if item_code:
                     current_supabase_qty = supabase_qty_map.get(item_code, 0)
                     new_supabase_qty = current_supabase_qty + qty
-                    update_inventory_quantity(clinic_id, item_code, new_supabase_qty)
+                    try:
+                        update_inventory_quantity(clinic_id, item_code, new_supabase_qty)
+                    except Exception as e:
+                        failed_items.append({"item_code": item_code, "error": str(e)})
             doc.reference.update({"status": "RECEIVED"})
         update_clinic(clinic_id, {"has_pending_order": False})
-        return jsonify({"message": "Order received & inventory updated"})
+        msg = {"message": "Order received & inventory updated"}
+        if failed_items:
+            msg["warning"] = f"{len(failed_items)} item(s) failed to update"
+            msg["failed_items"] = failed_items
+        return jsonify(msg)
     except Exception as e:
         return jsonify({"error": f"Complete order failed: {str(e)}"}), 500
 

@@ -2939,6 +2939,7 @@ class _OrderPageState extends State<OrderPage> {
   List details = [];
   List generatedOrders = [];
   Map<String, dynamic>? lastSubmittedOrder;
+  Map<String, dynamic>? pendingOrder;
   Map<String, dynamic> routeSummary = {
     "total_clinics": 0,
     "high_priority_count": 0,
@@ -3140,6 +3141,28 @@ class _OrderPageState extends State<OrderPage> {
     }
   }
 
+  Future<void> submitOrder() async {
+    if (pendingOrder == null) return;
+    try {
+      await safeApiPost("$baseUrl/update_order_status", {
+        "order_id": pendingOrder!['id'],
+        "status": "SUBMITTED",
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Order submitted ✅")),
+        );
+      }
+      await refreshOrderPage();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to submit: $e")),
+        );
+      }
+    }
+  }
+
   DateTime _parseOrderDate(dynamic value) {
     if (value == null) return DateTime.fromMillisecondsSinceEpoch(0);
     return DateTime.tryParse(value.toString()) ??
@@ -3149,18 +3172,26 @@ class _OrderPageState extends State<OrderPage> {
   Future<void> fetchLastSubmittedOrder() async {
     try {
       final data = await safeApiGet('$baseUrl/orders?clinic_id=${widget.clinicId}');
-      final List<Map<String, dynamic>> submittedOrders =
+      final List<Map<String, dynamic>> allOrders =
           (data['orders'] as List<dynamic>)
-              .where((order) => order['status'] == "SUBMITTED")
               .map((order) => Map<String, dynamic>.from(order))
               .toList();
-      submittedOrders.sort(
+      allOrders.sort(
         (a, b) => _parseOrderDate(
           b['created_at'],
         ).compareTo(_parseOrderDate(a['created_at'])),
       );
+      final pendingOrders = allOrders
+          .where((o) => o['status'] == "PENDING")
+          .toList();
+      final submittedOrders = allOrders
+          .where((o) => o['status'] == "SUBMITTED")
+          .toList();
       if (!mounted) return;
       setState(() {
+        pendingOrder = pendingOrders.isNotEmpty
+            ? pendingOrders.first
+            : null;
         lastSubmittedOrder = submittedOrders.isNotEmpty
             ? submittedOrders.first
             : null;
@@ -3168,6 +3199,7 @@ class _OrderPageState extends State<OrderPage> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
+        pendingOrder = null;
         lastSubmittedOrder = null;
       });
     }
@@ -3533,7 +3565,7 @@ class _OrderPageState extends State<OrderPage> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: suggestions.isEmpty ? null : confirmGenerateOrder,
+                onPressed: (pendingOrder != null || suggestions.isEmpty) ? null : confirmGenerateOrder,
                 icon: Icon(Icons.shopping_cart),
                 label: Text(
                   "Generate Order",
@@ -3550,6 +3582,48 @@ class _OrderPageState extends State<OrderPage> {
 
             SizedBox(height: 20),
 
+            // PENDING ORDER CARD
+            if (pendingOrder != null)
+              Card(
+                margin: EdgeInsets.only(bottom: 10),
+                child: Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Pending Order",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.orange,
+                        ),
+                      ),
+                      SizedBox(height: 5),
+                      Text("Date: ${pendingOrder!['created_at']}"),
+                      SizedBox(height: 5),
+
+                      ...pendingOrder!['items'].map<Widget>((item) {
+                        return Text(
+                          "• ${itemNameOf(item)} — ${itemQuantityOf(item, keys: ['qty', 'suggested_qty'])}",
+                        );
+                      }).toList(),
+                    ],
+                  ),
+                ),
+              ),
+
+            // SUBMIT ORDER BUTTON
+            if (pendingOrder != null)
+              ElevatedButton.icon(
+                onPressed: submitOrder,
+                icon: Icon(Icons.send),
+                label: Text("Submit Order"),
+              ),
+
+            if (pendingOrder != null && lastSubmittedOrder != null)
+              SizedBox(height: 16),
+
+            // SUBMITTED ORDER CARD
             if (lastSubmittedOrder != null)
               Card(
                 margin: EdgeInsets.only(bottom: 10),
@@ -3559,8 +3633,11 @@ class _OrderPageState extends State<OrderPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "Last Submitted Order",
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                        "Submitted Order",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue,
+                        ),
                       ),
                       SizedBox(height: 5),
                       Text("Date: ${lastSubmittedOrder!['created_at']}"),

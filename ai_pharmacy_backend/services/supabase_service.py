@@ -14,6 +14,7 @@ _SUPABASE_HEADERS = {
 _cache = {}
 _cache_lock = threading.Lock()
 _DEFAULT_TTL = 120
+_RETRY_TTL = 30
 
 def _cache_get(key):
     with _cache_lock:
@@ -43,15 +44,23 @@ def _rest_post(table, data, timeout=10.0):
         return {}
     return response.json()
 
-def _rest_patch(table, params, data, timeout=10.0):
+def _rest_patch(table, params, data, timeout=10.0, retries=2):
     url = f"{SUPABASE_URL}/rest/v1/{table}"
-    response = httpx.patch(
-        url, headers=_SUPABASE_HEADERS, params=params, json=data, timeout=timeout
-    )
-    response.raise_for_status()
-    if response.status_code == 204 or not response.content:
-        return {}
-    return response.json()
+    last_exception = None
+    for attempt in range(max(1, retries + 1)):
+        try:
+            response = httpx.patch(
+                url, headers=_SUPABASE_HEADERS, params=params, json=data, timeout=timeout
+            )
+            response.raise_for_status()
+            if response.status_code == 204 or not response.content:
+                return {}
+            return response.json()
+        except Exception as e:
+            last_exception = e
+            if attempt < retries:
+                time.sleep(0.5 * (attempt + 1))
+    raise last_exception
 
 def _safe_rest_get(table, params=None, timeout=10.0):
     try:
@@ -68,7 +77,12 @@ def fetch_inventory(clinic_id=None):
     if clinic_id:
         params = {"clinic_id": f"eq.{clinic_id}"}
     data = _safe_rest_get("inventory", params=params)
-    _cache_set(cache_key, data, ttl=_DEFAULT_TTL)
+    # Retry once on empty result in case of transient Supabase failure.
+    # Ensures a brief glitch doesn't poison the cache with [] for 120s.
+    if not data and clinic_id:
+        data = _safe_rest_get("inventory", params=params)
+    ttl = _RETRY_TTL if not data else _DEFAULT_TTL
+    _cache_set(cache_key, data, ttl=ttl)
     return data
 
 def fetch_medicines():
@@ -120,7 +134,8 @@ def get_joined_inventory(clinic_id=None):
 
             "updated_at": inv_item.get("updated_at") or med.get("updated_at"),
         })
-    _cache_set(cache_key, joined, ttl=_DEFAULT_TTL)
+    ttl = _RETRY_TTL if not joined else _DEFAULT_TTL
+    _cache_set(cache_key, joined, ttl=ttl)
     print(
         f"Inventory rows={len(inventory)}, "
         f"Medicine rows={len(medicines)}, "
