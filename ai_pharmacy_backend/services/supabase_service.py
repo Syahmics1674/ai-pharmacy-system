@@ -30,9 +30,12 @@ def _cache_set(key, data, ttl=_DEFAULT_TTL):
     with _cache_lock:
         _cache[key] = {"data": data, "expires_at": time.time() + ttl}
 
-def _rest_get(table, params=None, timeout=10.0):
+def _rest_get(table, params=None, headers=None, timeout=10.0):
     url = f"{SUPABASE_URL}/rest/v1/{table}"
-    response = httpx.get(url, headers=_SUPABASE_HEADERS, params=params, timeout=timeout)
+    req_headers = _SUPABASE_HEADERS.copy()
+    if headers:
+        req_headers.update(headers)
+    response = httpx.get(url, headers=req_headers, params=params, timeout=timeout)
     response.raise_for_status()
     return response.json()
 
@@ -62,9 +65,9 @@ def _rest_patch(table, params, data, timeout=10.0, retries=2):
                 time.sleep(0.5 * (attempt + 1))
     raise last_exception
 
-def _safe_rest_get(table, params=None, timeout=10.0):
+def _safe_rest_get(table, params=None, headers=None, timeout=10.0):
     try:
-        return _rest_get(table, params=params, timeout=timeout)
+        return _rest_get(table, params=params, headers=headers, timeout=timeout)
     except Exception:
         return []
 
@@ -99,12 +102,27 @@ def fetch_dispense_transactions(clinic_id=None, limit=100):
     cached = _cache_get(cache_key)
     if cached is not None:
         return cached
-    params = {"limit": limit, "order": "cloud_created_at.desc.nullslast"}
+
+    all_data = []
+    chunk_size = 1000
+    offset = 0
+    params = {"order": "cloud_created_at.desc.nullslast"}
     if clinic_id:
         params["clinic_id"] = f"eq.{clinic_id}"
-    data = _safe_rest_get("dispense_transactions", params=params)
-    _cache_set(cache_key, data, ttl=_DEFAULT_TTL)
-    return data
+
+    while len(all_data) < limit:
+        current_chunk_size = min(chunk_size, limit - len(all_data))
+        headers = {"Range": f"{offset}-{offset + current_chunk_size - 1}"}
+        data = _safe_rest_get("dispense_transactions", params=params, headers=headers)
+        if not data:
+            break
+        all_data.extend(data)
+        if len(data) < current_chunk_size:
+            break
+        offset += len(data)
+
+    _cache_set(cache_key, all_data, ttl=_DEFAULT_TTL)
+    return all_data
 
 def get_joined_inventory(clinic_id=None):
     cache_key = f"supabase_joined_inv_{clinic_id or 'all'}"
