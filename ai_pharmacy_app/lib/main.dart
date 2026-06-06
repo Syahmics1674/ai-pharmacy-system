@@ -3443,8 +3443,8 @@ class _OrderPageState extends State<OrderPage> {
                         title: Text(itemNameOf(item)),
                         subtitle: Text("Priority: ${item['priority']}"),
                         trailing: Text(
-                          "Qty: ${item['suggested_qty']}",
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                          "Order Qty: ${item['suggested_qty']}",
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
                     ),
