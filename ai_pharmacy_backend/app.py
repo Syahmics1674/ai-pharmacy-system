@@ -1255,26 +1255,10 @@ def get_order_suggestions():
         inv_items = get_inventory_for_clinic(clinic_id)
         suggestions = []
 
-        # Fallback heuristic if AI engine is not available
+        # If AI features are not available, do not return any suggestions (avoiding static fallbacks)
         if not AI_FEATURES_AVAILABLE or calculate_smart_inventory is None:
-            for item in inv_items:
-                stock = item["current_stock"]
-                item_name = item["item_name"]
-                if stock < 100:
-                    suggestions.append({
-                        "item_name": item_name,
-                        "suggested_qty": 200 - stock,
-                        "priority": "HIGH",
-                        "item_code": item.get("item_code", ""),
-                    })
-                elif stock < 200:
-                    suggestions.append({
-                        "item_name": item_name,
-                        "suggested_qty": 300 - stock,
-                        "priority": "MEDIUM",
-                        "item_code": item.get("item_code", ""),
-                    })
-            return jsonify({"clinic_id": clinic_id, "order_suggestions": suggestions})
+            logger.warning("AI features are unavailable. Returning empty order suggestions.")
+            return jsonify({"clinic_id": clinic_id, "order_suggestions": []})
 
         # Load clinic transaction history to generate AI predictions
         weather_data = get_7_day_weather()
@@ -1292,22 +1276,8 @@ def get_order_suggestions():
             stock = item["current_stock"]
             logs = my_usage.get(item_name, [])
 
-            # Fallback heuristic if this item has no historical usage logs yet
+            # Without historical usage logs, AI cannot predict demand; do not suggest replenishment
             if not logs:
-                if stock < 100:
-                    suggestions.append({
-                        "item_name": item_name,
-                        "suggested_qty": 200 - stock,
-                        "priority": "HIGH",
-                        "item_code": item.get("item_code", ""),
-                    })
-                elif stock < 200:
-                    suggestions.append({
-                        "item_name": item_name,
-                        "suggested_qty": 300 - stock,
-                        "priority": "MEDIUM",
-                        "item_code": item.get("item_code", ""),
-                    })
                 continue
 
             # Generate AI Smart Inventory metrics
