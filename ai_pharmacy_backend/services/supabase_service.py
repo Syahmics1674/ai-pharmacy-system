@@ -44,15 +44,23 @@ def _rest_post(table, data, timeout=10.0):
         return {}
     return response.json()
 
-def _rest_patch(table, params, data, timeout=10.0):
+def _rest_patch(table, params, data, timeout=10.0, retries=2):
     url = f"{SUPABASE_URL}/rest/v1/{table}"
-    response = httpx.patch(
-        url, headers=_SUPABASE_HEADERS, params=params, json=data, timeout=timeout
-    )
-    response.raise_for_status()
-    if response.status_code == 204 or not response.content:
-        return {}
-    return response.json()
+    last_exception = None
+    for attempt in range(max(1, retries + 1)):
+        try:
+            response = httpx.patch(
+                url, headers=_SUPABASE_HEADERS, params=params, json=data, timeout=timeout
+            )
+            response.raise_for_status()
+            if response.status_code == 204 or not response.content:
+                return {}
+            return response.json()
+        except Exception as e:
+            last_exception = e
+            if attempt < retries:
+                time.sleep(0.5 * (attempt + 1))
+    raise last_exception
 
 def _safe_rest_get(table, params=None, timeout=10.0):
     try:
