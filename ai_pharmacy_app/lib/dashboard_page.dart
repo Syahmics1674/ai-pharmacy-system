@@ -86,70 +86,106 @@ class DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) {
-      return RefreshIndicator(
-        onRefresh: fetchDashboardData,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _shimmerBox(height: 160),
-              const SizedBox(height: 20),
-              Row(children: [
-                Expanded(child: _shimmerBox(height: 100)),
-                const SizedBox(width: 10),
-                Expanded(child: _shimmerBox(height: 100)),
-              ]),
-              const SizedBox(height: 20),
-              _shimmerBox(height: 120),
-            ],
-          ),
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF090D1A), Color(0xFF151C2C)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
         ),
-      );
-    }
-    return RefreshIndicator(
-      onRefresh: fetchDashboardData,
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildGreetingHeader(),
-            const SizedBox(height: 20),
-            _buildSummaryCards(),
-            const SizedBox(height: 20),
-            _buildAlertsPanel(),
-            const SizedBox(height: 20),
-            _buildInsightPreview(),
-            const SizedBox(height: 20),
-            _buildQuickActions(),
-            const SizedBox(height: 20),
-            _buildInventoryHealth(),
-            const SizedBox(height: 20),
-            _buildRecentActivity(),
-          ],
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: RefreshIndicator(
+          onRefresh: fetchDashboardData,
+          backgroundColor: const Color(0xFF1E293B),
+          color: Colors.cyanAccent,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            child: isLoading
+                ? _buildLoadingState()
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildGreetingHeader(),
+                      const SizedBox(height: 24),
+                      _buildSummaryCards(),
+                      const SizedBox(height: 24),
+                      _buildAlertsPanel(),
+                      const SizedBox(height: 24),
+                      _buildInsightPreview(),
+                      const SizedBox(height: 24),
+                      _buildQuickActions(),
+                      const SizedBox(height: 24),
+                      _buildInventoryHealth(),
+                      const SizedBox(height: 24),
+                      _buildRecentActivity(),
+                    ],
+                  ),
+          ),
         ),
       ),
     );
   }
 
-  Widget _shimmerBox({double height = 100}) {
+  Widget _buildLoadingState() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _shimmerBox(height: 140, child: _buildGlowLogoLoading()),
+        const SizedBox(height: 24),
+        Row(
+          children: [
+            Expanded(child: _shimmerBox(height: 120)),
+            const SizedBox(width: 16),
+            Expanded(child: _shimmerBox(height: 120)),
+          ],
+        ),
+        const SizedBox(height: 24),
+        _shimmerBox(height: 200),
+        const SizedBox(height: 24),
+        _shimmerBox(height: 150),
+      ],
+    );
+  }
+
+  Widget _buildGlowLogoLoading() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const SizedBox(
+          width: 32,
+          height: 32,
+          child: CircularProgressIndicator(
+            strokeWidth: 3,
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.cyanAccent),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          "Analyzing Clinic Database...",
+          style: TextStyle(
+            color: Colors.cyanAccent.withOpacity(0.8),
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _shimmerBox({double height = 100, Widget? child}) {
     return Container(
       height: height,
+      width: double.infinity,
       decoration: BoxDecoration(
-        color: Colors.grey[200],
-        borderRadius: BorderRadius.circular(14),
+        color: Colors.white.withOpacity(0.04),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.06)),
       ),
-      child: Center(
-        child: SizedBox(
-          width: 24,
-          height: 24,
-          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.grey[400]),
-        ),
-      ),
+      child: child,
     );
   }
 
@@ -160,104 +196,169 @@ class DashboardPageState extends State<DashboardPage> {
     final currentDay = summary['current_day'] ?? "";
     final currentTime = summary['current_time'] ?? "";
     final district = summary['district'] ?? "";
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.blueAccent, Colors.blue.shade700],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(16),
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF1E1E38).withOpacity(0.8),
+            const Color(0xFF0F172A).withOpacity(0.8)
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "$greeting, $clinicName",
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "$greeting,",
+                      style: TextStyle(
+                        color: Colors.cyanAccent.shade200,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
                       ),
-                      const SizedBox(height: 4),
-                      if (district.isNotEmpty)
-                        Text(
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      clinicName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                    if (district.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.cyanAccent.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.cyanAccent.withOpacity(0.2)),
+                        ),
+                        child: Text(
                           "District: $district",
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.8),
-                            fontSize: 14,
+                            color: Colors.cyanAccent.shade100,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.greenAccent.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.greenAccent.withOpacity(0.5)),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.circle, size: 8, color: Colors.greenAccent),
-                      SizedBox(width: 6),
-                      Text(
-                        "Online",
-                        style: TextStyle(color: Colors.greenAccent, fontSize: 12),
                       ),
                     ],
-                  ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                Material(
-                  color: Colors.white.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(20),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(20),
-                    onTap: () => _confirmLogout(context),
-                    child: const Padding(
-                      padding: EdgeInsets.all(8),
-                      child: Icon(Icons.logout, color: Colors.white, size: 18),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.circle, size: 8, color: Color(0xFF10B981)),
+                        SizedBox(width: 6),
+                        Text(
+                          "Active Online",
+                          style: TextStyle(
+                            color: Color(0xFF34D399),
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+                  const SizedBox(height: 12),
+                  Material(
+                    color: Colors.redAccent.withOpacity(0.08),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      side: BorderSide(color: Colors.redAccent.withOpacity(0.2)),
+                    ),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(14),
+                      onTap: () => _confirmLogout(context),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.logout_rounded, color: Colors.redAccent, size: 14),
+                            SizedBox(width: 6),
+                            Text(
+                              "Logout",
+                              style: TextStyle(
+                                color: Colors.redAccent,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Divider(color: Colors.white.withOpacity(0.06), height: 1),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Icon(Icons.calendar_today_rounded, size: 14, color: Colors.white.withOpacity(0.4)),
+              const SizedBox(width: 8),
+              Text(
+                "$currentDay, $currentDate",
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.8),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
                 ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Icon(Icons.calendar_today, size: 14, color: Colors.white.withOpacity(0.7)),
-                const SizedBox(width: 6),
-                Text(
-                  "$currentDay, $currentDate",
-                  style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13),
+              ),
+              const Spacer(),
+              Icon(Icons.access_time_filled_rounded, size: 14, color: Colors.white.withOpacity(0.4)),
+              const SizedBox(width: 8),
+              Text(
+                currentTime,
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.8),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
                 ),
-                const SizedBox(width: 20),
-                Icon(Icons.access_time, size: 14, color: Colors.white.withOpacity(0.7)),
-                const SizedBox(width: 6),
-                Text(
-                  currentTime,
-                  style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13),
-                ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -268,49 +369,86 @@ class DashboardPageState extends State<DashboardPage> {
 
     return Row(
       children: [
-        Expanded(child: _summaryCard("Total\nMedicines", "$total", Colors.blue, Icons.medication)),
-        const SizedBox(width: 10),
-        Expanded(child: _summaryCard("Low\nStock", "$lowStock", Colors.orange, Icons.warning_amber)),
+        Expanded(
+          child: _summaryCard(
+            "Total Medicines",
+            "$total Items",
+            const Color(0xFF3B82F6),
+            Icons.medication_liquid_rounded,
+            widget.onNavigateInventory ?? () {},
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _summaryCard(
+            "Low Stock Alerts",
+            "$lowStock Items",
+            const Color(0xFFEF4444),
+            Icons.warning_amber_rounded,
+            widget.onNavigateInventory ?? () {},
+          ),
+        ),
       ],
     );
   }
 
-  Widget _summaryCard(String label, String value, Color color, IconData icon) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, color: color, size: 22),
+  Widget _summaryCard(String label, String value, Color color, IconData icon, VoidCallback onTap) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.03),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: onTap,
+          splashColor: color.withOpacity(0.1),
+          highlightColor: color.withOpacity(0.05),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: color.withOpacity(0.2)),
+                  ),
+                  child: Icon(icon, color: color, size: 24),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.white.withOpacity(0.5),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-                height: 1.3,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -325,106 +463,136 @@ class DashboardPageState extends State<DashboardPage> {
     final alerts = <Map<String, dynamic>>[];
     if (lowStock > 0) {
       alerts.add({
-        "icon": Icons.inventory,
-        "label": "$lowStock items low on stock",
-        "color": Colors.red,
-        "bg": Colors.red.withOpacity(0.1),
+        "icon": Icons.inventory_2_rounded,
+        "label": "$lowStock medicines are running critically low",
+        "color": const Color(0xFFEF4444),
+        "bg": const Color(0xFFEF4444).withOpacity(0.08),
+        "border": const Color(0xFFEF4444).withOpacity(0.25),
       });
     }
     if (moderate > 0) {
       alerts.add({
-        "icon": Icons.remove_shopping_cart,
-        "label": "$moderate items at moderate stock",
-        "color": Colors.orange,
-        "bg": Colors.orange.withOpacity(0.1),
+        "icon": Icons.warning_rounded,
+        "label": "$moderate medicines at moderate stock levels",
+        "color": const Color(0xFFF59E0B),
+        "bg": const Color(0xFFF59E0B).withOpacity(0.08),
+        "border": const Color(0xFFF59E0B).withOpacity(0.25),
       });
     }
     if (adequate > 0) {
       alerts.add({
-        "icon": Icons.check_circle,
-        "label": "$adequate items adequately stocked",
-        "color": Colors.green,
-        "bg": Colors.green.withOpacity(0.1),
+        "icon": Icons.check_circle_rounded,
+        "label": "$adequate medicines are adequately stocked",
+        "color": const Color(0xFF10B981),
+        "bg": const Color(0xFF10B981).withOpacity(0.08),
+        "border": const Color(0xFF10B981).withOpacity(0.25),
       });
     }
     if (pendingOrders > 0) {
       alerts.add({
-        "icon": Icons.shopping_cart,
-        "label": "$pendingOrders pending orders",
-        "color": Colors.blue,
-        "bg": Colors.blue.withOpacity(0.1),
-      });
-    }
-    if (insightMessage.isNotEmpty) {
-      alerts.add({
-        "icon": Icons.auto_awesome,
-        "label": insightMessage.length > 60
-            ? "${insightMessage.substring(0, 60)}..."
-            : insightMessage,
-        "color": Colors.purple,
-        "bg": Colors.purple.withOpacity(0.1),
+        "icon": Icons.local_shipping_rounded,
+        "label": "$pendingOrders pending procurement orders active",
+        "color": const Color(0xFF3B82F6),
+        "bg": const Color(0xFF3B82F6).withOpacity(0.08),
+        "border": const Color(0xFF3B82F6).withOpacity(0.25),
       });
     }
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.notifications_active, size: 20, color: Colors.blueAccent),
-                const SizedBox(width: 8),
-                const Text(
-                  "Notifications & Alerts",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.02),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.notifications_active_rounded, size: 20, color: Colors.cyanAccent),
+              const SizedBox(width: 10),
+              const Text(
+                "System Alerts & Notifications",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  letterSpacing: 0.2,
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            if (alerts.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Row(
-                  children: [
-                    Icon(Icons.check_circle, color: Colors.green, size: 20),
-                    const SizedBox(width: 8),
-                    const Text("All clear - no alerts", style: TextStyle(color: Colors.grey)),
-                  ],
+              ),
+              const Spacer(),
+              if (alerts.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    "${alerts.length} Alerts",
+                    style: const TextStyle(color: Colors.redAccent, fontSize: 10, fontWeight: FontWeight.bold),
+                  ),
                 ),
-              )
-            else
-              ...alerts.map((a) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: a['bg'],
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(a['icon'], size: 18, color: a['color']),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              a['label'],
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: a['color'],
-                                fontWeight: FontWeight.w500,
-                              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (alerts.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF10B981).withOpacity(0.06),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFF10B981).withOpacity(0.15)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.check_circle_outline_rounded, color: Color(0xFF34D399), size: 18),
+                  SizedBox(width: 10),
+                  Text(
+                    "All inventory systems running within safe thresholds",
+                    style: TextStyle(color: Color(0xFF34D399), fontSize: 13, fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
+            )
+          else
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: alerts.length,
+              itemBuilder: (context, idx) {
+                final a = alerts[idx];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: a['bg'],
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: a['border']),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(a['icon'], size: 18, color: a['color']),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            a['label'],
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.white.withOpacity(0.9),
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  )),
-          ],
-        ),
+                  ),
+                );
+              },
+            ),
+        ],
       ),
     );
   }
@@ -433,192 +601,253 @@ class DashboardPageState extends State<DashboardPage> {
     if (insightMessage.isEmpty && topProducts.isEmpty) {
       return const SizedBox.shrink();
     }
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
-          gradient: LinearGradient(
-            colors: [Colors.indigo.shade50, Colors.purple.shade50],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.02),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.purpleAccent.withOpacity(0.15)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.purpleAccent.withOpacity(0.02),
+            blurRadius: 20,
+            spreadRadius: 2,
           ),
-        ),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.auto_awesome, size: 20, color: Colors.indigo),
-                const SizedBox(width: 8),
-                const Text(
-                  "AI Insights Preview",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.auto_awesome_rounded, size: 20, color: Colors.purpleAccent),
+              const SizedBox(width: 10),
+              const Text(
+                "AI Inventory Analytics",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  letterSpacing: 0.2,
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            if (insightMessage.isNotEmpty)
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.7),
-                  borderRadius: BorderRadius.circular(10),
+              ),
+              const Spacer(),
+              Text(
+                "AI Preview",
+                style: TextStyle(
+                  color: Colors.purpleAccent.shade100,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
                 ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(Icons.lightbulb_outline, size: 18, color: Colors.amber),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        insightMessage,
-                        style: const TextStyle(fontSize: 13, height: 1.4),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (insightMessage.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.03),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white.withOpacity(0.05)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.lightbulb_outline_rounded, size: 20, color: Colors.amber),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      insightMessage,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.white.withOpacity(0.85),
+                        height: 1.5,
+                        fontWeight: FontWeight.w400,
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            if (topProducts.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              const Text(
-                "Top Dispensed Products",
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+          if (topProducts.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Text(
+              "Top Dispensed Products (Last 3 Months)",
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.white.withOpacity(0.5),
+                fontWeight: FontWeight.w600,
               ),
-              const SizedBox(height: 8),
-              ...topProducts.take(3).map((p) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 3),
-                    child: Row(
-                      children: [
-                        Icon(Icons.trending_up, size: 14, color: Colors.green.shade600),
-                        const SizedBox(width: 8),
-                        Text(
-                          dashItemNameOf(p),
-                          style: const TextStyle(fontSize: 13),
+            ),
+            const SizedBox(height: 12),
+            ...() {
+              int maxUsed = 1;
+              for (var p in topProducts) {
+                final count = p['total_used'] ?? 0;
+                if (count is int && count > maxUsed) {
+                  maxUsed = count;
+                }
+              }
+              return topProducts.take(3).map((p) {
+                final name = dashItemNameOf(p);
+                final count = p['total_used'] ?? 0;
+                final ratio = (count is int ? count.toDouble() : 0.0) / maxUsed;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.trending_up_rounded, size: 14, color: Colors.greenAccent),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              name,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Text(
+                            "$count units",
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.cyanAccent,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: SizedBox(
+                          height: 6,
+                          child: LinearProgressIndicator(
+                            value: ratio.clamp(0.05, 1.0),
+                            backgroundColor: Colors.white.withOpacity(0.04),
+                            valueColor: const AlwaysStoppedAnimation<Color>(Colors.purpleAccent),
+                          ),
                         ),
-                        const Spacer(),
-                        Text(
-                          "${p['total_used'] ?? 0} used",
-                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                        ),
-                      ],
-                    ),
-                  )),
-            ],
+                      ),
+                    ],
+                  ),
+                );
+              });
+            }(),
           ],
-        ),
+        ],
       ),
     );
   }
 
   Widget _buildQuickActions() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "Quick Actions",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.02),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Quick Navigation Hub",
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              letterSpacing: 0.2,
             ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: _actionButton(
-                    "View Inventory",
-                    Icons.inventory,
-                    Colors.blue,
-                    widget.onNavigateInventory ?? () {},
-                  ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _actionButton(
+                  "Inventory",
+                  Icons.inventory_2_outlined,
+                  const Color(0xFF3B82F6),
+                  widget.onNavigateInventory ?? () {},
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _actionButton(
-                    "Add Stock",
-                    Icons.add_circle,
-                    Colors.green,
-                    widget.onNavigateOperations ?? () {},
-                  ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _actionButton(
+                  "Add Stock",
+                  Icons.add_box_outlined,
+                  const Color(0xFF10B981),
+                  widget.onNavigateOperations ?? () {},
                 ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: _actionButton(
-                    "Orders",
-                    Icons.shopping_cart,
-                    Colors.orange,
-                    widget.onNavigateOrders ?? () {},
-                  ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _actionButton(
+                  "Orders",
+                  Icons.shopping_cart_outlined,
+                  const Color(0xFFF59E0B),
+                  widget.onNavigateOrders ?? () {},
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _actionButton(
-                    "Reports",
-                    Icons.bar_chart,
-                    Colors.purple,
-                    widget.onNavigateReports ?? () {},
-                  ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _actionButton(
+                  "AI Insights",
+                  Icons.auto_graph_outlined,
+                  const Color(0xFF8B5CF6),
+                  widget.onNavigateReports ?? () {},
                 ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
   Widget _actionButton(String label, IconData icon, Color color, VoidCallback onTap) {
-    return Material(
-      color: color.withOpacity(0.1),
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.03),
         borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          child: Column(
-            children: [
-              Icon(icon, color: color, size: 24),
-              const SizedBox(height: 6),
-              Text(
-                label,
-                style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w600),
-              ),
-            ],
+        border: Border.all(color: color.withOpacity(0.15)),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          splashColor: color.withOpacity(0.1),
+          highlightColor: color.withOpacity(0.05),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, color: color, size: 20),
+                const SizedBox(height: 6),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Colors.white.withOpacity(0.9),
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-    );
-  }
-
-  void _confirmLogout(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text("Confirm Logout"),
-        content: const Text("Are you sure you want to logout?"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              widget.onLogout?.call();
-            },
-            child: const Text("Logout"),
-          ),
-        ],
       ),
     );
   }
@@ -634,124 +863,178 @@ class DashboardPageState extends State<DashboardPage> {
       return const SizedBox.shrink();
     }
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "Inventory Health",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.02),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Inventory Health Index",
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              letterSpacing: 0.2,
             ),
-            const SizedBox(height: 16),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: SizedBox(
-                height: 24,
-                child: Row(
-                  children: [
-                    if (adequate > 0)
-                      Expanded(
-                        flex: adequate,
-                        child: Container(color: Colors.green),
+          ),
+          const SizedBox(height: 16),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: SizedBox(
+              height: 12,
+              child: Row(
+                children: [
+                  if (adequate > 0)
+                    Expanded(
+                      flex: adequate,
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(colors: [Color(0xFF10B981), Color(0xFF059669)]),
+                        ),
                       ),
-                    if (moderate > 0)
-                      Expanded(
-                        flex: moderate,
-                        child: Container(color: Colors.orange),
+                    ),
+                  if (moderate > 0)
+                    Expanded(
+                      flex: moderate,
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(colors: [Color(0xFFF59E0B), Color(0xFFD97706)]),
+                        ),
                       ),
-                    if (low > 0)
-                      Expanded(
-                        flex: low,
-                        child: Container(color: Colors.red),
+                    ),
+                  if (low > 0)
+                    Expanded(
+                      flex: low,
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(colors: [Color(0xFFEF4444), Color(0xFFDC2626)]),
+                        ),
                       ),
-                  ],
-                ),
+                    ),
+                ],
               ),
             ),
-            const SizedBox(height: 12),
-            _healthLegend("Adequate", adequate, Colors.green),
-            _healthLegend("Moderate", moderate, Colors.orange),
-            _healthLegend("Low Stock", low, Colors.red),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _healthLegend(String label, int count, Color color) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
-        children: [
-          Container(
-            width: 12,
-            height: 12,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(3),
-            ),
           ),
-          const SizedBox(width: 8),
-          Text(label, style: const TextStyle(fontSize: 13)),
-          const Spacer(),
-          Text(
-            "$count",
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: color),
-          ),
+          const SizedBox(height: 16),
+          _healthLegend("Adequate Stock", adequate, const Color(0xFF10B981)),
+          Divider(color: Colors.white.withOpacity(0.04), height: 12),
+          _healthLegend("Moderate Stock", moderate, const Color(0xFFF59E0B)),
+          Divider(color: Colors.white.withOpacity(0.04), height: 12),
+          _healthLegend("Low Stock warning", low, const Color(0xFFEF4444)),
         ],
       ),
     );
   }
 
-  Widget _buildRecentActivity() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.history, size: 20, color: Colors.blueAccent),
-                const SizedBox(width: 8),
-                const Text(
-                  "Recent Activity",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            if (recentActivity.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24),
-                child: Center(
-                  child: Column(
-                    children: [
-                      Icon(Icons.inbox, size: 40, color: Colors.grey[300]),
-                      const SizedBox(height: 8),
-                      Text(
-                        "No recent activity",
-                        style: TextStyle(color: Colors.grey[500], fontSize: 14),
-                      ),
-                    ],
-                  ),
-                ),
-              )
-            else
-              ...recentActivity.take(10).map((a) => _activityTile(a)),
-          ],
+  Widget _healthLegend(String label, int count, Color color) {
+    return Row(
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(color: color.withOpacity(0.4), blurRadius: 4, spreadRadius: 1),
+            ],
+          ),
         ),
+        const SizedBox(width: 10),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            color: Colors.white.withOpacity(0.7),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const Spacer(),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: color.withOpacity(0.2)),
+          ),
+          child: Text(
+            "$count items",
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRecentActivity() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.02),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.history_toggle_off_rounded, size: 20, color: Colors.cyanAccent),
+              const SizedBox(width: 10),
+              const Text(
+                "Recent Operation Logs",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          if (recentActivity.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(Icons.inbox_rounded, size: 48, color: Colors.white.withOpacity(0.1)),
+                    const SizedBox(height: 12),
+                    Text(
+                      "No operations logged in the past 24 hours",
+                      style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: recentActivity.take(10).length,
+              itemBuilder: (context, idx) {
+                final entry = recentActivity[idx];
+                final isLast = idx == recentActivity.take(10).length - 1;
+                return _activityTimelineTile(entry, isLast);
+              },
+            ),
+        ],
       ),
     );
   }
 
-  Widget _activityTile(Map<String, dynamic> entry) {
+  Widget _activityTimelineTile(Map<String, dynamic> entry, bool isLast) {
     final type = entry['type'] ?? "";
     final itemName = dashItemNameOf(entry);
     final ts = entry['timestamp'] ?? "";
@@ -761,52 +1044,106 @@ class DashboardPageState extends State<DashboardPage> {
     final quantity = entry['quantity'] ?? 0;
 
     if (type == "stock_in") {
-      icon = Icons.add_circle_outline;
-      color = Colors.green;
-      description = "Added $quantity × $itemName";
+      icon = Icons.add_circle_outline_rounded;
+      color = const Color(0xFF10B981);
+      description = "Restocked $quantity × $itemName";
     } else if (type == "stock_out") {
-      icon = Icons.remove_circle_outline;
-      color = Colors.orange;
-      description = "Used $quantity × $itemName";
+      icon = Icons.remove_circle_outline_rounded;
+      color = const Color(0xFFF59E0B);
+      description = "Dispensed $quantity × $itemName";
     } else if (type == "order") {
       final status = entry['status'] ?? "PENDING";
-      icon = Icons.receipt_long;
-      color = status == "RECEIVED" ? Colors.green : Colors.blue;
-      description = "Order $status";
+      icon = Icons.receipt_long_rounded;
+      color = status == "RECEIVED" ? const Color(0xFF10B981) : const Color(0xFF3B82F6);
+      description = "Procurement Order $status";
     } else {
-      icon = Icons.circle;
+      icon = Icons.circle_outlined;
       color = Colors.grey;
       description = itemName;
     }
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+    return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, size: 16, color: color),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  description,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+          Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: color.withOpacity(0.3)),
                 ),
-                if (ts.isNotEmpty)
-                  Text(
-                    _formatTimestamp(ts),
-                    style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                child: Icon(icon, size: 14, color: color),
+              ),
+              if (!isLast)
+                Expanded(
+                  child: Container(
+                    width: 2,
+                    color: Colors.white.withOpacity(0.06),
                   ),
-              ],
+                ),
+            ],
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    description,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                      height: 1.3,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  if (ts.isNotEmpty)
+                    Text(
+                      _formatTimestamp(ts),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.white.withOpacity(0.4),
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmLogout(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        title: const Text("Confirm Logout", style: TextStyle(color: Colors.white)),
+        content: Text(
+          "Are you sure you want to logout from ${summary['clinic_name'] ?? widget.clinicId}?",
+          style: TextStyle(color: Colors.white.withOpacity(0.7)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text("Cancel", style: TextStyle(color: Colors.white.withOpacity(0.6))),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              widget.onLogout?.call();
+            },
+            child: const Text(
+              "Logout",
+              style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
             ),
           ),
         ],

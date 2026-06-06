@@ -1216,12 +1216,17 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
       return _getDayOfWeekName(date.weekday);
     });
 
-    List<String> weeklyLabels = const ["W-3", "W-2", "W-1", "This W"];
+    List<String> weeklyLabels = const ["3w ago", "2w ago", "1w ago", "This Week"];
 
     List<String> monthlyLabels = List.generate(3, (i) {
       final date = DateTime(today.year, today.month - (2 - i), 1);
       return _getMonthName(date.month);
     });
+
+    // Calculate period totals
+    int total7d = dailyUsage.isNotEmpty ? dailyUsage.reduce((a, b) => a + b) : 0;
+    int total4w = weeklyUsage.isNotEmpty ? weeklyUsage.reduce((a, b) => a + b) : 0;
+    int total3m = monthlyUsage.isNotEmpty ? monthlyUsage.reduce((a, b) => a + b) : 0;
 
     return Container(
       width: double.infinity,
@@ -1236,10 +1241,10 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
         children: [
           Row(
             children: [
-              const Icon(Icons.trending_up_rounded, color: Colors.cyanAccent, size: 20),
+              const Icon(Icons.bar_chart_rounded, color: Colors.cyanAccent, size: 22),
               const SizedBox(width: 8),
               const Text(
-                "Usage Trends",
+                "Consolidated Medicine Usage",
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 18,
@@ -1248,7 +1253,46 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 6),
+          const Text(
+            "Total units of all medicines dispensed across the entire clinic.",
+            style: TextStyle(
+              color: Colors.blueGrey,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Glassmorphic Metric Badges
+          Row(
+            children: [
+              Expanded(
+                child: _buildMetricBadge(
+                  "7-Day Total",
+                  "$total7d units",
+                  Colors.cyanAccent,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildMetricBadge(
+                  "4-Week Total",
+                  "$total4w units",
+                  Colors.amberAccent,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildMetricBadge(
+                  "3-Month Total",
+                  "$total3m units",
+                  Colors.greenAccent,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1258,6 +1302,39 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
               const SizedBox(width: 12),
               Expanded(child: _buildMiniChart("Monthly (3 months)", monthlyUsage, monthlyLabels, Colors.greenAccent)),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetricBadge(String label, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.25), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.blueGrey,
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              color: color,
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ],
       ),

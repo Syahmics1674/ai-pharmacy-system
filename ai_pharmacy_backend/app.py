@@ -1162,7 +1162,7 @@ def dashboard_summary():
             if data.get("status") in ("PENDING", "SUBMITTED"):
                 pending_orders_count += 1
 
-        dispense_txns = fetch_dispense_transactions(clinic_id=clinic_id, limit=1000)
+        dispense_txns = fetch_dispense_transactions(clinic_id=clinic_id, limit=5000)
         usage_list = dispense_txns_to_usage_list(dispense_txns)
         stock_in_data = []
         for u in usage_list:
@@ -1251,25 +1251,85 @@ def get_order_suggestions():
         clinic_data = fetch_clinic(clinic_id)
         if clinic_data.get("has_pending_order"):
             return jsonify({"clinic_id": clinic_id, "order_suggestions": []})
+        
         inv_items = get_inventory_for_clinic(clinic_id)
         suggestions = []
+
+        # Fallback heuristic if AI engine is not available
+        if not AI_FEATURES_AVAILABLE or calculate_smart_inventory is None:
+            for item in inv_items:
+                stock = item["current_stock"]
+                item_name = item["item_name"]
+                if stock < 100:
+                    suggestions.append({
+                        "item_name": item_name,
+                        "suggested_qty": 200 - stock,
+                        "priority": "HIGH",
+                        "item_code": item.get("item_code", ""),
+                    })
+                elif stock < 200:
+                    suggestions.append({
+                        "item_name": item_name,
+                        "suggested_qty": 300 - stock,
+                        "priority": "MEDIUM",
+                        "item_code": item.get("item_code", ""),
+                    })
+            return jsonify({"clinic_id": clinic_id, "order_suggestions": suggestions})
+
+        # Load clinic transaction history to generate AI predictions
+        weather_data = get_7_day_weather()
+        dispense_txns = fetch_dispense_transactions(clinic_id=clinic_id, limit=5000)
+        usage_list = dispense_txns_to_usage_list(dispense_txns)
+        my_usage = {}
+        for u in usage_list:
+            item = u["item_name"]
+            if item not in my_usage:
+                my_usage[item] = []
+            my_usage[item].append(u)
+
         for item in inv_items:
-            stock = item["current_stock"]
             item_name = item["item_name"]
-            if stock < 100:
+            stock = item["current_stock"]
+            logs = my_usage.get(item_name, [])
+
+            # Fallback heuristic if this item has no historical usage logs yet
+            if not logs:
+                if stock < 100:
+                    suggestions.append({
+                        "item_name": item_name,
+                        "suggested_qty": 200 - stock,
+                        "priority": "HIGH",
+                        "item_code": item.get("item_code", ""),
+                    })
+                elif stock < 200:
+                    suggestions.append({
+                        "item_name": item_name,
+                        "suggested_qty": 300 - stock,
+                        "priority": "MEDIUM",
+                        "item_code": item.get("item_code", ""),
+                    })
+                continue
+
+            # Generate AI Smart Inventory metrics
+            metrics = calculate_smart_inventory(logs, stock, item_name=item_name, weather_data=weather_data)
+            run_out_days = metrics.get('run_out_days', -1)
+            recommend_order = metrics.get('recommend_order', 0)
+
+            # Suggest an order if the item will run out in the next 30 days and needs stock
+            if run_out_days != -1 and recommend_order > 0:
+                priority = "LOW"
+                if run_out_days <= 7:
+                    priority = "HIGH"
+                elif run_out_days <= 14:
+                    priority = "MEDIUM"
+
                 suggestions.append({
                     "item_name": item_name,
-                    "suggested_qty": 200 - stock,
-                    "priority": "HIGH",
+                    "suggested_qty": int(recommend_order),
+                    "priority": priority,
                     "item_code": item.get("item_code", ""),
                 })
-            elif stock < 200:
-                suggestions.append({
-                    "item_name": item_name,
-                    "suggested_qty": 300 - stock,
-                    "priority": "MEDIUM",
-                    "item_code": item.get("item_code", ""),
-                })
+
         return jsonify({"clinic_id": clinic_id, "order_suggestions": suggestions})
     except Exception as e:
         return jsonify({"error": f"Order suggestions failed: {str(e)}"}), 500
@@ -1478,7 +1538,7 @@ def ai_forecast():
         cached_data = cache_get(cache_key)
         if cached_data:
             return jsonify(cached_data)
-        dispense_txns = fetch_dispense_transactions(clinic_id=clinic_id, limit=1000)
+        dispense_txns = fetch_dispense_transactions(clinic_id=clinic_id, limit=5000)
         usage_data = [
             {"quantity_used": u["quantity_used"], "timestamp": u["timestamp"]}
             for u in dispense_txns_to_usage_list(dispense_txns)
@@ -1505,7 +1565,7 @@ def ai_anomalies():
         cached_data = cache_get(cache_key)
         if cached_data:
             return jsonify(cached_data)
-        dispense_txns = fetch_dispense_transactions(clinic_id=clinic_id, limit=1000)
+        dispense_txns = fetch_dispense_transactions(clinic_id=clinic_id, limit=5000)
         usage_data = [
             {"item_name": u["item_name"], "quantity_used": u["quantity_used"], "timestamp": u["timestamp"]}
             for u in dispense_txns_to_usage_list(dispense_txns)
@@ -1535,7 +1595,7 @@ def ai_anomalies():
 @cached(ttl_seconds=300)
 def ai_overall_usage():
     clinic_id = request.args.get('clinic_id')
-    dispense_txns = fetch_dispense_transactions(clinic_id=clinic_id, limit=1000)
+    dispense_txns = fetch_dispense_transactions(clinic_id=clinic_id, limit=5000)
     logs = dispense_txns_to_usage_list(dispense_txns)
     return jsonify(build_overall_usage_payload(logs))
 
@@ -1552,7 +1612,7 @@ def ai_stock_summary():
 @cached(ttl_seconds=300)
 def ai_top_products():
     clinic_id = request.args.get('clinic_id')
-    dispense_txns = fetch_dispense_transactions(clinic_id=clinic_id, limit=1000)
+    dispense_txns = fetch_dispense_transactions(clinic_id=clinic_id, limit=5000)
     return jsonify(build_top_products_from_dispense(dispense_txns))
 
 
@@ -1562,7 +1622,7 @@ def ai_insight_message():
     clinic_id = request.args.get('clinic_id')
     inventory_items = get_inventory_for_clinic(clinic_id)
     stock_summary = build_stock_summary_payload(inventory_items)
-    dispense_txns = fetch_dispense_transactions(clinic_id=clinic_id, limit=1000)
+    dispense_txns = fetch_dispense_transactions(clinic_id=clinic_id, limit=5000)
     top_products = build_top_products_from_dispense(dispense_txns)
     return jsonify(build_insight_message_payload(stock_summary, top_products))
 
@@ -1579,7 +1639,7 @@ def ai_smart_inventory():
         inv_items = get_inventory_for_clinic(clinic_id)
         my_inventory = {item['item_name']: item['current_stock'] for item in inv_items}
         weather_data = get_7_day_weather()
-        dispense_txns = fetch_dispense_transactions(clinic_id=clinic_id, limit=1000)
+        dispense_txns = fetch_dispense_transactions(clinic_id=clinic_id, limit=5000)
         usage_list = dispense_txns_to_usage_list(dispense_txns)
         my_usage = {}
         for u in usage_list:
@@ -1633,7 +1693,7 @@ def ai_inventory_history():
             current_inventory[display_name] = int(item.get("quantity", 0))
 
         # 2. Fetch the last 2000 dispense transactions
-        dispense_txns = fetch_dispense_transactions(clinic_id=clinic_id, limit=2000)
+        dispense_txns = fetch_dispense_transactions(clinic_id=clinic_id, limit=5000)
 
         # 3. Retrieve medicine catalog for code matching in transactions
         medicines = fetch_medicines()
