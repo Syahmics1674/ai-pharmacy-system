@@ -4145,14 +4145,6 @@ class _OrderPageState extends State<OrderPage> {
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                           color: accentColor,
-                    ...suggestions.map(
-                      (item) => ListTile(
-                        leading: Icon(Icons.medication),
-                        title: Text(itemNameOf(item)),
-                        subtitle: Text("Priority: ${item['priority']}"),
-                        trailing: Text(
-                          "Order Qty: ${item['suggested_qty']}",
-                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
                     ),

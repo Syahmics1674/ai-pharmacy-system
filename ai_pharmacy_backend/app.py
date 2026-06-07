@@ -1271,13 +1271,26 @@ def get_order_suggestions():
                 my_usage[item] = []
             my_usage[item].append(u)
 
+        low_stock_fallback = 0  # count of items suggested via fallback
+
         for item in inv_items:
             item_name = item["item_name"]
             stock = item["current_stock"]
             logs = my_usage.get(item_name, [])
 
-            # Without historical usage logs, AI cannot predict demand; do not suggest replenishment
+            # Without historical usage logs, AI cannot predict demand;
+            # fallback to a simple low-stock heuristic so the dashboard's
+            # "low stock" count and the suggestion list stay in sync.
             if not logs:
+                # Match the Flutter low-stock threshold (qty < 20)
+                if stock < 20:
+                    suggestions.append({
+                        "item_name": item_name,
+                        "suggested_qty": int(max(20, 30 - stock)),
+                        "priority": "HIGH" if stock < 10 else "MEDIUM",
+                        "item_code": item.get("item_code", ""),
+                    })
+                    low_stock_fallback += 1
                 continue
 
             # Generate AI Smart Inventory metrics
@@ -1299,6 +1312,15 @@ def get_order_suggestions():
                     "priority": priority,
                     "item_code": item.get("item_code", ""),
                 })
+
+        logger.info(
+            f"[order_suggestions] clinic={clinic_id} "
+            f"low_stock_count={sum(1 for i in inv_items if i['current_stock'] < 20)} "
+            f"ai_candidates={len([i for i in inv_items if my_usage.get(i['item_name'], [])])} "
+            f"fallback_suggested={low_stock_fallback} "
+            f"ai_suggested={len(suggestions) - low_stock_fallback} "
+            f"total_suggested={len(suggestions)}"
+        )
 
         return jsonify({"clinic_id": clinic_id, "order_suggestions": suggestions})
     except Exception as e:
