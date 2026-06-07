@@ -3165,18 +3165,26 @@ class _OrderPageState extends State<OrderPage> {
 
   Future<void> fetchSuggestions() async {
     try {
-      final data = await safeApiGet("$baseUrl/order_suggestions?clinic_id=${widget.clinicId}");
+      final data = await safeApiGet(
+        "$baseUrl/order_suggestions?clinic_id=${widget.clinicId}",
+        timeout: const Duration(seconds: 45),
+      );
       if (mounted) {
         setState(() {
           suggestions = data['order_suggestions'] ?? [];
         });
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint("DEBUG: fetchSuggestions failed: $e");
+    }
   }
 
   Future<void> fetchConsolidation() async {
     try {
-      final data = await safeApiGet("$baseUrl/consolidate?clinic_id=${widget.clinicId}");
+      final data = await safeApiGet(
+        "$baseUrl/consolidate?clinic_id=${widget.clinicId}",
+        timeout: const Duration(seconds: 45),
+      );
       if (mounted) {
         setState(() {
           consolidatedDate = data['consolidated_date'] ?? "";
@@ -3195,6 +3203,7 @@ class _OrderPageState extends State<OrderPage> {
         });
       }
     } catch (e) {
+      debugPrint("DEBUG: fetchConsolidation failed: $e");
       clearConsolidationState();
     }
   }
@@ -3434,8 +3443,8 @@ class _OrderPageState extends State<OrderPage> {
                         title: Text(itemNameOf(item)),
                         subtitle: Text("Priority: ${item['priority']}"),
                         trailing: Text(
-                          "Qty: ${item['suggested_qty']}",
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                          "Order Qty: ${item['suggested_qty']}",
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
                     ),
