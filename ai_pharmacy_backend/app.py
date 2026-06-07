@@ -1746,18 +1746,20 @@ def generate_order():
     data = request.json
     clinic_id = data.get("clinic_id")
     items = data.get("items")
+    status = data.get("status", "DRAFT")
     if not clinic_id or not items:
         return jsonify({"error": "Missing data"}), 400
     try:
         order_data = {
             "clinic_id": clinic_id,
             "items": items,
-            "status": "PENDING",
+            "status": status,
             "created_at": datetime.utcnow()
         }
-        db.collection("orders").add(order_data)
-        update_clinic(clinic_id, {"has_pending_order": True})
-        return jsonify({"message": "Order generated successfully"})
+        _, doc_ref = db.collection("orders").add(order_data)
+        if status in ("DRAFT", "PENDING", "SUBMITTED"):
+            update_clinic(clinic_id, {"has_pending_order": True})
+        return jsonify({"message": "Order generated successfully", "order_id": doc_ref.id})
     except Exception as e:
         return jsonify({"error": f"Order generation failed: {str(e)}"}), 500
 
@@ -1792,35 +1794,48 @@ def complete_order():
     if not clinic_id:
         return jsonify({"error": "clinic_id required"}), 400
     try:
-        orders = db.collection("orders") \
-            .where("clinic_id", "==", clinic_id) \
-            .where("status", "==", "SUBMITTED") \
-            .stream()
         joined_supabase = get_joined_inventory(clinic_id=clinic_id)
         supabase_qty_map = {item["item_code"]: int(item["quantity"]) for item in joined_supabase}
 
+        orders_found = 0
+        items_updated = 0
         failed_items = []
-        for doc in orders:
+        for doc in db.collection("orders") \
+                .where("clinic_id", "==", clinic_id) \
+                .where("status", "==", "SUBMITTED") \
+                .stream():
+            orders_found += 1
             order_data = doc.to_dict()
             items = order_data.get("items", [])
             for item in items:
                 item_code = item.get("item_code", "")
                 qty = item.get("qty", 0)
-                if item_code:
-                    current_supabase_qty = supabase_qty_map.get(item_code, 0)
-                    new_supabase_qty = current_supabase_qty + qty
-                    try:
-                        update_inventory_quantity(clinic_id, item_code, new_supabase_qty)
-                    except Exception as e:
-                        failed_items.append({"item_code": item_code, "error": str(e)})
+                if not item_code:
+                    print(f"[complete_order] SKIP item with empty item_code: {item}")
+                    continue
+                current_supabase_qty = supabase_qty_map.get(item_code, 0)
+                new_supabase_qty = current_supabase_qty + qty
+                print(f"[complete_order] clinic={clinic_id} item_code={item_code} "
+                      f"current={current_supabase_qty} ordered={qty} new={new_supabase_qty}")
+                try:
+                    update_inventory_quantity(clinic_id, item_code, new_supabase_qty)
+                    items_updated += 1
+                    supabase_qty_map[item_code] = new_supabase_qty
+                except Exception as e:
+                    print(f"[complete_order] FAILED item_code={item_code}: {e}")
+                    failed_items.append({"item_code": item_code, "error": str(e)})
             doc.reference.update({"status": "RECEIVED"})
         update_clinic(clinic_id, {"has_pending_order": False})
+        clear_cache()
+        print(f"[complete_order] done: orders={orders_found} items_updated={items_updated} "
+              f"failed={len(failed_items)}")
         msg = {"message": "Order received & inventory updated"}
         if failed_items:
             msg["warning"] = f"{len(failed_items)} item(s) failed to update"
             msg["failed_items"] = failed_items
         return jsonify(msg)
     except Exception as e:
+        print(f"[complete_order] UNHANDLED ERROR: {e}")
         return jsonify({"error": f"Complete order failed: {str(e)}"}), 500
 
 
@@ -1833,12 +1848,13 @@ def update_order_status():
         return jsonify({"error": "Missing data"}), 400
     try:
         db.collection("orders").document(order_id).update({"status": new_status})
-        if new_status == "SUBMITTED":
-            order = db.collection("orders").document(order_id).get()
-            if order.exists:
-                clinic_id = order.to_dict().get("clinic_id")
-                if clinic_id:
-                    update_clinic(clinic_id, {"has_pending_order": True})
+        order = db.collection("orders").document(order_id).get()
+        clinic_id = order.to_dict().get("clinic_id") if order.exists else None
+        if new_status == "SUBMITTED" and clinic_id:
+            update_clinic(clinic_id, {"has_pending_order": True})
+        if new_status == "CANCELLED" and clinic_id:
+            update_clinic(clinic_id, {"has_pending_order": False})
+            clear_cache()
         return jsonify({"message": "Order status updated"})
     except Exception as e:
         return jsonify({"error": f"Update failed: {str(e)}"}), 500
