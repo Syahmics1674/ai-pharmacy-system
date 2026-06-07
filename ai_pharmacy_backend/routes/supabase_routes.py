@@ -23,7 +23,50 @@ def live_inventory():
 @supabase_bp.route("/api/dispense_history", methods=["GET"])
 def dispense_history():
     try:
-        data = fetch_dispense_transactions()
+        clinic_id = request.args.get("clinic_id")
+        data = fetch_dispense_transactions(clinic_id=clinic_id, limit=200)
+
+        # Resolve medicine display names matching the inventory page logic
+        medicines = fetch_medicines()
+        medicine_map = {m.get("item_code"): m for m in medicines if m.get("item_code")}
+
+        for txn in data:
+            # Normalize timestamp key: Supabase stores cloud_created_at
+            if "created_at" not in txn:
+                raw_ts = txn.get("cloud_created_at") or txn.get("local_created_at")
+                if raw_ts:
+                    txn["created_at"] = raw_ts
+
+            item_code = txn.get("item_code", "")
+            med = medicine_map.get(item_code, {})
+
+            # Resolve display name using same precedence as inventory page:
+            # full_brand_name > brand_name > match_name > generic_name + strength + dosage_form > item_code
+            display_name = (
+                med.get("full_brand_name")
+                or med.get("brand_name")
+                or med.get("match_name")
+                or (
+                    " ".join(
+                        p for p in [
+                            med.get("generic_name"),
+                            med.get("strength"),
+                            med.get("dosage_form"),
+                        ] if p
+                    )
+                    or None
+                )
+                or item_code
+                or "Unknown"
+            )
+            txn["_display_name"] = display_name
+
+            # Also attach individual fields for flexible fallback on the client
+            for field in ("full_brand_name", "brand_name", "match_name",
+                          "generic_name", "strength", "dosage_form"):
+                if med.get(field):
+                    txn[field] = med[field]
+
         return jsonify({"success": True, "dispense_transactions": data})
     except Exception as e:
         return jsonify({"success": False, "error": str(e), "dispense_transactions": []}), 500
