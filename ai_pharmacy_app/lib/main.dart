@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:pdf/pdf.dart' as pw_core;
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'order_history_page.dart';
 import 'pkd_dashboard_page.dart';
 import 'dashboard_page.dart';
 import 'live_inventory_page.dart';
 import 'services/sync_service.dart';
+import 'services/live_inventory_service.dart';
 import 'config/api_config.dart';
 
 // Client-side API response cache
@@ -3028,23 +3032,42 @@ class _OrderPageState extends State<OrderPage> {
   String clinicDisplayName = "";
   String generatedOrderDate = "";
 
+  List _cartItems = [];
+  List _inventoryItems = [];
+  Map<String, dynamic>? _selectedMedicine;
+  final TextEditingController _qtyController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
+  int _lowStockCount = 0;
+  bool _suggestionsExpanded = true;
+  bool _showAllItems = false;
+  int _draftCount = 0;
+  int _submittedCount = 0;
+  final Map<String, int> _editableQtys = {};
+
   // 🔥 GENERATE ORDER
   Future<void> generateOrder() async {
     if (isLoading) return;
     try {
       final generatedItems = suggestions.map<Map<String, dynamic>>((item) {
+        final code = medicineIdOf(item);
+        final qty = _editableQtys[code] ?? (item['suggested_qty'] as int);
         return {
-          "item_code": medicineIdOf(item),
+          "item_code": code,
           "item_name": itemNameOf(item),
-          "qty": item['suggested_qty'],
-          "suggested_qty": item['suggested_qty'],
+          "qty": qty,
+          "suggested_qty": qty,
         };
       }).toList();
       await safeApiPost("$baseUrl/generate_order", {
         "clinic_id": widget.clinicId,
         "items": generatedItems,
+        "status": "DRAFT",
       });
       if (mounted) {
+        setState(() {
+          generatedOrders = generatedItems;
+          generatedOrderDate = DateTime.now().toIso8601String().split('T').first;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Order generated successfully ✅")),
         );
@@ -3066,7 +3089,7 @@ class _OrderPageState extends State<OrderPage> {
       builder: (context) {
         int totalQty = suggestions.fold(
           0,
-          (sum, item) => sum + (item['suggested_qty'] as int),
+          (sum, item) => sum + (_editableQtys[medicineIdOf(item)] ?? (item['suggested_qty'] as int)),
         );
         return AlertDialog(
           title: Text("Confirm Order"),
@@ -3076,10 +3099,16 @@ class _OrderPageState extends State<OrderPage> {
             children: [
               Text("You are about to order:\n"),
 
-              ...suggestions.map(
-                (item) =>
-                    Text("• ${itemNameOf(item)} — ${item['suggested_qty']}"),
-              ),
+              ...suggestions.map((item) {
+                final code = medicineIdOf(item);
+                final suggestedQty = item['suggested_qty'] as int;
+                final qty = _editableQtys[code] ?? suggestedQty;
+                final modified = qty != suggestedQty;
+                return Text(
+                  "• ${itemNameOf(item)} — $qty"
+                  "${modified ? '  [Modified: AI was $suggestedQty]' : ''}",
+                );
+              }),
               Text("Total: $totalQty items"),
 
               SizedBox(height: 10),
@@ -3138,6 +3167,14 @@ class _OrderPageState extends State<OrderPage> {
     super.initState();
     fetchClinicName();
     refreshOrderPage();
+    _fetchInventoryItems();
+  }
+
+  @override
+  void dispose() {
+    _qtyController.dispose();
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> fetchClinicName() async {
@@ -3172,6 +3209,12 @@ class _OrderPageState extends State<OrderPage> {
       if (mounted) {
         setState(() {
           suggestions = data['order_suggestions'] ?? [];
+          _showAllItems = false;
+          _editableQtys.clear();
+          for (final item in suggestions) {
+            final code = medicineIdOf(item);
+            _editableQtys[code] = item['suggested_qty'] as int;
+          }
         });
       }
     } catch (e) {
@@ -3227,6 +3270,104 @@ class _OrderPageState extends State<OrderPage> {
     }
   }
 
+  Future<void> cancelDraftOrder() async {
+    if (pendingOrder == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Cancel Draft Order?"),
+        content: const Text(
+          "This will permanently remove the current draft order.\n"
+          "You can generate a new order again later.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text("No"),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            child: const Text("Yes, Cancel Draft"),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await safeApiPost("$baseUrl/update_order_status", {
+        "order_id": pendingOrder!['id'],
+        "status": "CANCELLED",
+      });
+      if (mounted) {
+        setState(() {
+          pendingOrder = null;
+          generatedOrders = [];
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Draft order cancelled")),
+        );
+      }
+      await refreshOrderPage();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to cancel draft: $e")),
+        );
+      }
+    }
+  }
+
+  // DEMO MODE ONLY
+  // Real deployment should disable submitted order cancellation.
+  Future<void> cancelSubmittedOrder() async {
+    if (lastSubmittedOrder == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Cancel Submitted Order?"),
+        content: const Text(
+          "This order has already been submitted.\n\n"
+          "Demo/Test mode only.\n\n"
+          "Are you sure you want to cancel it?",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text("No"),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            child: const Text("Yes, Cancel"),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await safeApiPost("$baseUrl/update_order_status", {
+        "order_id": lastSubmittedOrder!['id'],
+        "status": "CANCELLED",
+      });
+      if (mounted) {
+        setState(() {
+          lastSubmittedOrder = null;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Submitted order cancelled")),
+        );
+      }
+      await refreshOrderPage();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to cancel: $e")),
+        );
+      }
+    }
+  }
+
   Future<void> submitOrder() async {
     if (pendingOrder == null) return;
     try {
@@ -3267,16 +3408,18 @@ class _OrderPageState extends State<OrderPage> {
           b['created_at'],
         ).compareTo(_parseOrderDate(a['created_at'])),
       );
-      final pendingOrders = allOrders
-          .where((o) => o['status'] == "PENDING")
+      final draftOrders = allOrders
+          .where((o) => o['status'] == "DRAFT")
           .toList();
       final submittedOrders = allOrders
           .where((o) => o['status'] == "SUBMITTED")
           .toList();
       if (!mounted) return;
       setState(() {
-        pendingOrder = pendingOrders.isNotEmpty
-            ? pendingOrders.first
+        _draftCount = draftOrders.length;
+        _submittedCount = submittedOrders.length;
+        pendingOrder = draftOrders.isNotEmpty
+            ? draftOrders.first
             : null;
         lastSubmittedOrder = submittedOrders.isNotEmpty
             ? submittedOrders.first
@@ -3287,6 +3430,8 @@ class _OrderPageState extends State<OrderPage> {
       setState(() {
         pendingOrder = null;
         lastSubmittedOrder = null;
+        _draftCount = 0;
+        _submittedCount = 0;
       });
     }
   }
@@ -3322,6 +3467,155 @@ class _OrderPageState extends State<OrderPage> {
     );
   }
 
+  int _sumOrderItems(List items) {
+    int total = 0;
+    for (final item in items) {
+      total += itemQuantityOf(item, keys: ['qty', 'suggested_qty']);
+    }
+    return total;
+  }
+
+  Widget _buildOrderStatusCard({
+    required IconData icon,
+    required String statusLabel,
+    required Color statusColor,
+    required List<dynamic> items,
+    required String createdDate,
+    required int totalQty,
+  }) {
+    final totalItems = items.length;
+    final formattedDate = createdDate.length >= 10
+        ? createdDate.substring(0, 10)
+        : createdDate;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: statusColor.withValues(alpha: 0.3)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: statusColor, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  statusLabel,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: statusColor,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    "$totalItems Item${totalItems == 1 ? '' : 's'}",
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: statusColor),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Icon(Icons.calendar_today, size: 14, color: Colors.grey[500]),
+                const SizedBox(width: 4),
+                Text("Created: $formattedDate",
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+                const SizedBox(width: 16),
+                Icon(Icons.inventory_2, size: 14, color: Colors.grey[500]),
+                const SizedBox(width: 4),
+                Text("Total: $totalQty",
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              childrenPadding: EdgeInsets.zero,
+              title: Text(
+                "View Order List ($totalItems item${totalItems == 1 ? '' : 's'})",
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+              collapsedIconColor: Theme.of(context).colorScheme.primary,
+              iconColor: Theme.of(context).colorScheme.primary,
+              children: [
+                const Divider(height: 1),
+                const SizedBox(height: 8),
+                // Header row
+                Row(
+                  children: [
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text("Medicine",
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey[600]),
+                      ),
+                    ),
+                    Text("Qty",
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey[600]),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                ),
+                const Divider(height: 8),
+                ...items.map((item) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 8),
+                      Icon(Icons.medication, size: 14, color: Colors.grey[400]),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          itemNameOf(item),
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                      ),
+                      Text(
+                        "${itemQuantityOf(item, keys: ['qty', 'suggested_qty'])}",
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                  ),
+                )),
+                const SizedBox(height: 4),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<dynamic> get _activeOrderItems {
+    if (generatedOrders.isNotEmpty) return generatedOrders;
+    if (pendingOrder != null) {
+      final items = pendingOrder!['items'];
+      if (items is List) return items;
+    }
+    if (lastSubmittedOrder != null) {
+      final items = lastSubmittedOrder!['items'];
+      if (items is List) return items;
+    }
+    return [];
+  }
+
   Future<Uint8List> buildOrderPdf() async {
     final pdf = pw.Document();
     final orderDate = generatedOrderDate.isEmpty
@@ -3330,53 +3624,225 @@ class _OrderPageState extends State<OrderPage> {
     final clinicLabel = clinicDisplayName.isEmpty
         ? widget.clinicId
         : clinicDisplayName;
+    final activeItems = _activeOrderItems;
+    final totalItems = activeItems.length;
+    final lowStockCount = _lowStockCount;
+    final priority = basedOn.isEmpty ? "N/A" : basedOn;
+    final timestamp = DateTime.now().toIso8601String().split('T').first;
 
     pdf.addPage(
-      pw.Page(
-        build: (context) {
-          return pw.Padding(
-            padding: const pw.EdgeInsets.all(24),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
+      pw.MultiPage(
+        pageFormat: pw_core.PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(40),
+        header: (context) => pw.Container(
+          alignment: pw.Alignment.center,
+          padding: const pw.EdgeInsets.only(bottom: 20),
+          child: pw.Column(
+            children: [
+              pw.Text(
+                "AI-Assisted Pharmacy Inventory System",
+                style: pw.TextStyle(
+                  fontSize: 18,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+              pw.SizedBox(height: 4),
+              pw.Text(
+                "Order Document",
+                style: pw.TextStyle(
+                  fontSize: 13,
+                  color: const pw_core.PdfColor.fromInt(0xFF666666),
+                ),
+              ),
+            ],
+          ),
+        ),
+        footer: (context) => pw.Container(
+          alignment: pw.Alignment.center,
+          padding: const pw.EdgeInsets.only(top: 10),
+          child: pw.Text(
+            "Generated by AI-Assisted Pharmacy Inventory System",
+            style: pw.TextStyle(
+              fontSize: 9,
+              color: const pw_core.PdfColor.fromInt(0xFF999999),
+            ),
+          ),
+        ),
+        build: (context) => [
+          // Clinic Info
+          pw.Container(
+            padding: const pw.EdgeInsets.all(16),
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(color: const pw_core.PdfColor.fromInt(0xFFCCCCCC)),
+              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+            ),
+            child: pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                pw.Text(
-                  "AI-Assisted Pharmacy System",
-                  style: pw.TextStyle(
-                    fontSize: 22,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text("Clinic Name: $clinicLabel",
+                        style: const pw.TextStyle(fontSize: 11)),
+                    pw.SizedBox(height: 4),
+                    pw.Text("Clinic ID: ${widget.clinicId}",
+                        style: const pw.TextStyle(fontSize: 11)),
+                    pw.SizedBox(height: 4),
+                    pw.Text("Order Date: $orderDate",
+                        style: const pw.TextStyle(fontSize: 11)),
+                  ],
                 ),
-                pw.SizedBox(height: 24),
-                pw.Text(
-                  "Clinic: $clinicLabel",
-                  style: pw.TextStyle(fontSize: 14),
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.end,
+                  children: [
+                    pw.Text("Priority Level: $priority",
+                        style: pw.TextStyle(
+                            fontSize: 11,
+                            fontWeight: pw.FontWeight.bold,
+                            color: priority == "HIGH"
+                                ? const pw_core.PdfColor.fromInt(0xFFCC0000)
+                                : priority == "MEDIUM"
+                                    ? const pw_core.PdfColor.fromInt(0xFFCC6600)
+                                    : const pw_core.PdfColor.fromInt(0xFF333333))),
+                    pw.SizedBox(height: 8),
+                    pw.Text("Prepared By: __________",
+                        style: const pw.TextStyle(fontSize: 11)),
+                    pw.SizedBox(height: 4),
+                    pw.Text("Approved By: __________",
+                        style: const pw.TextStyle(fontSize: 11)),
+                  ],
                 ),
-                pw.SizedBox(height: 8),
-                pw.Text("Date: $orderDate", style: pw.TextStyle(fontSize: 14)),
-                pw.SizedBox(height: 24),
-                pw.Text(
-                  "Items",
-                  style: pw.TextStyle(
-                    fontSize: 16,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
-                ),
-                pw.SizedBox(height: 12),
-                ...generatedOrders.map((item) {
-                  final qty = item['qty'] ?? item['suggested_qty'] ?? 0;
-
-                  return pw.Padding(
-                    padding: const pw.EdgeInsets.only(bottom: 8),
-                    child: pw.Text(
-                      "- ${itemNameOf(item)}: $qty",
-                      style: const pw.TextStyle(fontSize: 13),
-                    ),
-                  );
-                }),
               ],
             ),
-          );
-        },
+          ),
+          pw.SizedBox(height: 24),
+
+          // Order Summary
+          pw.Container(
+            padding: const pw.EdgeInsets.all(12),
+            decoration: pw.BoxDecoration(
+              color: const pw_core.PdfColor.fromInt(0xFFF5F5F5),
+              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+            ),
+            child: pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
+              children: [
+                pw.Column(children: [
+                  pw.Text("$totalItems",
+                      style: pw.TextStyle(
+                          fontSize: 18, fontWeight: pw.FontWeight.bold)),
+                  pw.Text("Total Items",
+                      style: const pw.TextStyle(fontSize: 10)),
+                ]),
+                pw.Column(children: [
+                  pw.Text("$lowStockCount",
+                      style: pw.TextStyle(
+                          fontSize: 18, fontWeight: pw.FontWeight.bold)),
+                  pw.Text("Low Stock Count",
+                      style: const pw.TextStyle(fontSize: 10)),
+                ]),
+                pw.Column(children: [
+                  pw.Text(priority,
+                      style: pw.TextStyle(
+                          fontSize: 18, fontWeight: pw.FontWeight.bold)),
+                  pw.Text("Priority",
+                      style: const pw.TextStyle(fontSize: 10)),
+                ]),
+                pw.Column(children: [
+                  pw.Text(timestamp,
+                      style: pw.TextStyle(
+                          fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                  pw.Text("Generated",
+                      style: const pw.TextStyle(fontSize: 10)),
+                ]),
+              ],
+            ),
+          ),
+          pw.SizedBox(height: 24),
+
+          // Medicine Table Header
+          pw.Text(
+            "Medicine List",
+            style: pw.TextStyle(
+              fontSize: 14,
+              fontWeight: pw.FontWeight.bold,
+            ),
+          ),
+          pw.SizedBox(height: 8),
+
+          // Table
+          pw.Table(
+            border: pw.TableBorder.all(
+              color: const pw_core.PdfColor.fromInt(0xFFCCCCCC),
+              width: 0.5,
+            ),
+            columnWidths: const {
+              0: pw.FlexColumnWidth(1),
+              1: pw.FlexColumnWidth(6),
+              2: pw.FlexColumnWidth(2),
+            },
+            children: [
+              // Header row
+              pw.TableRow(
+                decoration: const pw.BoxDecoration(
+                  color: pw_core.PdfColor.fromInt(0xFF333333),
+                ),
+                children: [
+                  pw.Container(
+                    padding: const pw.EdgeInsets.all(8),
+                    child: pw.Text("No",
+                        style: pw.TextStyle(
+                            fontSize: 10,
+                            fontWeight: pw.FontWeight.bold,
+                            color: const pw_core.PdfColor.fromInt(0xFFFFFFFF))),
+                  ),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.all(8),
+                    child: pw.Text("Medicine",
+                        style: pw.TextStyle(
+                            fontSize: 10,
+                            fontWeight: pw.FontWeight.bold,
+                            color: const pw_core.PdfColor.fromInt(0xFFFFFFFF))),
+                  ),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.all(8),
+                    child: pw.Text("Quantity",
+                        style: pw.TextStyle(
+                            fontSize: 10,
+                            fontWeight: pw.FontWeight.bold,
+                            color: const pw_core.PdfColor.fromInt(0xFFFFFFFF)),
+                        textAlign: pw.TextAlign.right),
+                  ),
+                ],
+              ),
+              // Data rows
+              ...activeItems.asMap().entries.map(
+                    (entry) => pw.TableRow(
+                      children: [
+                        pw.Container(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text("${entry.key + 1}",
+                              style: const pw.TextStyle(fontSize: 10)),
+                        ),
+                        pw.Container(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text(itemNameOf(entry.value),
+                              style: const pw.TextStyle(fontSize: 10)),
+                        ),
+                        pw.Container(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text(
+                              "${entry.value['qty'] ?? entry.value['suggested_qty'] ?? 0}",
+                              style: const pw.TextStyle(fontSize: 10),
+                              textAlign: pw.TextAlign.right),
+                        ),
+                      ],
+                    ),
+                  ),
+            ],
+          ),
+          pw.SizedBox(height: 20),
+        ],
       ),
     );
 
@@ -3384,21 +3850,20 @@ class _OrderPageState extends State<OrderPage> {
   }
 
   Future<void> exportOrderAsPdf() async {
-    if (generatedOrders.isEmpty) return;
+    final activeItems = _activeOrderItems;
+    if (activeItems.isEmpty) return;
 
-    final clinicLabel = clinicDisplayName.isEmpty
-        ? widget.clinicId
-        : clinicDisplayName;
+    final dateStr = DateTime.now().toIso8601String().split('T').first;
 
     await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => Scaffold(
-          appBar: AppBar(title: Text("Order PDF Preview")),
+          appBar: AppBar(title: const Text("Order PDF Preview")),
           body: PdfPreview(
             build: (format) => buildOrderPdf(),
             pdfFileName:
-                "order_${clinicLabel.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}.pdf",
+                "order_${widget.clinicId}_$dateStr.pdf",
             canChangePageFormat: false,
             canChangeOrientation: false,
             canDebug: false,
@@ -3408,390 +3873,1433 @@ class _OrderPageState extends State<OrderPage> {
     );
   }
 
-  // ================= UI =================
+  Future<void> exportOrderAsCsv() async {
+    final activeItems = _activeOrderItems;
+    if (activeItems.isEmpty) return;
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: ListView(
-          children: [
-            // 🔷 ORDER SUGGESTIONS
-            Card(
-              elevation: 3,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
+    final dateStr = DateTime.now().toIso8601String().split('T').first;
+    final buffer = StringBuffer();
+    buffer.writeln("item_code,item_name,qty");
+    for (final item in activeItems) {
+      final code = medicineIdOf(item);
+      final name = itemNameOf(item).replaceAll(",", " ");
+      final qty = item['qty'] ?? item['suggested_qty'] ?? 0;
+      buffer.writeln("$code,$name,$qty");
+    }
+
+    final directory = await getApplicationDocumentsDirectory();
+    final file = File("${directory.path}/order_${widget.clinicId}_$dateStr.csv");
+    await file.writeAsString(buffer.toString());
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("CSV saved: ${file.path}")),
+      );
+    }
+  }
+
+  // ================= QUICK ORDER =================
+
+  Future<void> _fetchInventoryItems() async {
+    final items = await LiveInventoryService.fetchLiveInventory(clinicId: widget.clinicId);
+    if (!mounted) return;
+    int lowStock = 0;
+    for (final item in items) {
+      final qty = (item['quantity'] ?? 0) as num;
+      if (qty < 20) lowStock++;
+    }
+    setState(() {
+      _inventoryItems = items;
+      _lowStockCount = lowStock;
+    });
+  }
+
+  Future<void> _showMedicinePicker() async {
+    final selected = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (ctx) {
+        String query = '';
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            final filtered = query.isEmpty
+                ? _inventoryItems
+                : _inventoryItems.where((item) {
+                    final name = liveInventoryDisplayName(item).toLowerCase();
+                    final code = (item['item_code'] ?? '').toString().toLowerCase();
+                    return name.contains(query.toLowerCase()) ||
+                        code.contains(query.toLowerCase());
+                  }).toList();
+            return AlertDialog(
+              title: const Text('Select Medicine'),
+              content: SizedBox(
+                width: double.maxFinite,
+                height: 400,
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      "Suggested Orders",
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                    TextField(
+                      autofocus: true,
+                      decoration: InputDecoration(
+                        hintText: 'Search medicine...',
+                        prefixIcon: const Icon(Icons.search),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onChanged: (v) => setDialogState(() => query = v),
+                    ),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: ListView.separated(
+                        itemCount: filtered.length,
+                        separatorBuilder: (_, _) => const Divider(height: 1),
+                        itemBuilder: (_, i) {
+                          final item = filtered[i];
+                          return ListTile(
+                            dense: true,
+                            leading: const Icon(Icons.medication),
+                            title: Text(
+                              liveInventoryDisplayName(item),
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                            subtitle: Text(
+                              'Stock: ${item['quantity'] ?? 0}',
+                              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                            ),
+                            onTap: () => Navigator.pop(ctx, item as Map<String, dynamic>),
+                          );
+                        },
                       ),
                     ),
-                    SizedBox(height: 10),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+    if (selected != null && mounted) {
+      setState(() => _selectedMedicine = selected);
+    }
+  }
 
-                    ...suggestions.map(
-                      (item) => ListTile(
-                        leading: Icon(Icons.medication),
-                        title: Text(itemNameOf(item)),
-                        subtitle: Text("Priority: ${item['priority']}"),
-                        trailing: Text(
-                          "Order Qty: ${item['suggested_qty']}",
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+  void _addToCart() {
+    if (_selectedMedicine == null) return;
+    final qtyText = _qtyController.text.trim();
+    final qty = int.tryParse(qtyText);
+    if (qty == null || qty <= 0) return;
+    final itemCode = _selectedMedicine!['item_code'] ?? '';
+    final itemName = _selectedMedicine!['medicine_name'] ?? liveInventoryDisplayName(_selectedMedicine!);
+    if (itemCode.toString().isEmpty) return;
+    setState(() {
+      _cartItems.add({
+        'item_code': itemCode,
+        'item_name': itemName,
+        'qty': qty,
+      });
+      _selectedMedicine = null;
+      _qtyController.clear();
+    });
+  }
+
+  void _removeFromCart(int index) {
+    setState(() => _cartItems.removeAt(index));
+  }
+
+  Future<void> _generateQuickOrder() async {
+    if (_cartItems.isEmpty) return;
+    setState(() => isLoading = true);
+    try {
+      await safeApiPost("$baseUrl/generate_order", {
+        "clinic_id": widget.clinicId,
+        "items": _cartItems,
+        "status": "SUBMITTED",
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Quick order submitted ✅")),
+        );
+      }
+      setState(() {
+        _cartItems = [];
+        _selectedMedicine = null;
+        _qtyController.clear();
+      });
+      await refreshOrderPage();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed: $e")),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
+
+  // ================= SMART AI RECOMMENDATION BANNER =================
+
+  Widget _buildRecommendationBanner() {
+    String title;
+    String subtitle;
+    String actionLabel;
+    String severityLabel;
+    IconData icon;
+    Color bgColor;
+    Color iconColor;
+    Color accentColor;
+
+    final highCount = routeSummary['high_priority_count'] ?? 0;
+
+    if (pendingOrder != null) {
+      severityLabel = "DRAFT";
+      title = "Draft order awaiting submission";
+      subtitle = "Review and submit to PKD.";
+      actionLabel = "Recommended: Submit within 24 hours.";
+      icon = Icons.edit_note_rounded;
+      bgColor = Colors.orange.shade50;
+      iconColor = Colors.orange.shade700;
+      accentColor = Colors.orange;
+    } else if (_lowStockCount > 0) {
+      severityLabel = "HIGH";
+      title = "Immediate action recommended";
+      subtitle = "Your clinic has critical shortages.";
+      if (highCount > 0) {
+        subtitle += "\nOther clinics on this route are also preparing orders.";
+      }
+      actionLabel = "Recommended: Generate and submit order within 24 hours.";
+      icon = Icons.warning_amber_rounded;
+      bgColor = Colors.red.shade50;
+      iconColor = Colors.red.shade700;
+      accentColor = Colors.red;
+    } else if (lastSubmittedOrder != null) {
+      severityLabel = "SUBMITTED";
+      title = "Order submitted to PKD";
+      subtitle = "Awaiting delivery and stock receipt confirmation.";
+      actionLabel = "Mark as received when stock arrives.";
+      icon = Icons.schedule_rounded;
+      bgColor = Colors.blue.shade50;
+      iconColor = Colors.blue.shade700;
+      accentColor = Colors.blue;
+    } else if (highCount > 0) {
+      severityLabel = "INFO";
+      title = "Inventory healthy";
+      subtitle = "Your inventory levels are adequate.\n"
+          "$highCount clinic${highCount > 1 ? 's' : ''} on this route currently "
+          "ha${highCount > 1 ? 've' : 's'} shortages,\n"
+          "but no order is required for your clinic at this time.";
+      actionLabel = "Routine monitoring recommended.";
+      icon = Icons.info_outline_rounded;
+      bgColor = Colors.blue.shade50;
+      iconColor = Colors.blue.shade700;
+      accentColor = Colors.blue;
+    } else {
+      severityLabel = "HEALTHY";
+      title = "Inventory status healthy";
+      subtitle = "No shortages detected.\nNo replenishment action required.";
+      actionLabel = "Routine monitoring recommended.";
+      icon = Icons.check_circle_rounded;
+      bgColor = Colors.green.shade50;
+      iconColor = Colors.green.shade700;
+      accentColor = Colors.green;
+    }
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: iconColor.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: iconColor, size: 28),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: accentColor.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        severityLabel,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: accentColor,
                         ),
                       ),
                     ),
                   ],
                 ),
-              ),
+                const SizedBox(height: 8),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                    color: Colors.grey.shade800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey.shade600,
+                    height: 1.3,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  actionLabel,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: accentColor,
+                  ),
+                ),
+              ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
 
-            SizedBox(height: 16),
+  // ================= SUGGESTION ITEMS =================
 
-            // 🔷 CONSOLIDATED DATE
-            Card(
-              elevation: 3,
-              color: Colors.blue[50],
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
+  List<Widget> _buildSuggestionItems() {
+    final displayItems = _showAllItems ? suggestions : suggestions.take(10).toList();
+    final items = <Widget>[];
+
+    for (final item in displayItems) {
+      final code = medicineIdOf(item);
+      final name = itemNameOf(item);
+      final priority = item['priority'] as String? ?? '';
+      final suggestedQty = item['suggested_qty'] as int? ?? 0;
+      final currentQty = _editableQtys[code] ?? suggestedQty;
+
+      items.add(
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Row(
+            children: [
+              // Medicine info
+              Expanded(
+                flex: 3,
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Next Order Date", style: TextStyle(fontSize: 18)),
-                    SizedBox(height: 8),
                     Text(
-                      consolidatedDate.isEmpty ? "-" : consolidatedDate,
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
+                      name,
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 2),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: getPriorityColor(priority).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        priority,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: getPriorityColor(priority),
+                        ),
                       ),
                     ),
+                    if (currentQty != suggestedQty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        "AI: $suggestedQty → Final: $currentQty",
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.orange.shade700,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
-            ),
+              const SizedBox(width: 8),
 
-            if (recommendationMessage.isNotEmpty) ...[
-              SizedBox(height: 12),
+              // Quantity controls: [-] Qty [+]
               Container(
-                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.amber[50],
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.amber.shade200),
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.info_outline, color: Colors.blueAccent),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        recommendationMessage,
-                        style: TextStyle(
-                          fontSize: 15,
-                          height: 1.4,
-                          fontWeight: FontWeight.w500,
+                    InkWell(
+                      onTap: () {
+                        if (currentQty > 1) {
+                          setState(() {
+                            _editableQtys[code] = currentQty - 1;
+                          });
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        child: const Icon(Icons.remove, size: 16),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 48,
+                      child: TextField(
+                        controller: TextEditingController(text: "$currentQty")
+                          ..selection = TextSelection.collapsed(offset: "$currentQty".length),
+                        keyboardType: TextInputType.number,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(vertical: 8),
                         ),
+                        onChanged: (value) {
+                          final parsed = int.tryParse(value);
+                          if (parsed != null && parsed >= 1) {
+                            setState(() {
+                              _editableQtys[code] = parsed;
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                    InkWell(
+                      onTap: () {
+                        setState(() {
+                          _editableQtys[code] = currentQty + 1;
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        child: const Icon(Icons.add, size: 16),
                       ),
                     ),
                   ],
                 ),
               ),
             ],
+          ),
+        ),
+      );
+    }
 
-            SizedBox(height: 20),
+    if (!_showAllItems && suggestions.length > 10) {
+      items.add(
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () {
+                setState(() {
+                  _showAllItems = true;
+                });
+              },
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: Text("View All Items (${suggestions.length})"),
+            ),
+          ),
+        ),
+      );
+    } else if (_showAllItems && suggestions.length > 10) {
+      items.add(
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: SizedBox(
+            width: double.infinity,
+            child: TextButton(
+              onPressed: () {
+                setState(() {
+                  _showAllItems = false;
+                });
+              },
+              child: Text("Show fewer items"),
+            ),
+          ),
+        ),
+      );
+    }
 
-            // REASON CARD
-            Card(
-              color: Colors.orange[50],
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  basedOn.isEmpty
-                      ? "Based on: -"
-                      : "Based on: $basedOn priority",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+    return items;
+  }
+
+  // ================= ORDER HISTORY CARD =================
+
+  Widget _buildOrderHistoryCard() {
+    final lastOrder = lastSubmittedOrder;
+    final hasHistory = lastOrder != null;
+
+    String lastDate = '';
+    String lastStatus = '';
+    int itemCount = 0;
+    int totalQty = 0;
+
+    if (hasHistory) {
+      lastDate = lastOrder!['created_at']?.toString() ?? '';
+      if (lastDate.length >= 10) {
+        lastDate = lastDate.substring(0, 10);
+      }
+      lastStatus = lastOrder!['status']?.toString() ?? '';
+      final items = lastOrder!['items'] as List<dynamic>? ?? [];
+      itemCount = items.length;
+      totalQty = _sumOrderItems(items);
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                "Order History",
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
-
-            SizedBox(height: 16),
-
-            Card(
-              elevation: 3,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Route Insight",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 12),
-                    buildInsightRow(
-                      icon: Icons.groups_rounded,
-                      color: Colors.indigo,
-                      label: "Total clinics",
-                      value: "${routeSummary['total_clinics'] ?? 0}",
-                    ),
-                    buildInsightRow(
-                      icon: Icons.priority_high_rounded,
-                      color: Colors.red,
-                      label: "High priority",
-                      value: "${routeSummary['high_priority_count'] ?? 0}",
-                    ),
-                    buildInsightRow(
-                      icon: Icons.warning_amber_rounded,
-                      color: Colors.orange,
-                      label: "Medium priority",
-                      value: "${routeSummary['medium_priority_count'] ?? 0}",
-                    ),
-                    buildInsightRow(
-                      icon: Icons.check_circle_outline_rounded,
-                      color: Colors.green,
-                      label: "Low priority",
-                      value: "${routeSummary['low_priority_count'] ?? 0}",
-                    ),
-                    Divider(height: 24),
-                    buildInsightRow(
-                      icon: Icons.local_hospital_rounded,
-                      color: Colors.blueAccent,
-                      label: "Most urgent clinic",
-                      value: mostUrgentClinic.isEmpty ? "-" : mostUrgentClinic,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // DETAILS LIST
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Clinic Breakdown",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 10),
-
-                    ...details.map(
-                      (d) => ListTile(
-                        title: Text(d['clinic']),
-                        subtitle: Text("Date: ${d['date'] ?? '-'}"),
-                        trailing: Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: getPriorityColor(
-                              d['priority'],
-                            ).withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            d['priority'],
-                            style: TextStyle(
-                              color: getPriorityColor(d['priority']),
-                              fontWeight: FontWeight.bold,
-                            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (hasHistory) ...[
+                  // LAST ORDER DATE
+                  _buildHistoryRow(Icons.calendar_today, "Last Order", lastDate),
+                  const SizedBox(height: 8),
+                  // STATUS
+                  _buildHistoryRow(Icons.info_outline, "Status", lastStatus),
+                  const SizedBox(height: 8),
+                  // ITEMS
+                  _buildHistoryRow(Icons.medication, "Items", "$itemCount"),
+                  const SizedBox(height: 8),
+                  // TOTAL QTY
+                  _buildHistoryRow(Icons.inventory_2, "Total Quantity", "$totalQty"),
+                ] else ...[
+                  // FALLBACK
+                  Row(
+                    children: [
+                      Icon(Icons.history, size: 20, color: Colors.grey.shade500),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          "No previous orders found.",
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey.shade600,
                           ),
                         ),
                       ),
-                    ),
-                    if (details.isEmpty)
-                      Text(
-                        "No route comparison available right now.",
-                        style: TextStyle(color: Colors.grey[600]),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 30),
+                    child: Text(
+                      "Create your first order to start building history.",
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade500,
                       ),
-                  ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => OrderHistoryPage(clinicId: widget.clinicId),
+                        ),
+                      ).then((_) {
+                        fetchLastSubmittedOrder();
+                      });
+                    },
+                    icon: const Icon(Icons.open_in_new, size: 18),
+                    label: const Text("View Full Order History"),
+                  ),
                 ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHistoryRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: Colors.grey.shade600),
+        const SizedBox(width: 10),
+        Text(
+          "$label:  ",
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey.shade600,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ================= SUMMARY CHIP =================
+
+  Widget _buildSummaryChip(IconData icon, String label, String value, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 16, color: color),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey.shade600,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: color,
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
 
-            // VIEW ORDER HISTORY BUTTON
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => OrderHistoryPage(clinicId: widget.clinicId),
-                  ),
-                ).then((_) {
-                  fetchLastSubmittedOrder(); // 🔥 REFRESH HERE
-                });
-              },
-              child: Text("View Order History"),
+  // ================= KPI DASHBOARD =================
+
+  Widget _buildDashboardGrid() {
+    final draftCount = _draftCount;
+    final submittedCount = _submittedCount;
+
+    final nextOrderDate = consolidatedDate.isEmpty ? "-" : consolidatedDate;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth > 500;
+        final kpis = [
+          _KpiCard(
+            icon: Icons.edit_note_rounded,
+            label: "Draft Orders",
+            value: "$draftCount",
+            color: Colors.orange,
+          ),
+          _KpiCard(
+            icon: Icons.send_rounded,
+            label: "Submitted Orders",
+            value: "$submittedCount",
+            color: Colors.blue,
+          ),
+          _KpiCard(
+            icon: Icons.inventory_2,
+            label: "Low Stock Items",
+            value: "$_lowStockCount",
+            color: _lowStockCount > 0 ? Colors.red : Colors.green,
+          ),
+          _KpiCard(
+            icon: Icons.calendar_today,
+            label: "Next Order Date",
+            value: nextOrderDate,
+            color: Colors.indigo,
+          ),
+        ];
+
+        if (isWide) {
+          return SizedBox(
+            height: 90,
+            child: Row(
+              children: kpis
+                  .map((kpi) => Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: kpi,
+                        ),
+                      ))
+                  .toList(),
             ),
+          );
+        }
 
-            // 🔥 GENERATE BUTTON
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: (pendingOrder != null || suggestions.isEmpty) ? null : confirmGenerateOrder,
-                icon: Icon(Icons.shopping_cart),
-                label: Text(
-                  "Generate Order",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        return Wrap(
+          children: kpis
+              .map((kpi) => SizedBox(
+                    width: (constraints.maxWidth - 12) / 2,
+                    height: 82,
+                    child: Padding(
+                      padding: const EdgeInsets.all(3),
+                      child: kpi,
+                    ),
+                  ))
+              .toList(),
+        );
+      },
+    );
+  }
+
+  // ================= UI =================
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: RefreshIndicator(
+        onRefresh: refreshOrderPage,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: [
+              // ================= SECTION 1: ORDER DASHBOARD =================
+              Text(
+                "Order Dashboard",
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
                 ),
-                style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(vertical: 18),
+              ),
+              const SizedBox(height: 12),
+
+              _buildDashboardGrid(),
+
+              const SizedBox(height: 16),
+
+              // ================= SMART NOTIFICATION BANNER =================
+              _buildRecommendationBanner(),
+
+              const SizedBox(height: 20),
+
+              // ================= SECTION 2: SUGGESTED ORDERS =================
+              if (suggestions.isNotEmpty) ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        "Suggested Orders",
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                Card(
+                  elevation: 2,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                ),
-              ),
-            ),
-
-            SizedBox(height: 20),
-
-            // PENDING ORDER CARD
-            if (pendingOrder != null)
-              Card(
-                margin: EdgeInsets.only(bottom: 10),
-                child: Padding(
-                  padding: EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Pending Order",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.orange,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // GENERATE ORDER LIST BUTTON — PROMINENT CTA
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: (pendingOrder != null) ? null : confirmGenerateOrder,
+                            icon: const Icon(Icons.auto_awesome, size: 22),
+                            label: const Text(
+                              "Generate Order List",
+                              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Theme.of(context).colorScheme.primary,
+                              foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                              padding: const EdgeInsets.symmetric(vertical: 18),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              elevation: 4,
+                            ),
+                          ),
                         ),
-                      ),
-                      SizedBox(height: 5),
-                      Text("Date: ${pendingOrder!['created_at']}"),
-                      SizedBox(height: 5),
 
-                      ...pendingOrder!['items'].map<Widget>((item) {
-                        return Text(
-                          "• ${itemNameOf(item)} — ${itemQuantityOf(item, keys: ['qty', 'suggested_qty'])}",
-                        );
-                      }).toList(),
-                    ],
+                        const SizedBox(height: 16),
+
+                        // SUMMARY ROW
+                        Row(
+                          children: [
+                            _buildSummaryChip(
+                              Icons.medication_rounded,
+                              "Total items",
+                              "${suggestions.length}",
+                              Colors.indigo,
+                            ),
+                            const SizedBox(width: 10),
+                            _buildSummaryChip(
+                              Icons.priority_high_rounded,
+                              "Priority",
+                              basedOn.isEmpty ? "-" : basedOn,
+                              basedOn == "HIGH"
+                                  ? Colors.red
+                                  : basedOn == "MEDIUM"
+                                      ? Colors.orange
+                                      : Colors.green,
+                            ),
+                            const SizedBox(width: 10),
+                            _buildSummaryChip(
+                              Icons.inventory_rounded,
+                              "Low stock",
+                              "$_lowStockCount",
+                              _lowStockCount > 0 ? Colors.red : Colors.green,
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 14),
+
+                        // COLLAPSIBLE MEDICINE LIST
+                        InkWell(
+                          onTap: () {
+                            setState(() {
+                              _suggestionsExpanded = !_suggestionsExpanded;
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  _suggestionsExpanded
+                                      ? Icons.expand_less
+                                      : Icons.expand_more,
+                                  size: 20,
+                                  color: Colors.grey.shade600,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  _suggestionsExpanded
+                                      ? "Hide medicine list"
+                                      : "Show medicine list (${suggestions.length} items)",
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        if (_suggestionsExpanded) ...[
+                          const Divider(height: 16),
+                          ..._buildSuggestionItems(),
+                        ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
+                const SizedBox(height: 24),
+              ],
 
-            // SUBMIT ORDER BUTTON
-            if (pendingOrder != null)
-              ElevatedButton.icon(
-                onPressed: submitOrder,
-                icon: Icon(Icons.send),
-                label: Text("Submit Order"),
-              ),
+              // ================= ORDER HISTORY (always visible) =================
+              _buildOrderHistoryCard(),
 
-            if (pendingOrder != null && lastSubmittedOrder != null)
-              SizedBox(height: 16),
+              const SizedBox(height: 24),
 
-            // SUBMITTED ORDER CARD
-            if (lastSubmittedOrder != null)
-              Card(
-                margin: EdgeInsets.only(bottom: 10),
-                child: Padding(
-                  padding: EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Submitted Order",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue,
-                        ),
-                      ),
-                      SizedBox(height: 5),
-                      Text("Date: ${lastSubmittedOrder!['created_at']}"),
-                      SizedBox(height: 5),
-
-                      ...lastSubmittedOrder!['items'].map<Widget>((item) {
-                        return Text(
-                          "• ${itemNameOf(item)} — ${itemQuantityOf(item, keys: ['qty', 'suggested_qty'])}",
-                        );
-                      }).toList(),
-                    ],
-                  ),
+              // ================= SECTION 3: QUICK ORDER =================
+              Text(
+                "Quick Order",
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
                 ),
               ),
+              const SizedBox(height: 12),
 
-            // MARK AS RECEIVED BUTTON
-            if (lastSubmittedOrder != null)
-              ElevatedButton.icon(
-                onPressed: markOrderReceived,
-                icon: Icon(Icons.check),
-                label: Text("Mark as Received"),
-              ),
-
-            // DISPLAY ORDER LIST
-            if (generatedOrders.isNotEmpty)
               Card(
-                margin: EdgeInsets.only(top: 16),
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        "Generated Order (APPL)",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      // Medicine selector
+                      Row(
+                        children: [
+                          Expanded(
+                            child: InkWell(
+                              onTap: _showMedicinePicker,
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: Colors.grey.shade300),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.medication, size: 20, color: Colors.grey),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        _selectedMedicine != null
+                                            ? liveInventoryDisplayName(_selectedMedicine!)
+                                            : "Select medicine...",
+                                        style: TextStyle(
+                                          color: _selectedMedicine != null ? Colors.black87 : Colors.grey,
+                                          fontSize: 15,
+                                        ),
+                                      ),
+                                    ),
+                                    const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          SizedBox(
+                            width: 80,
+                            child: TextField(
+                              controller: _qtyController,
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(
+                                hintText: "Qty",
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton.filled(
+                            onPressed: _addToCart,
+                            icon: const Icon(Icons.add),
+                            style: IconButton.styleFrom(
+                              backgroundColor: Theme.of(context).colorScheme.primary,
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
+                        ],
                       ),
-                      SizedBox(height: 10),
 
-                      ...generatedOrders.map(
-                        (item) => ListTile(
-                          title: Text(itemNameOf(item)),
-                          trailing: Text(
-                            "Qty: ${item['qty'] ?? item['suggested_qty']}",
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                      const SizedBox(height: 16),
+
+                      // Cart items
+                      if (_cartItems.isEmpty)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 24),
+                          child: Text(
+                            "No items in cart. Select a medicine and add quantity.",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.grey[500]),
+                          ),
+                        )
+                      else ...[
+                        const Divider(),
+                        const SizedBox(height: 8),
+                        ...List.generate(_cartItems.length, (index) {
+                          final item = _cartItems[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    item['item_name'] ?? 'Unknown',
+                                    style: const TextStyle(fontSize: 14),
+                                  ),
+                                ),
+                                Text(
+                                  "Qty: ${item['qty']}",
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  icon: const Icon(Icons.remove_circle_outline, color: Colors.red, size: 20),
+                                  onPressed: () => _removeFromCart(index),
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: _cartItems.isEmpty ? null : _generateQuickOrder,
+                            icon: const Icon(Icons.shopping_cart_checkout, size: 18),
+                            label: Text(
+                              "Generate Quick Order (${_cartItems.length} items)",
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                      SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: exportOrderAsPdf,
-                          icon: Icon(Icons.picture_as_pdf_outlined),
-                          label: Text("Export as PDF"),
-                        ),
-                      ),
+                      ],
                     ],
                   ),
                 ),
               ),
 
-            // 🔄 LOADING
-            if (isLoading) Center(child: CircularProgressIndicator()),
-          ],
+              const SizedBox(height: 24),
+
+              // ================= SECTION 4: ROUTE INSIGHT =================
+              if (routeSummary['total_clinics'] != 0 || details.isNotEmpty) ...[
+                Text(
+                  "Route Insight",
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        buildInsightRow(
+                          icon: Icons.groups_rounded,
+                          color: Colors.indigo,
+                          label: "Total clinics",
+                          value: "${routeSummary['total_clinics'] ?? 0}",
+                        ),
+                        buildInsightRow(
+                          icon: Icons.priority_high_rounded,
+                          color: Colors.red,
+                          label: "High priority",
+                          value: "${routeSummary['high_priority_count'] ?? 0}",
+                        ),
+                        buildInsightRow(
+                          icon: Icons.warning_amber_rounded,
+                          color: Colors.orange,
+                          label: "Medium priority",
+                          value: "${routeSummary['medium_priority_count'] ?? 0}",
+                        ),
+                        buildInsightRow(
+                          icon: Icons.check_circle_outline_rounded,
+                          color: Colors.green,
+                          label: "Low priority",
+                          value: "${routeSummary['low_priority_count'] ?? 0}",
+                        ),
+                        const Divider(height: 24),
+                        buildInsightRow(
+                          icon: Icons.local_hospital_rounded,
+                          color: Colors.blueAccent,
+                          label: "Most urgent clinic",
+                          value: mostUrgentClinic.isEmpty ? "-" : mostUrgentClinic,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                if (details.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Clinic Breakdown",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey[800],
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          ...details.map(
+                            (d) => ListTile(
+                              dense: true,
+                              title: Text(d['clinic'] ?? ''),
+                              subtitle: Text("Date: ${d['date'] ?? '-'}"),
+                              trailing: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: getPriorityColor(d['priority']).withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  d['priority'] ?? '',
+                                  style: TextStyle(
+                                    color: getPriorityColor(d['priority']),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 24),
+              ],
+
+              // ================= SECTION 5: ORDER STATUS =================
+              if (pendingOrder != null || lastSubmittedOrder != null || generatedOrders.isNotEmpty) ...[
+                Text(
+                  "Order Status",
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // ---- DRAFT / PENDING ORDER CARD ----
+                if (pendingOrder != null) _buildOrderStatusCard(
+                  icon: Icons.schedule,
+                  statusLabel: "DRAFT",
+                  statusColor: Colors.orange,
+                  items: (pendingOrder!['items'] as List<dynamic>?) ?? [],
+                  createdDate: pendingOrder!['created_at']?.toString() ?? '',
+                  totalQty: _sumOrderItems(pendingOrder!['items'] as List? ?? []),
+                ),
+
+                // ---- GENERATED ORDER CARD (local draft from generateOrder) ----
+                if (generatedOrders.isNotEmpty && pendingOrder == null) _buildOrderStatusCard(
+                  icon: Icons.description_rounded,
+                  statusLabel: "DRAFT",
+                  statusColor: Colors.orange,
+                  items: generatedOrders,
+                  createdDate: generatedOrderDate,
+                  totalQty: _sumOrderItems(generatedOrders),
+                ),
+
+                if (pendingOrder != null && lastSubmittedOrder != null)
+                  const SizedBox(height: 12),
+
+                // ---- SUBMITTED ORDER CARD ----
+                if (lastSubmittedOrder != null) _buildOrderStatusCard(
+                  icon: Icons.check_circle,
+                  statusLabel: "SUBMITTED",
+                  statusColor: Colors.blue,
+                  items: (lastSubmittedOrder!['items'] as List<dynamic>?) ?? [],
+                  createdDate: lastSubmittedOrder!['created_at']?.toString() ?? '',
+                  totalQty: _sumOrderItems(lastSubmittedOrder!['items'] as List? ?? []),
+                ),
+
+                const SizedBox(height: 16),
+
+                // ---- CURRENT ORDER ACTIONS CARD ----
+                Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.tune_rounded, size: 20, color: Colors.grey[700]),
+                            const SizedBox(width: 8),
+                            Text(
+                              "Current Order Actions",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey[800],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Export buttons (always visible for any active order)
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: exportOrderAsPdf,
+                                icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+                                label: const Text("Export PDF"),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: exportOrderAsCsv,
+                                icon: const Icon(Icons.table_chart_outlined, size: 18),
+                                label: const Text("Export CSV"),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+
+                        // Submit to PKD (for DRAFT / pendingOrder)
+                        if (pendingOrder != null) ...[
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: submitOrder,
+                              icon: const Icon(Icons.send_rounded, size: 18),
+                              label: const Text(
+                                "Submit to PKD",
+                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.orange,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                elevation: 3,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                        ],
+
+                        // Mark as Received (for SUBMITTED)
+                        if (lastSubmittedOrder != null) ...[
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: markOrderReceived,
+                              icon: const Icon(Icons.check, size: 18),
+                              label: const Text(
+                                "Mark as Received",
+                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                elevation: 3,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          // DEMO MODE ONLY
+                          // Real deployment should disable submitted order cancellation.
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: cancelSubmittedOrder,
+                              icon: const Icon(Icons.cancel_outlined, size: 18),
+                              label: const Text(
+                                "Cancel Submitted Order",
+                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.red,
+                                side: const BorderSide(color: Colors.red),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ),
+                          ),
+                        ],
+
+                        // Cancel Draft Order (for DRAFT / pendingOrder)
+                        if (pendingOrder != null) ...[
+                          const SizedBox(height: 4),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: cancelDraftOrder,
+                              icon: const Icon(Icons.delete_outline, size: 18),
+                              label: const Text(
+                                "Cancel Draft Order",
+                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.red,
+                                side: const BorderSide(color: Colors.red),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+              ],
+
+              // 🔄 LOADING
+              if (isLoading)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 32),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+
+              const SizedBox(height: 32),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+// ================= KPI CARD WIDGET =================
+
+class _KpiCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+
+  const _KpiCard({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 26, color: color),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                    height: 1.1,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
