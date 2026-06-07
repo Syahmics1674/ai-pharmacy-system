@@ -13,6 +13,36 @@ class DispenseHistoryPage extends StatefulWidget {
 class _DispenseHistoryPageState extends State<DispenseHistoryPage> {
   List<dynamic> _transactions = [];
   bool _isLoading = true;
+  bool _sortAscending = false; // false = Latest First (default)
+  String _filterAction = 'all'; // 'all', 'dispense', 'stock_out'
+
+  static const _months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+
+  List<dynamic> get _filteredSorted {
+    var items = _transactions;
+
+    // Filter
+    if (_filterAction != 'all') {
+      items = items.where((t) {
+        final a = (t['action'] ?? '').toString().toLowerCase();
+        return a == _filterAction;
+      }).toList();
+    }
+
+    // Sort by created_at
+    items = List.from(items);
+    items.sort((a, b) {
+      final ats = (a['created_at'] ?? a['timestamp'] ?? '').toString();
+      final bts = (b['created_at'] ?? b['timestamp'] ?? '').toString();
+      final cmp = ats.compareTo(bts);
+      return _sortAscending ? cmp : -cmp;
+    });
+
+    return items;
+  }
 
   @override
   void initState() {
@@ -32,76 +62,228 @@ class _DispenseHistoryPageState extends State<DispenseHistoryPage> {
     });
   }
 
+  Widget _buildActionBadge(bool isDispense) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: isDispense
+            ? Colors.green.withValues(alpha: 0.15)
+            : Colors.deepOrange.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        isDispense ? "DISPENSE" : "STOCK OUT",
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          color: isDispense ? Colors.green.shade800 : Colors.deepOrange.shade800,
+        ),
+      ),
+    );
+  }
+
+  String _formatTimestamp(String raw) {
+    if (raw.isEmpty) return '';
+    try {
+      final clean = raw
+          .replaceFirst(RegExp(r'\.\d+'), '')
+          .replaceFirst('Z', '')
+          .replaceFirst('+00:00', '');
+      final dt = DateTime.parse(clean);
+      final day = dt.day.toString().padLeft(2, '0');
+      final mon = _months[dt.month - 1];
+      final yr = dt.year.toString();
+      final hh = dt.hour.toString().padLeft(2, '0');
+      final mm = dt.minute.toString().padLeft(2, '0');
+      return '$day $mon $yr, $hh:$mm';
+    } catch (_) {
+      return raw;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (_transactions.isEmpty) {
-      return Center(
-        child: Text(
-          "No dispense history",
-          style: TextStyle(color: Colors.grey[600]),
+
+    return Column(
+      children: [
+        // Filter and sort controls
+        _buildControls(),
+        const Divider(height: 1),
+        Expanded(
+          child: _transactions.isEmpty
+              ? Center(
+                  child: Text(
+                    "No dispense history",
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                )
+              : RefreshIndicator(
+                  onRefresh: _load,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.only(top: 4, bottom: 16),
+                    itemCount: _filteredSorted.length,
+                    itemBuilder: (_, i) {
+                      final t = _filteredSorted[i];
+                      final qty = t['quantity_change'] ?? t['quantity'] ?? 0;
+                      final qtyNum = (qty is num) ? qty.toDouble() : 0.0;
+                      final isNegative = qtyNum < 0;
+
+                      final action = (t['action'] ?? '').toString().toLowerCase();
+                      final isDispense = action == 'dispense';
+
+                      final name = (t['_display_name'] ?? t['matched_name'] ?? t['item_name'] ?? t['item_code'] ?? 'Unknown').toString();
+
+                      final rawTs = (t['created_at'] ?? t['timestamp'] ?? '').toString();
+                      final formattedTs = _formatTimestamp(rawTs);
+
+                      return Card(
+                        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          child: Row(
+                            children: [
+                              Icon(
+                                isNegative ? Icons.trending_down : Icons.trending_up,
+                                color: isNegative ? Colors.red : Colors.green,
+                                size: 28,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            name,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 15,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        _buildActionBadge(isDispense),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    if (formattedTs.isNotEmpty)
+                                      Text(
+                                        formattedTs,
+                                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                                      ),
+                                    if (t['device_id'] != null)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 2),
+                                        child: Text(
+                                          "Device: ${t['device_id']}",
+                                          style: TextStyle(color: Colors.grey[500], fontSize: 11),
+                                        ),
+                                      ),
+                                    if (t['confidence'] != null)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 1),
+                                        child: Text(
+                                          "Confidence: ${t['confidence']}",
+                                          style: TextStyle(color: Colors.grey[400], fontSize: 10),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                isNegative ? "${qtyNum.toInt()}" : "+${qtyNum.toInt()}",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: isNegative ? Colors.red : Colors.green,
+                                  fontSize: 20,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
         ),
-      );
-    }
-    return RefreshIndicator(
-      onRefresh: _load,
-      child: ListView.builder(
-        itemCount: _transactions.length,
-        itemBuilder: (_, i) {
-          final t = _transactions[i];
-          final qty = t['quantity_change'] ?? t['quantity'] ?? 0;
-          final qtyNum = (qty is num) ? qty.toDouble() : 0.0;
-          final isNegative = qtyNum < 0;
-          return Card(
-            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: ListTile(
-              leading: Icon(
-                isNegative ? Icons.trending_down : Icons.trending_up,
-                color: isNegative ? Colors.red : Colors.green,
-              ),
-              title: Text(
-                (t['medicine_name'] ?? t['item_name'] ?? 'Unknown').toString(),
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (t['device_id'] != null)
-                    Text(
-                      "Device: ${t['device_id']}",
-                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                    ),
-                  if (t['confidence'] != null)
-                    Text(
-                      "Confidence: ${t['confidence']}",
-                      style: TextStyle(color: Colors.grey[500], fontSize: 11),
-                    ),
-                ],
-              ),
-              trailing: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    isNegative ? "${qtyNum.toInt()}" : "+${qtyNum.toInt()}",
+      ],
+    );
+  }
+
+  Widget _buildControls() {
+    const filters = ['all', 'dispense', 'stock_out'];
+    const filterLabels = ['All', 'Dispense', 'Stock Out'];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Row(
+        children: [
+          // Filter chips
+          ...List.generate(filters.length, (i) {
+            final active = _filterAction == filters[i];
+            return Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: GestureDetector(
+                onTap: () => setState(() => _filterAction = filters[i]),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: active
+                        ? Theme.of(context).colorScheme.primary
+                        : Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    filterLabels[i],
                     style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: isNegative ? Colors.red : Colors.green,
-                      fontSize: 16,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: active ? Colors.white : Colors.grey.shade700,
                     ),
                   ),
-                  if (t['created_at'] != null || t['timestamp'] != null)
-                    Text(
-                      (t['created_at'] ?? t['timestamp'] ?? '').toString(),
-                      style: TextStyle(color: Colors.grey[500], fontSize: 10),
+                ),
+              ),
+            );
+          }),
+          const Spacer(),
+          // Sort button
+          GestureDetector(
+            onTap: () => setState(() => _sortAscending = !_sortAscending),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    _sortAscending ? Icons.arrow_upward : Icons.arrow_downward,
+                    size: 16,
+                    color: Colors.grey.shade700,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    _sortAscending ? 'Oldest First' : 'Latest First',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade700,
                     ),
+                  ),
                 ],
               ),
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }
