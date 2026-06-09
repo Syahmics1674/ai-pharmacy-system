@@ -7,6 +7,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 import 'config/api_config.dart';
+import 'services/time_service.dart';
 
 String orderItemNameOf(dynamic item) {
   if (item is Map) {
@@ -100,9 +101,10 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
 
   Future<Uint8List> buildHistoricalPdf(Map<String, dynamic> order) async {
     final pdf = pw.Document();
-    final orderDate = (order['created_at'] ?? '').toString().length >= 10
-        ? (order['created_at'] ?? '').toString().substring(0, 10)
-        : (order['created_at'] ?? '').toString();
+    final rawCreated = (order['created_at'] ?? '').toString();
+    final orderDate = rawCreated.isNotEmpty
+        ? TimeService.formatDate(rawCreated)
+        : rawCreated;
     final items = order['items'] as List<dynamic>? ?? [];
     final status = order['status'] as String? ?? 'N/A';
 
@@ -256,9 +258,10 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
 
   Future<void> downloadHistoricalPdf(Map<String, dynamic> order) async {
     final pdfBytes = await buildHistoricalPdf(order);
-    final dateStr = (order['created_at'] ?? '').toString().length >= 10
-        ? (order['created_at'] ?? '').toString().substring(0, 10).replaceAll('-', '_')
-        : DateTime.now().toIso8601String().split('T').first;
+    final rawCreated = (order['created_at'] ?? '').toString();
+    final dateStr = rawCreated.isNotEmpty
+        ? TimeService.formatDate(rawCreated).replaceAll('-', '_')
+        : TimeService.formatDate(TimeService.nowMYT());
 
     await Navigator.push(
       context,

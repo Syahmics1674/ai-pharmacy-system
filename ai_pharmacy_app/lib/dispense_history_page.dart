@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'services/live_inventory_service.dart';
+import 'services/time_service.dart';
+import 'theme/app_colors.dart';
+import 'theme/app_spacing.dart';
 
 class DispenseHistoryPage extends StatefulWidget {
   final String? clinicId;
@@ -13,18 +16,12 @@ class DispenseHistoryPage extends StatefulWidget {
 class _DispenseHistoryPageState extends State<DispenseHistoryPage> {
   List<dynamic> _transactions = [];
   bool _isLoading = true;
-  bool _sortAscending = false; // false = Latest First (default)
-  String _filterAction = 'all'; // 'all', 'dispense', 'stock_out'
-
-  static const _months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-  ];
+  bool _sortAscending = false;
+  String _filterAction = 'all';
 
   List<dynamic> get _filteredSorted {
     var items = _transactions;
 
-    // Filter
     if (_filterAction != 'all') {
       items = items.where((t) {
         final a = (t['action'] ?? '').toString().toLowerCase();
@@ -32,7 +29,6 @@ class _DispenseHistoryPageState extends State<DispenseHistoryPage> {
       }).toList();
     }
 
-    // Sort by created_at
     items = List.from(items);
     items.sort((a, b) {
       final ats = (a['created_at'] ?? a['timestamp'] ?? '').toString();
@@ -62,13 +58,12 @@ class _DispenseHistoryPageState extends State<DispenseHistoryPage> {
     });
   }
 
-  Widget _buildActionBadge(bool isDispense) {
+  Widget _buildActionBadge(bool isDispense, bool isDark) {
+    final c = isDispense ? AppColors.success : AppColors.danger;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: isDispense
-            ? Colors.green.withValues(alpha: 0.15)
-            : Colors.deepOrange.withValues(alpha: 0.15),
+        color: c.withValues(alpha: isDark ? 0.2 : 0.1),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
@@ -76,48 +71,32 @@ class _DispenseHistoryPageState extends State<DispenseHistoryPage> {
         style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.bold,
-          color: isDispense ? Colors.green.shade800 : Colors.deepOrange.shade800,
+          color: c,
         ),
       ),
     );
   }
 
-  String _formatTimestamp(String raw) {
-    if (raw.isEmpty) return '';
-    try {
-      final clean = raw
-          .replaceFirst(RegExp(r'\.\d+'), '')
-          .replaceFirst('Z', '')
-          .replaceFirst('+00:00', '');
-      final dt = DateTime.parse(clean);
-      final day = dt.day.toString().padLeft(2, '0');
-      final mon = _months[dt.month - 1];
-      final yr = dt.year.toString();
-      final hh = dt.hour.toString().padLeft(2, '0');
-      final mm = dt.minute.toString().padLeft(2, '0');
-      return '$day $mon $yr, $hh:$mm';
-    } catch (_) {
-      return raw;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
 
     return Column(
       children: [
-        // Filter and sort controls
-        _buildControls(),
+        _buildControls(isDark),
         const Divider(height: 1),
         Expanded(
           child: _transactions.isEmpty
               ? Center(
                   child: Text(
                     "No dispense history",
-                    style: TextStyle(color: Colors.grey[600]),
+                    style: TextStyle(
+                      color: isDark ? AppColors.textDarkSecondary : AppColors.textSecondary,
+                    ),
                   ),
                 )
               : RefreshIndicator(
@@ -137,20 +116,20 @@ class _DispenseHistoryPageState extends State<DispenseHistoryPage> {
                       final name = (t['_display_name'] ?? t['matched_name'] ?? t['item_name'] ?? t['item_code'] ?? 'Unknown').toString();
 
                       final rawTs = (t['created_at'] ?? t['timestamp'] ?? '').toString();
-                      final formattedTs = _formatTimestamp(rawTs);
+                      final formattedTs = rawTs.isNotEmpty ? TimeService.formatDateTimeShort(rawTs) : '';
 
                       return Card(
-                        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 4),
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 10),
                           child: Row(
                             children: [
                               Icon(
                                 isNegative ? Icons.trending_down : Icons.trending_up,
-                                color: isNegative ? Colors.red : Colors.green,
+                                color: isNegative ? AppColors.danger : AppColors.success,
                                 size: 28,
                               ),
-                              const SizedBox(width: 12),
+                              const SizedBox(width: AppSpacing.md),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -167,22 +146,28 @@ class _DispenseHistoryPageState extends State<DispenseHistoryPage> {
                                             overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
-                                        const SizedBox(width: 8),
-                                        _buildActionBadge(isDispense),
+                                        const SizedBox(width: AppSpacing.sm),
+                                        _buildActionBadge(isDispense, isDark),
                                       ],
                                     ),
                                     const SizedBox(height: 4),
                                     if (formattedTs.isNotEmpty)
                                       Text(
                                         formattedTs,
-                                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                                        style: TextStyle(
+                                          color: isDark ? AppColors.textDarkSecondary : AppColors.textSecondary,
+                                          fontSize: 12,
+                                        ),
                                       ),
                                     if (t['device_id'] != null)
                                       Padding(
                                         padding: const EdgeInsets.only(top: 2),
                                         child: Text(
                                           "Device: ${t['device_id']}",
-                                          style: TextStyle(color: Colors.grey[500], fontSize: 11),
+                                          style: TextStyle(
+                                            color: isDark ? AppColors.textDarkSecondary : AppColors.textSecondary,
+                                            fontSize: 11,
+                                          ),
                                         ),
                                       ),
                                     if (t['confidence'] != null)
@@ -190,18 +175,21 @@ class _DispenseHistoryPageState extends State<DispenseHistoryPage> {
                                         padding: const EdgeInsets.only(top: 1),
                                         child: Text(
                                           "Confidence: ${t['confidence']}",
-                                          style: TextStyle(color: Colors.grey[400], fontSize: 10),
+                                          style: TextStyle(
+                                            color: isDark ? AppColors.textDarkSecondary : AppColors.textSecondary,
+                                            fontSize: 10,
+                                          ),
                                         ),
                                       ),
                                   ],
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                              const SizedBox(width: AppSpacing.md),
                               Text(
                                 isNegative ? "${qtyNum.toInt()}" : "+${qtyNum.toInt()}",
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  color: isNegative ? Colors.red : Colors.green,
+                                  color: isNegative ? AppColors.danger : AppColors.success,
                                   fontSize: 20,
                                 ),
                               ),
@@ -217,15 +205,14 @@ class _DispenseHistoryPageState extends State<DispenseHistoryPage> {
     );
   }
 
-  Widget _buildControls() {
+  Widget _buildControls(bool isDark) {
     const filters = ['all', 'dispense', 'stock_out'];
     const filterLabels = ['All', 'Dispense', 'Stock Out'];
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
       child: Row(
         children: [
-          // Filter chips
           ...List.generate(filters.length, (i) {
             final active = _filterAction == filters[i];
             return Padding(
@@ -233,11 +220,11 @@ class _DispenseHistoryPageState extends State<DispenseHistoryPage> {
               child: GestureDetector(
                 onTap: () => setState(() => _filterAction = filters[i]),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 6),
                   decoration: BoxDecoration(
                     color: active
                         ? Theme.of(context).colorScheme.primary
-                        : Colors.grey.shade200,
+                        : (isDark ? AppColors.surfaceDark : AppColors.backgroundLight),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -245,7 +232,7 @@ class _DispenseHistoryPageState extends State<DispenseHistoryPage> {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: active ? Colors.white : Colors.grey.shade700,
+                      color: active ? Colors.white : (isDark ? AppColors.textOnDark : AppColors.textPrimary),
                     ),
                   ),
                 ),
@@ -253,13 +240,12 @@ class _DispenseHistoryPageState extends State<DispenseHistoryPage> {
             );
           }),
           const Spacer(),
-          // Sort button
           GestureDetector(
             onTap: () => setState(() => _sortAscending = !_sortAscending),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.grey.shade200,
+                color: isDark ? AppColors.surfaceDark : AppColors.backgroundLight,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(
@@ -268,7 +254,7 @@ class _DispenseHistoryPageState extends State<DispenseHistoryPage> {
                   Icon(
                     _sortAscending ? Icons.arrow_upward : Icons.arrow_downward,
                     size: 16,
-                    color: Colors.grey.shade700,
+                    color: isDark ? AppColors.textDarkSecondary : AppColors.textSecondary,
                   ),
                   const SizedBox(width: 4),
                   Text(
@@ -276,7 +262,7 @@ class _DispenseHistoryPageState extends State<DispenseHistoryPage> {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade700,
+                      color: isDark ? AppColors.textDarkSecondary : AppColors.textSecondary,
                     ),
                   ),
                 ],

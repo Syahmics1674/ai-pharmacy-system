@@ -2,7 +2,12 @@ import 'package:flutter/material.dart';
 import 'main.dart';
 import 'services/live_inventory_service.dart';
 import 'services/sync_service.dart';
+import 'services/time_service.dart';
 import 'dispense_history_page.dart';
+import 'theme/app_colors.dart';
+import 'theme/app_spacing.dart';
+import 'widgets/common/empty_state.dart';
+import 'widgets/common/loading_state.dart';
 
 class LiveInventoryPage extends StatefulWidget {
   final String? clinicId;
@@ -34,8 +39,8 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
   static const List<String> _sortOptions = [
     "Name A-Z",
     "Name Z-A",
-    "Quantity Low → High",
-    "Quantity High → Low",
+    "Quantity Low \u2192 High",
+    "Quantity High \u2192 Low",
     "Recently Updated",
   ];
 
@@ -93,7 +98,6 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
   void _applyFilter() {
     var items = List<Map<String, dynamic>>.from(_inventory);
 
-    // Search
     if (_search.isNotEmpty) {
       final q = _search.toLowerCase();
       items = items.where((item) {
@@ -114,7 +118,6 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
       }).toList();
     }
 
-    // Filter chip
     if (_filterChip == "Low Stock") {
       items = items
           .where((item) =>
@@ -134,17 +137,16 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
           .toList();
     }
 
-    // Sort
     if (_sortOption == "Name A-Z") {
       items.sort(
           (a, b) => liveInventoryDisplayName(a).compareTo(liveInventoryDisplayName(b)));
     } else if (_sortOption == "Name Z-A") {
       items.sort(
           (a, b) => liveInventoryDisplayName(b).compareTo(liveInventoryDisplayName(a)));
-    } else if (_sortOption == "Quantity Low → High") {
+    } else if (_sortOption == "Quantity Low \u2192 High") {
       items.sort((a, b) =>
           ((a['quantity'] ?? 0) as num).compareTo((b['quantity'] ?? 0) as num));
-    } else if (_sortOption == "Quantity High → Low") {
+    } else if (_sortOption == "Quantity High \u2192 Low") {
       items.sort((a, b) =>
           ((b['quantity'] ?? 0) as num).compareTo((a['quantity'] ?? 0) as num));
     } else if (_sortOption == "Recently Updated") {
@@ -159,9 +161,9 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
   }
 
   Color _stockColor(int qty) {
-    if (qty > 50) return const Color(0xFF2FBF71);
-    if (qty >= 20) return const Color(0xFFF5A524);
-    return const Color(0xFFEF5A5A);
+    if (qty > 50) return AppColors.success;
+    if (qty >= 20) return AppColors.warning;
+    return AppColors.danger;
   }
 
   String _stockLabel(int qty) {
@@ -184,52 +186,38 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accentColor = isDark ? AppColors.primaryLight : AppColors.primary;
+
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF090D1A), Color(0xFF151C2C)],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-      ),
+      color: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
-          title: const Text(
-            "Live Inventory Status",
-            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18),
-          ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.refresh_rounded, color: Colors.cyanAccent),
-              onPressed: () async {
-                await SyncService.fullSync(widget.clinicId ?? '');
-                _load();
-              },
-            ),
-          ],
+          title: const SizedBox.shrink(),
+          toolbarHeight: _isOffline ? 90 : 50,
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(50),
             child: Container(
-              margin: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+              margin: const EdgeInsets.only(left: AppSpacing.lg, right: AppSpacing.lg, bottom: AppSpacing.sm),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.04),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withOpacity(0.08)),
+                color: isDark ? AppColors.surfaceDark : AppColors.backgroundLight,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
               ),
               child: TabBar(
                 controller: _tabController,
                 dividerColor: Colors.transparent,
                 indicator: BoxDecoration(
-                  color: Colors.cyanAccent.withOpacity(0.15),
+                  color: accentColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.cyanAccent.withOpacity(0.3), width: 1.5),
+                  border: Border.all(color: accentColor.withValues(alpha: 0.3), width: 1.5),
                 ),
                 indicatorSize: TabBarIndicatorSize.tab,
-                labelColor: Colors.cyanAccent,
-                unselectedLabelColor: Colors.white.withOpacity(0.6),
+                labelColor: accentColor,
+                unselectedLabelColor: isDark ? AppColors.textDarkSecondary : AppColors.textSecondary,
                 labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 0.3),
                 unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 0.3),
                 tabs: const [
@@ -253,11 +241,11 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
 
   Widget _buildSummaryChip(String label, int count, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -268,12 +256,9 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
             decoration: BoxDecoration(
               color: color,
               shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(color: color.withOpacity(0.4), blurRadius: 4, spreadRadius: 1),
-              ],
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.sm),
           Text(
             "$count $label",
             style: TextStyle(
@@ -288,50 +273,35 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
   }
 
   Widget _buildInventoryTab() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accentColor = isDark ? AppColors.primaryLight : AppColors.primary;
+
     if (_isLoading) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const CircularProgressIndicator(
-              strokeWidth: 3,
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.cyanAccent),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              "Loading live stock counts...",
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.5),
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      );
+      return const LoadingState(message: "Loading live stock counts...");
     }
+
     return Column(
       children: [
         if (_isOffline)
           Container(
             width: double.infinity,
-            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm, horizontal: AppSpacing.lg),
             decoration: BoxDecoration(
-              color: Colors.orangeAccent.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.orangeAccent.withOpacity(0.2)),
+              color: AppColors.warning.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(color: AppColors.warning.withValues(alpha: 0.2)),
             ),
             child: Row(
               children: [
-                const Icon(Icons.wifi_off_rounded, size: 16, color: Colors.orangeAccent),
-                const SizedBox(width: 10),
+                const Icon(Icons.wifi_off_rounded, size: 16, color: AppColors.warning),
+                const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
-                    "Offline Mode — Displaying local database backup",
+                    "Offline Mode \u2014 Displaying local database backup",
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.orangeAccent.shade100,
+                      color: isDark ? AppColors.warningLight : AppColors.warning,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -339,29 +309,28 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
               ],
             ),
           ),
-        // Search bar
         Padding(
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+          padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.md, 0),
           child: TextField(
-            style: const TextStyle(color: Colors.white, fontSize: 14),
+            style: TextStyle(color: isDark ? AppColors.textOnDark : AppColors.textPrimary, fontSize: 14),
             decoration: InputDecoration(
               hintText: "Search catalog or code...",
-              hintStyle: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 14),
-              prefixIcon: Icon(Icons.search_rounded, color: Colors.white.withOpacity(0.5), size: 20),
+              hintStyle: TextStyle(color: isDark ? AppColors.textDarkSecondary : AppColors.textSecondary, fontSize: 14),
+              prefixIcon: Icon(Icons.search_rounded, color: isDark ? AppColors.textDarkSecondary : AppColors.textSecondary, size: 20),
               filled: true,
-              fillColor: Colors.white.withOpacity(0.03),
-              contentPadding: const EdgeInsets.symmetric(vertical: 12),
+              fillColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+              contentPadding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: Colors.white.withOpacity(0.06)),
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+                borderSide: BorderSide(color: isDark ? AppColors.borderDark : AppColors.borderLight),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: Colors.white.withOpacity(0.06)),
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+                borderSide: BorderSide(color: isDark ? AppColors.borderDark : AppColors.borderLight),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(color: Colors.cyanAccent),
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+                borderSide: BorderSide(color: accentColor),
               ),
             ),
             onChanged: (v) {
@@ -372,37 +341,33 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
             },
           ),
         ),
-        // Summary counters
         Padding(
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+          padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.md, 0),
           child: Row(
             children: [
-              _buildSummaryChip("Low Stock", _lowStockCount, const Color(0xFFEF5A5A)),
-              const SizedBox(width: 8),
-              _buildSummaryChip("Moderate", _moderateCount, const Color(0xFFF5A524)),
-              const SizedBox(width: 8),
-              _buildSummaryChip("Adequate", _adequateCount, const Color(0xFF2FBF71)),
+              _buildSummaryChip("Low Stock", _lowStockCount, AppColors.danger),
+              const SizedBox(width: AppSpacing.sm),
+              _buildSummaryChip("Moderate", _moderateCount, AppColors.warning),
+              const SizedBox(width: AppSpacing.sm),
+              _buildSummaryChip("Adequate", _adequateCount, AppColors.success),
               const Spacer(),
               if (!_isOffline)
                 FutureBuilder<String>(
                   future: SyncService.lastSyncTime(),
                   builder: (_, snap) {
                     final label = snap.data ?? '';
-                    final short = label.length > 19
-                        ? label.substring(0, 19).replaceFirst('T', ' ')
-                        : label;
+                    final formatted = label.isNotEmpty ? TimeService.formatDateTime(label) : '';
                     return Text(
-                      "Sync: $short",
-                      style: TextStyle(fontSize: 10, color: Colors.white.withOpacity(0.4)),
+                      "Sync: $formatted",
+                      style: TextStyle(fontSize: 10, color: isDark ? AppColors.textDarkSecondary : AppColors.textSecondary),
                     );
                   },
                 ),
             ],
           ),
         ),
-        // Filter chips + sort dropdown
         Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+          padding: const EdgeInsets.fromLTRB(AppSpacing.md, 10, AppSpacing.md, 0),
           child: Row(
             children: [
               Expanded(
@@ -411,21 +376,6 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
                   child: Row(
                     children: _filterOptions.map((f) {
                       final active = _filterChip == f;
-                      Color chipColor;
-                      Color textColor;
-                      if (f == "Low Stock") {
-                        chipColor = const Color(0xFFEF5A5A);
-                        textColor = Colors.white;
-                      } else if (f == "Moderate") {
-                        chipColor = const Color(0xFFF5A524);
-                        textColor = Colors.white;
-                      } else if (f == "Adequate") {
-                        chipColor = const Color(0xFF2FBF71);
-                        textColor = Colors.white;
-                      } else {
-                        chipColor = Colors.cyanAccent;
-                        textColor = const Color(0xFF090D1A);
-                      }
                       return Padding(
                         padding: const EdgeInsets.only(right: 6),
                         child: GestureDetector(
@@ -437,12 +387,12 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
                           },
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
                             decoration: BoxDecoration(
-                              color: active ? chipColor : Colors.white.withOpacity(0.05),
+                              color: active ? accentColor : (isDark ? AppColors.borderDark : AppColors.borderLight),
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
-                                color: active ? chipColor : Colors.white.withOpacity(0.12),
+                                color: active ? accentColor : (isDark ? AppColors.borderDark : AppColors.borderLight),
                                 width: 1.5,
                               ),
                             ),
@@ -451,7 +401,7 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
-                                color: active ? textColor : Colors.white.withOpacity(0.8),
+                                color: active ? Colors.white : (isDark ? AppColors.textOnDark : AppColors.textPrimary),
                               ),
                             ),
                           ),
@@ -461,20 +411,20 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.sm),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.03),
-                  border: Border.all(color: Colors.white.withOpacity(0.06)),
-                  borderRadius: BorderRadius.circular(16),
+                  color: isDark ? AppColors.surfaceDark : AppColors.backgroundLight,
+                  border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     value: _sortOption,
                     isDense: true,
-                    dropdownColor: const Color(0xFF1E293B),
-                    icon: Icon(Icons.arrow_drop_down_rounded, color: Colors.white.withOpacity(0.6)),
+                    dropdownColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                    icon: Icon(Icons.arrow_drop_down_rounded, color: isDark ? AppColors.textDarkSecondary : AppColors.textSecondary),
                     items: _sortOptions.map((s) {
                       return DropdownMenuItem(
                         value: s,
@@ -482,7 +432,7 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
                           s,
                           style: TextStyle(
                             fontSize: 11,
-                            color: Colors.white.withOpacity(0.85),
+                            color: isDark ? AppColors.textOnDark : AppColors.textPrimary,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -501,27 +451,22 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
             ],
           ),
         ),
-        const SizedBox(height: 8),
-        // Inventory list
+        const SizedBox(height: AppSpacing.sm),
         if (_filtered.isEmpty)
-          Expanded(
-            child: Center(
-              child: Text(
-                _search.isEmpty && _filterChip == "All"
-                    ? "No inventory data found"
-                    : "No matching medicines found",
-                style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 13),
-              ),
+          const Expanded(
+            child: EmptyState(
+              icon: Icons.medication_rounded,
+              title: "No medicines found",
+              subtitle: "Adjust search or filter to see results",
             ),
           )
         else
           Expanded(
             child: RefreshIndicator(
               onRefresh: _load,
-              backgroundColor: const Color(0xFF1E293B),
-              color: Colors.cyanAccent,
+              color: accentColor,
               child: ListView.builder(
-                padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
+                padding: const EdgeInsets.fromLTRB(AppSpacing.md, 4, AppSpacing.md, AppSpacing.xxl),
                 itemCount: _filtered.length,
                 itemBuilder: (_, i) {
                   final item = _filtered[i];
@@ -533,21 +478,14 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
                   final ratio = (qty.toDouble() / 100.0).clamp(0.0, 1.0);
 
                   return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
+                    margin: const EdgeInsets.only(bottom: AppSpacing.md),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.02),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.white.withOpacity(0.05)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
+                      color: isDark ? AppColors.surfaceDark : AppColors.backgroundLight,
+                      borderRadius: BorderRadius.circular(AppRadius.xl),
+                      border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(AppSpacing.lg),
                       child: Row(
                         children: [
                           Container(
@@ -556,22 +494,19 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
                             decoration: BoxDecoration(
                               color: color,
                               borderRadius: BorderRadius.circular(2),
-                              boxShadow: [
-                                BoxShadow(color: color.withOpacity(0.4), blurRadius: 4, spreadRadius: 1),
-                              ],
                             ),
                           ),
-                          const SizedBox(width: 16),
+                          const SizedBox(width: AppSpacing.lg),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
                                   displayName,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 15,
-                                    color: Colors.white,
+                                    color: isDark ? AppColors.textOnDark : AppColors.textPrimary,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -581,7 +516,7 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
                                   Text(
                                     genericName,
                                     style: TextStyle(
-                                      color: Colors.white.withOpacity(0.5),
+                                      color: isDark ? AppColors.textDarkSecondary : AppColors.textSecondary,
                                       fontSize: 12,
                                       fontWeight: FontWeight.w400,
                                     ),
@@ -594,19 +529,19 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
                                   Text(
                                     dosageForm,
                                     style: TextStyle(
-                                      color: Colors.white.withOpacity(0.4),
+                                      color: isDark ? AppColors.textDarkSecondary : AppColors.textSecondary,
                                       fontSize: 11,
                                     ),
                                   ),
                                 ],
-                                const SizedBox(height: 8),
+                                const SizedBox(height: AppSpacing.sm),
                                 ClipRRect(
                                   borderRadius: BorderRadius.circular(4),
                                   child: SizedBox(
                                     height: 4,
                                     child: LinearProgressIndicator(
                                       value: ratio,
-                                      backgroundColor: Colors.white.withOpacity(0.04),
+                                      backgroundColor: isDark ? AppColors.surfaceDark : AppColors.backgroundLight,
                                       valueColor: AlwaysStoppedAnimation<Color>(color),
                                     ),
                                   ),
@@ -614,7 +549,7 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
                               ],
                             ),
                           ),
-                          const SizedBox(width: 16),
+                          const SizedBox(width: AppSpacing.lg),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
@@ -624,18 +559,15 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
                                   fontSize: 22,
                                   fontWeight: FontWeight.bold,
                                   color: color,
-                                  shadows: [
-                                    Shadow(color: color.withOpacity(0.3), blurRadius: 6),
-                                  ],
                                 ),
                               ),
                               const SizedBox(height: 6),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: color.withOpacity(0.08),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: color.withOpacity(0.2)),
+                                  color: color.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                                  border: Border.all(color: color.withValues(alpha: 0.2)),
                                 ),
                                 child: Text(
                                   _stockLabel(qty),
