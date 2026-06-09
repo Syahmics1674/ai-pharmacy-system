@@ -1086,6 +1086,38 @@ class _StockOperationsPageState extends State<StockOperationsPage> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: AppSpacing.md),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        try {
+                          final response = await http.post(
+                            Uri.parse("${ApiConfig.baseUrl}/start_mediscan"),
+                            headers: {"Content-Type": "application/json"},
+                            body: jsonEncode({"mode": "stock_out"}),
+                          );
+                          if (response.statusCode == 200) {
+                            debugPrint("MedScan started for dispense");
+                          } else {
+                            debugPrint("Failed to start MedScan: ${response.body}");
+                          }
+                        } catch (e) {
+                          debugPrint("Error starting MedScan: $e");
+                        }
+                      },
+                      icon: const Icon(Icons.qr_code_scanner_rounded, size: 18),
+                      label: const Text("MedScan Dispense"),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                        foregroundColor: isDark ? AppColors.primaryLight : AppColors.primary,
+                        side: BorderSide(color: isDark ? AppColors.primaryLight : AppColors.primary),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
