@@ -62,13 +62,13 @@ class _DispenseHistoryPageState extends State<DispenseHistoryPage> {
     });
   }
 
-  Widget _buildActionBadge(bool isDispense) {
+  Widget _buildActionBadge(bool isDispense, bool isDark) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
         color: isDispense
-            ? Colors.green.withValues(alpha: 0.15)
-            : Colors.deepOrange.withValues(alpha: 0.15),
+            ? (isDark ? Colors.green.withOpacity(0.2) : Colors.green.withOpacity(0.1))
+            : (isDark ? Colors.deepOrange.withOpacity(0.2) : Colors.deepOrange.withOpacity(0.1)),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
@@ -76,7 +76,9 @@ class _DispenseHistoryPageState extends State<DispenseHistoryPage> {
         style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.bold,
-          color: isDispense ? Colors.green.shade800 : Colors.deepOrange.shade800,
+          color: isDispense
+              ? (isDark ? Colors.green.shade300 : Colors.green.shade800)
+              : (isDark ? Colors.deepOrange.shade300 : Colors.deepOrange.shade800),
         ),
       ),
     );
@@ -103,6 +105,17 @@ class _DispenseHistoryPageState extends State<DispenseHistoryPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final surfaceColor = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final textPrimary = isDark ? Colors.white : const Color(0xFF1E293B);
+    final textSecondary = isDark ? Colors.white.withOpacity(0.6) : const Color(0xFF64748B);
+    final textMuted = isDark ? Colors.white.withOpacity(0.4) : const Color(0xFF94A3B8);
+    final chipBg = isDark ? Colors.grey.shade800 : Colors.grey.shade200;
+    final chipText = isDark ? Colors.white : Colors.grey.shade700;
+    final badgeDispenseBg = isDark ? Colors.green.withOpacity(0.2) : Colors.green.withOpacity(0.1);
+    final badgeStockOutBg = isDark ? Colors.deepOrange.withOpacity(0.2) : Colors.deepOrange.withOpacity(0.1);
+
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -110,14 +123,14 @@ class _DispenseHistoryPageState extends State<DispenseHistoryPage> {
     return Column(
       children: [
         // Filter and sort controls
-        _buildControls(),
+        _buildControls(isDark),
         const Divider(height: 1),
         Expanded(
           child: _transactions.isEmpty
               ? Center(
                   child: Text(
                     "No dispense history",
-                    style: TextStyle(color: Colors.grey[600]),
+                    style: TextStyle(color: textMuted),
                   ),
                 )
               : RefreshIndicator(
@@ -168,21 +181,21 @@ class _DispenseHistoryPageState extends State<DispenseHistoryPage> {
                                           ),
                                         ),
                                         const SizedBox(width: 8),
-                                        _buildActionBadge(isDispense),
+                                        _buildActionBadge(isDispense, isDark),
                                       ],
                                     ),
                                     const SizedBox(height: 4),
                                     if (formattedTs.isNotEmpty)
                                       Text(
                                         formattedTs,
-                                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                                        style: TextStyle(color: textMuted, fontSize: 12),
                                       ),
                                     if (t['device_id'] != null)
                                       Padding(
                                         padding: const EdgeInsets.only(top: 2),
                                         child: Text(
                                           "Device: ${t['device_id']}",
-                                          style: TextStyle(color: Colors.grey[500], fontSize: 11),
+                                          style: TextStyle(color: textSecondary, fontSize: 11),
                                         ),
                                       ),
                                     if (t['confidence'] != null)
@@ -190,7 +203,7 @@ class _DispenseHistoryPageState extends State<DispenseHistoryPage> {
                                         padding: const EdgeInsets.only(top: 1),
                                         child: Text(
                                           "Confidence: ${t['confidence']}",
-                                          style: TextStyle(color: Colors.grey[400], fontSize: 10),
+                                          style: TextStyle(color: textSecondary, fontSize: 10),
                                         ),
                                       ),
                                   ],
@@ -217,7 +230,9 @@ class _DispenseHistoryPageState extends State<DispenseHistoryPage> {
     );
   }
 
-  Widget _buildControls() {
+  Widget _buildControls(bool isDark) {
+    final chipBg = isDark ? Colors.grey.shade800 : Colors.grey.shade200;
+    final chipText = isDark ? Colors.white : Colors.grey.shade700;
     const filters = ['all', 'dispense', 'stock_out'];
     const filterLabels = ['All', 'Dispense', 'Stock Out'];
 
@@ -237,7 +252,7 @@ class _DispenseHistoryPageState extends State<DispenseHistoryPage> {
                   decoration: BoxDecoration(
                     color: active
                         ? Theme.of(context).colorScheme.primary
-                        : Colors.grey.shade200,
+                        : chipBg,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -245,7 +260,7 @@ class _DispenseHistoryPageState extends State<DispenseHistoryPage> {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: active ? Colors.white : Colors.grey.shade700,
+                      color: active ? Colors.white : chipText,
                     ),
                   ),
                 ),
@@ -259,7 +274,7 @@ class _DispenseHistoryPageState extends State<DispenseHistoryPage> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.grey.shade200,
+                color: chipBg,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(
@@ -268,7 +283,7 @@ class _DispenseHistoryPageState extends State<DispenseHistoryPage> {
                   Icon(
                     _sortAscending ? Icons.arrow_upward : Icons.arrow_downward,
                     size: 16,
-                    color: Colors.grey.shade700,
+                    color: chipText,
                   ),
                   const SizedBox(width: 4),
                   Text(
@@ -276,7 +291,7 @@ class _DispenseHistoryPageState extends State<DispenseHistoryPage> {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade700,
+                      color: chipText,
                     ),
                   ),
                 ],

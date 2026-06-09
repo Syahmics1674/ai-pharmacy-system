@@ -13,9 +13,19 @@ import 'order_history_page.dart';
 import 'pkd_dashboard_page.dart';
 import 'dashboard_page.dart';
 import 'live_inventory_page.dart';
+import 'settings_page.dart';
 import 'services/sync_service.dart';
 import 'services/live_inventory_service.dart';
 import 'config/api_config.dart';
+import 'theme/app_colors.dart';
+import 'theme/app_theme.dart';
+import 'widgets/common/app_top_bar.dart';
+import 'widgets/common/app_sidebar.dart';
+import 'widgets/common/metric_card.dart';
+import 'widgets/common/status_chip.dart';
+import 'widgets/common/page_header.dart';
+import 'widgets/common/status_badge.dart';
+import 'widgets/common/empty_state.dart';
 
 // Client-side API response cache
 final _apiCache = <String, _CacheEntry>{};
@@ -155,27 +165,96 @@ Future<Map<String, dynamic>> safeApiPost(String url, Map<String, dynamic> body, 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final SharedPreferences prefs = await SharedPreferences.getInstance();
-  final String? role = prefs.getString("role");
+  final String themeModeStr = prefs.getString("theme_mode") ?? "system";
 
-  Widget initialPage = const LoginPage();
+  ThemeMode initialTheme = ThemeMode.system;
+  if (themeModeStr == "light") initialTheme = ThemeMode.light;
+  if (themeModeStr == "dark") initialTheme = ThemeMode.dark;
 
-  if (role == "pkd") {
-    final String district = prefs.getString("district") ?? "";
-    if (district.isNotEmpty) {
-      initialPage = PKDDashboardPage(district: district);
-    }
-  } else if (role == "clinic") {
-    final String clinicId = prefs.getString("clinic_id") ?? "";
-    if (clinicId.isNotEmpty) {
-      initialPage = MainScreen(clinicId: clinicId);
+  runApp(PharmacyApp(initialTheme: initialTheme));
+}
+
+class PharmacyApp extends StatefulWidget {
+  final ThemeMode initialTheme;
+
+  const PharmacyApp({super.key, required this.initialTheme});
+
+  static _PharmacyAppState of(BuildContext context) {
+    return context.findAncestorStateOfType<_PharmacyAppState>()!;
+  }
+
+  @override
+  State<PharmacyApp> createState() => _PharmacyAppState();
+}
+
+class _PharmacyAppState extends State<PharmacyApp> {
+  late ThemeMode _themeMode;
+
+  @override
+  void initState() {
+    super.initState();
+    _themeMode = widget.initialTheme;
+  }
+
+  void setThemeMode(ThemeMode mode) {
+    setState(() => _themeMode = mode);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'AI Pharmacy',
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: _themeMode,
+      home: const _AppShell(),
+      debugShowCheckedModeBanner: false,
+    );
+  }
+}
+
+class _AppShell extends StatefulWidget {
+  const _AppShell();
+
+  @override
+  State<_AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends State<_AppShell> {
+  @override
+  void initState() {
+    super.initState();
+    _determineInitialPage();
+  }
+
+  Future<void> _determineInitialPage() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String? role = prefs.getString("role");
+    if (!mounted) return;
+
+    if (role == "pkd") {
+      final String district = prefs.getString("district") ?? "";
+      if (district.isNotEmpty) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => PKDDashboardPage(district: district)),
+        );
+      }
+    } else if (role == "clinic") {
+      final String clinicId = prefs.getString("clinic_id") ?? "";
+      if (clinicId.isNotEmpty) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => MainScreen(clinicId: clinicId)),
+        );
+      }
     }
   }
 
-  runApp(MaterialApp(
-    title: 'AI Pharmacy',
-    home: initialPage,
-    debugShowCheckedModeBanner: false,
-  ));
+  @override
+  Widget build(BuildContext context) {
+    return const LoginPage();
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -202,6 +281,7 @@ class _MainScreenState extends State<MainScreen>
   String clinicName = "";
   String clinicDistrict = "";
   bool _isSyncing = false;
+  bool _sidebarCollapsed = false;
 
   final orderKey = GlobalKey<_OrderPageState>();
   final dashboardKey = GlobalKey<DashboardPageState>();
@@ -256,6 +336,7 @@ class _MainScreenState extends State<MainScreen>
     "Stock Operations",
     "AI Insights",
     "Order Management",
+    "Settings",
   ];
 
   @override
@@ -293,11 +374,12 @@ class _MainScreenState extends State<MainScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isWide = MediaQuery.of(context).size.width >= 768;
+
     final List<Widget> pages = [
       DashboardPage(
         key: dashboardKey,
         clinicId: widget.clinicId,
-        onLogout: _performLogout,
         onNavigateInventory: () => setState(() => _selectedIndex = 1),
         onNavigateOperations: () => setState(() => _selectedIndex = 2),
         onNavigateOrders: () => setState(() => _selectedIndex = 4),
@@ -307,84 +389,57 @@ class _MainScreenState extends State<MainScreen>
       StockOperationsPage(clinicId: widget.clinicId),
       AIInsightsPage(clinicId: widget.clinicId),
       OrderPage(key: orderKey, clinicId: widget.clinicId),
+      SettingsPage(
+        currentTheme: Theme.of(context).brightness == Brightness.dark
+            ? ThemeMode.dark
+            : ThemeMode.light,
+        onThemeChanged: (mode) {
+          PharmacyApp.of(context).setThemeMode(mode);
+        },
+      ),
     ];
 
     return Scaffold(
-      appBar: _selectedIndex == 0
+      appBar: _selectedIndex == 0 && !isWide
           ? null
-          : AppBar(
-              title: Row(
-                children: [
-                  GestureDetector(
-                    onTap: () => setState(() => _selectedIndex = 0),
-                    child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        clinicName.isEmpty ? widget.clinicId : clinicName,
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          "AI-Assisted Pharmacy Inventory System",
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                        ),
-                        Text(
-                          _pageTitles[_selectedIndex],
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.white70,
-                            fontWeight: FontWeight.w500,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(width: 60),
-                ],
-              ),
-              centerTitle: false,
-              backgroundColor: Colors.blueAccent,
+          : AppTopBar(
+              clinicName: clinicName.isEmpty ? widget.clinicId : clinicName,
+              subtitle: _pageTitles[_selectedIndex],
+              syncStatus: _isSyncing ? "Syncing..." : "Online",
+              isSyncing: _isSyncing,
+              onSettingsTap: () => _onItemTapped(5),
+              onClinicTap: () => _onItemTapped(0),
             ),
-      body: pages[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        selectedItemColor: Colors.blue,
-        unselectedItemColor: Colors.grey,
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: "Dashboard",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.inventory),
-            label: "Inventory",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.swap_horiz),
-            label: "Operations",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.insights),
-            label: "AI Insights",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.shopping_cart),
-            label: "Orders",
-          ),
-        ],
-      ),
+      body: isWide
+          ? Row(
+              children: [
+                AppSidebar(
+                  selectedIndex: _selectedIndex,
+                  onItemSelected: _onItemTapped,
+                  collapsed: _sidebarCollapsed,
+                  onToggleCollapse: () => setState(() => _sidebarCollapsed = !_sidebarCollapsed),
+                  clinicName: clinicName.isEmpty ? widget.clinicId : clinicName,
+                  clinicDistrict: clinicDistrict,
+                  onLogout: _performLogout,
+                ),
+                Expanded(child: pages[_selectedIndex]),
+              ],
+            )
+          : pages[_selectedIndex],
+      bottomNavigationBar: isWide
+          ? null
+          : BottomNavigationBar(
+              currentIndex: _selectedIndex.clamp(0, 4),
+              onTap: (i) => _onItemTapped(i),
+              type: BottomNavigationBarType.fixed,
+              items: const [
+                BottomNavigationBarItem(icon: Icon(Icons.dashboard_rounded), label: "Dashboard"),
+                BottomNavigationBarItem(icon: Icon(Icons.inventory_2_rounded), label: "Inventory"),
+                BottomNavigationBarItem(icon: Icon(Icons.swap_horiz_rounded), label: "Operations"),
+                BottomNavigationBarItem(icon: Icon(Icons.insights_rounded), label: "AI Insights"),
+                BottomNavigationBarItem(icon: Icon(Icons.shopping_cart_rounded), label: "Orders"),
+              ],
+            ),
     );
   }
 }
@@ -427,24 +482,23 @@ class _LoginPageState extends State<LoginPage> {
           .post(
             Uri.parse("$baseUrl/login"),
             headers: {"Content-Type": "application/json"},
-            body: jsonEncode({"user_id": userId, "password": password}),
+            body: json.encode({
+              "user_id": userId,
+              "password": password,
+              "role": selectedRole.toLowerCase(),
+            }),
           )
-          .timeout(const Duration(seconds: 10));
+          .timeout(const Duration(seconds: 15));
 
-      final data = json.decode(response.body) as Map<String, dynamic>;
-      if (!mounted) return;
+      if (response.statusCode != 200) {
+        throw Exception("HTTP ${response.statusCode}");
+      }
 
-      if (response.statusCode == 200 && data["success"] == true) {
-        final role = (data["role"] ?? "").toString().toLowerCase();
-        final expectedRole = selectedRole.toLowerCase();
+      final data = json.decode(response.body);
+      final role = (data["role"] ?? "").toString().toLowerCase();
 
-        if (role != expectedRole) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text("Incorrect role selected")));
-          return;
-        }
-
+      if (data.containsKey("success") &&
+          (data["success"] == true || data["success"] == "true")) {
         final SharedPreferences prefs = await SharedPreferences.getInstance();
         await prefs.setString("role", role);
 
@@ -497,125 +551,239 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isWide = MediaQuery.of(context).size.width >= 768;
+
     return Scaffold(
-      backgroundColor: Colors.grey[100],
-      body: Center(
-        child: Container(
-          width: 350,
-          padding: EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 🔷 TITLE
-              Text(
-                "AI-Assisted Pharmacy Inventory System",
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
-              ),
-
-              SizedBox(height: 30),
-
-              DropdownButtonFormField<String>(
-                initialValue: selectedRole,
-                decoration: InputDecoration(
-                  labelText: "Role",
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.badge_outlined),
-                ),
-                items: loginRoles
-                    .map(
-                      (role) => DropdownMenuItem<String>(
-                        value: role,
-                        child: Text(role),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) {
-                  if (value == null) return;
-                  setState(() {
-                    selectedRole = value;
-                  });
-                },
-              ),
-
-              SizedBox(height: 15),
-
-              // 🔷 USERNAME
-              TextField(
-                controller: userController,
-                textInputAction: TextInputAction.next,
-                decoration: InputDecoration(
-                  labelText: selectedRole == "PKD"
-                      ? "PKD User ID"
-                      : "Clinic User ID",
-                  hintText: selectedRole == "PKD"
-                      ? "pkd_kapit"
-                      : "clinic_bangkit",
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.person),
-                ),
-              ),
-
-              SizedBox(height: 15),
-
-              // 🔷 PASSWORD
-              TextField(
-                controller: passController,
-                obscureText: !isPasswordVisible,
-                textInputAction: TextInputAction.done,
-                onSubmitted: (_) => login(),
-                decoration: InputDecoration(
-                  labelText: "Password",
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.lock),
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      isPasswordVisible
-                          ? Icons.visibility
-                          : Icons.visibility_off,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        isPasswordVisible = !isPasswordVisible;
-                      });
-                    },
+      body: Row(
+        children: [
+          if (isWide)
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: isDark
+                        ? [const Color(0xFF0D1B2A), const Color(0xFF1B2838)]
+                        : [const Color(0xFF0D47A1), const Color(0xFF1565C0)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
                 ),
-              ),
-
-              SizedBox(height: 25),
-
-              // 🔥 LOGIN BUTTON
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: isLoading ? null : login,
-                  style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: 15),
-                    backgroundColor: Colors.blueAccent,
-                    foregroundColor: Colors.white,
-                  ),
-                  child: isLoading
-                      ? SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(48),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          child: const Icon(
+                            Icons.local_hospital_rounded,
+                            size: 64,
                             color: Colors.white,
                           ),
-                        )
-                      : Text("Login", style: TextStyle(fontSize: 16)),
+                        ),
+                        const SizedBox(height: 32),
+                        Text(
+                          "AI-Assisted Pharmacy\nInventory System",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            height: 1.3,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          "Efficient inventory management\npowered by artificial intelligence",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: Colors.white.withValues(alpha: 0.8),
+                            height: 1.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            ],
+            ),
+          Expanded(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(32),
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 400),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (!isWide)
+                        Column(
+                          children: [
+                            Icon(
+                              Icons.local_hospital_rounded,
+                              size: 48,
+                              color: AppColors.primary,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              "AI-Assisted Pharmacy\nInventory System",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? AppColors.textOnDark : AppColors.textPrimary,
+                                height: 1.3,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              "Sign in to your account",
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: isDark ? AppColors.textDarkSecondary : AppColors.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 32),
+                          ],
+                        ),
+                      Card(
+                        elevation: isDark ? 0 : 2,
+                        color: isDark ? AppColors.surfaceDark : Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: BorderSide(
+                            color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Sign In",
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? AppColors.textOnDark : AppColors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              DropdownButtonFormField<String>(
+                                initialValue: selectedRole,
+                                decoration: InputDecoration(
+                                  labelText: "Role",
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  prefixIcon: const Icon(Icons.badge_outlined),
+                                ),
+                                items: loginRoles
+                                    .map(
+                                      (role) => DropdownMenuItem<String>(
+                                        value: role,
+                                        child: Text(role),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged: (value) {
+                                  if (value == null) return;
+                                  setState(() {
+                                    selectedRole = value;
+                                  });
+                                },
+                              ),
+                              const SizedBox(height: 16),
+                              TextField(
+                                controller: userController,
+                                textInputAction: TextInputAction.next,
+                                decoration: InputDecoration(
+                                  labelText: selectedRole == "PKD"
+                                      ? "PKD User ID"
+                                      : "Clinic User ID",
+                                  hintText: selectedRole == "PKD"
+                                      ? "pkd_kapit"
+                                      : "clinic_bangkit",
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  prefixIcon: const Icon(Icons.person),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              TextField(
+                                controller: passController,
+                                obscureText: !isPasswordVisible,
+                                textInputAction: TextInputAction.done,
+                                onSubmitted: (_) => login(),
+                                decoration: InputDecoration(
+                                  labelText: "Password",
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  prefixIcon: const Icon(Icons.lock),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      isPasswordVisible
+                                          ? Icons.visibility
+                                          : Icons.visibility_off,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        isPasswordVisible = !isPasswordVisible;
+                                      });
+                                    },
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
+                                  onPressed: isLoading ? null : login,
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    backgroundColor: AppColors.primary,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    elevation: 0,
+                                  ),
+                                  child: isLoading
+                                      ? const SizedBox(
+                                          height: 20,
+                                          width: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white,
+                                          ),
+                                        )
+                                      : const Text("Login", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 }
-
-
 
 // ================= STOCK OPERATIONS PAGE =================
 
@@ -1046,37 +1214,89 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
   // ---- BUILD ----
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     if (isLoading) {
       return Container(
-        color: const Color(0xFF0F172A),
+        color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
         child: Center(
-          child: CircularProgressIndicator(color: Colors.cyanAccent),
+          child: CircularProgressIndicator(color: isDark ? Colors.cyanAccent : Colors.blueAccent),
         ),
       );
     }
 
     return Container(
-      color: const Color(0xFF0F172A),
+      color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 🔷 SECTION TITLE
-            Text(
-              "AI Insights Dashboard",
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
+            PageHeader(
+              title: "AI Insights Dashboard",
+              subtitle: "Overall analytics, trends, and medicine insights",
+              icon: Icons.insights_rounded,
+            ),
+
+            // AI Status Card
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.success.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.auto_awesome_rounded, color: AppColors.success, size: 22),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              "AI Model Active",
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 15,
+                                color: isDark ? AppColors.textOnDark : AppColors.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const StatusBadge(
+                              label: "Online",
+                              style: BadgeStyle.success,
+                              showDot: true,
+                              fontSize: 10,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          "Confidence: High  |  Last Updated: ${DateTime.now().toString().substring(0, 16)}  |  Model: Gradient Boosting v1",
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark ? AppColors.textDarkSecondary : AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              "Overall analytics, trends, and medicine insights",
-              style: TextStyle(color: Colors.blueGrey, fontSize: 13),
-            ),
-            const SizedBox(height: 24),
 
             // ═══════════════════════════════════
             // PART 2: OVERALL USAGE CHART
@@ -1126,8 +1346,8 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
             // ═══════════════════════════════════
             Text(
               "Medicines (${_filteredInventory.length})",
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: isDark ? Colors.white : const Color(0xFF1E293B),
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -1135,7 +1355,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
             const SizedBox(height: 4),
             Text(
               "Sorted by depletion risk — tap for details",
-              style: TextStyle(color: Colors.blueGrey, fontSize: 12),
+              style: TextStyle(color: isDark ? Colors.blueGrey : const Color(0xFF64748B), fontSize: 12),
             ),
             Builder(
               builder: (context) {
@@ -1157,7 +1377,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                         children: [
                           IconButton(
                             icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 16),
-                            color: safePage > 1 ? Colors.cyanAccent : Colors.grey,
+                            color: safePage > 1 ? (isDark ? Colors.cyanAccent : Colors.blueAccent) : Colors.grey,
                             onPressed: safePage > 1
                                 ? () => setState(() => currentPage = safePage - 1)
                                 : null,
@@ -1166,14 +1386,14 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF1E293B),
+                              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
                               borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: Colors.white12),
+                              border: Border.all(color: isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
                             ),
                             child: Text(
                               "Page $safePage of $totalPages",
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: isDark ? Colors.white : const Color(0xFF1E293B),
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -1182,7 +1402,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                           const SizedBox(width: 12),
                           IconButton(
                             icon: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
-                            color: safePage < totalPages ? Colors.cyanAccent : Colors.grey,
+                            color: safePage < totalPages ? (isDark ? Colors.cyanAccent : Colors.blueAccent) : Colors.grey,
                             onPressed: safePage < totalPages
                                 ? () => setState(() => currentPage = safePage + 1)
                                 : null,
@@ -1202,7 +1422,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                 child: Text(
                   "No medicines match your search.",
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white38, fontSize: 15),
+                  style: TextStyle(color: isDark ? Colors.white38 : const Color(0xFF94A3B8), fontSize: 15),
                 ),
               ),
           ],
@@ -1213,6 +1433,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
 
   // ---- OVERALL USAGE SECTION ----
   Widget _buildOverallUsageSection() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final today = DateTime.now();
 
     List<String> dailyLabels = List.generate(7, (i) {
@@ -1236,21 +1457,21 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white12),
+        border: Border.all(color: isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.bar_chart_rounded, color: Colors.cyanAccent, size: 22),
+              Icon(Icons.bar_chart_rounded, color: isDark ? Colors.cyanAccent : Colors.blueAccent, size: 22),
               const SizedBox(width: 8),
-              const Text(
+              Text(
                 "Consolidated Medicine Usage",
                 style: TextStyle(
-                  color: Colors.white,
+                  color: isDark ? Colors.white : const Color(0xFF1E293B),
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
@@ -1258,10 +1479,10 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
             ],
           ),
           const SizedBox(height: 6),
-          const Text(
+          Text(
             "Total units of all medicines dispensed across the entire clinic.",
             style: TextStyle(
-              color: Colors.blueGrey,
+              color: isDark ? Colors.blueGrey : const Color(0xFF64748B),
               fontSize: 12,
             ),
           ),
@@ -1274,7 +1495,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                 child: _buildMetricBadge(
                   "7-Day Total",
                   "$total7d units",
-                  Colors.cyanAccent,
+                  isDark ? Colors.cyanAccent : Colors.blueAccent,
                 ),
               ),
               const SizedBox(width: 12),
@@ -1300,7 +1521,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: _buildMiniChart("Daily (7 days)", dailyUsage, dailyLabels, Colors.cyanAccent)),
+              Expanded(child: _buildMiniChart("Daily (7 days)", dailyUsage, dailyLabels, isDark ? Colors.cyanAccent : Colors.blueAccent)),
               const SizedBox(width: 12),
               Expanded(child: _buildMiniChart("Weekly (4 weeks)", weeklyUsage, weeklyLabels, Colors.amberAccent)),
               const SizedBox(width: 12),
@@ -1313,6 +1534,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
   }
 
   Widget _buildMetricBadge(String label, String value, Color color) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
@@ -1325,8 +1547,8 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
         children: [
           Text(
             label,
-            style: const TextStyle(
-              color: Colors.blueGrey,
+            style: TextStyle(
+              color: isDark ? Colors.blueGrey : const Color(0xFF64748B),
               fontSize: 10,
               fontWeight: FontWeight.w600,
             ),
@@ -1381,6 +1603,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
 
   // ---- HISTORICAL TRENDS SECTION ----
   Widget _buildHistoricalTrendsSection() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     if (inventoryHistory.isEmpty || historyDates.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -1404,21 +1627,21 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white12),
+        border: Border.all(color: isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.history_toggle_off_rounded, color: Colors.cyanAccent, size: 20),
+              Icon(Icons.history_toggle_off_rounded, color: isDark ? Colors.cyanAccent : Colors.blueAccent, size: 20),
               const SizedBox(width: 8),
-              const Text(
+              Text(
                 "30-Day Inventory History",
                 style: TextStyle(
-                  color: Colors.white,
+                  color: isDark ? Colors.white : const Color(0xFF1E293B),
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
@@ -1428,16 +1651,16 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF0F172A),
+                  color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.cyanAccent.withOpacity(0.3)),
+                  border: Border.all(color: (isDark ? Colors.cyanAccent : Colors.blueAccent).withOpacity(0.3)),
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     value: selectedHistoryMedicine,
-                    dropdownColor: const Color(0xFF0F172A),
-                    icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.cyanAccent, size: 16),
-                    style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                    dropdownColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                    icon: Icon(Icons.keyboard_arrow_down_rounded, color: isDark ? Colors.cyanAccent : Colors.blueAccent, size: 16),
+                    style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1E293B), fontSize: 11, fontWeight: FontWeight.bold),
                     items: inventoryHistory.keys.map((String key) {
                       return DropdownMenuItem<String>(
                         value: key,
@@ -1467,9 +1690,9 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
             Container(
               height: 180,
               alignment: Alignment.center,
-              child: const Text(
+              child: Text(
                 "No historical data for selected medicine.",
-                style: TextStyle(color: Colors.white38),
+                style: TextStyle(color: isDark ? Colors.white38 : const Color(0xFF94A3B8)),
               ),
             )
           else
@@ -1480,7 +1703,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                   gridData: FlGridData(
                     show: true,
                     drawVerticalLine: false,
-                    getDrawingHorizontalLine: (v) => FlLine(color: Colors.white10, strokeWidth: 1, dashArray: [5, 5]),
+                    getDrawingHorizontalLine: (v) => FlLine(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0), strokeWidth: 1, dashArray: [5, 5]),
                   ),
                   titlesData: FlTitlesData(
                     show: true,
@@ -1502,12 +1725,12 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                             String formatted = "${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}";
                             return Padding(
                               padding: const EdgeInsets.only(top: 8.0),
-                              child: Text(formatted, style: const TextStyle(color: Colors.blueGrey, fontSize: 9)),
+                              child: Text(formatted, style: TextStyle(color: isDark ? Colors.blueGrey : const Color(0xFF64748B), fontSize: 9)),
                             );
                           } catch (_) {
                             return Padding(
                               padding: const EdgeInsets.only(top: 8.0),
-                              child: Text(rawDate.length > 5 ? rawDate.substring(5) : rawDate, style: const TextStyle(color: Colors.blueGrey, fontSize: 9)),
+                              child: Text(rawDate.length > 5 ? rawDate.substring(5) : rawDate, style: TextStyle(color: isDark ? Colors.blueGrey : const Color(0xFF64748B), fontSize: 9)),
                             );
                           }
                         },
@@ -1518,7 +1741,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                         showTitles: true,
                         interval: maxY / 4 > 0 ? maxY / 4 : 10,
                         getTitlesWidget: (value, meta) {
-                          return Text(value.toInt().toString(), style: const TextStyle(color: Colors.blueGrey, fontSize: 9));
+                          return Text(value.toInt().toString(), style: TextStyle(color: isDark ? Colors.blueGrey : const Color(0xFF64748B), fontSize: 9));
                         },
                         reservedSize: 28,
                       ),
@@ -1563,9 +1786,9 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                           bool showDot = index == 0 || index == spots.length - 1 || index % 5 == 0;
                           return FlDotCirclePainter(
                             radius: showDot ? 3 : 0,
-                            color: Colors.cyanAccent,
+                            color: isDark ? Colors.cyanAccent : Colors.blueAccent,
                             strokeWidth: showDot ? 2 : 0,
-                            strokeColor: const Color(0xFF1E293B),
+                            strokeColor: isDark ? const Color(0xFF1E293B) : Colors.white,
                           );
                         },
                       ),
@@ -1588,15 +1811,16 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
   }
 
   Widget _buildMiniChart(String label, List<int> values, List<String> xLabels, Color color) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     if (values.isEmpty) {
       return Container(
         height: 140,
         decoration: BoxDecoration(
-          color: const Color(0xFF0F172A),
+          color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Center(
-          child: Text("No data", style: TextStyle(color: Colors.white38, fontSize: 11)),
+          child: Text("No data", style: TextStyle(color: isDark ? Colors.white38 : const Color(0xFF94A3B8), fontSize: 11)),
         ),
       );
     }
@@ -1615,14 +1839,14 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
               barTouchData: BarTouchData(
                 enabled: true,
                 touchTooltipData: BarTouchTooltipData(
-                  tooltipBgColor: const Color(0xFF1E293B),
-                  tooltipBorder: const BorderSide(color: Colors.white10),
+                  tooltipBgColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+                  tooltipBorder: BorderSide(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
                   tooltipPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   tooltipMargin: 4,
                   getTooltipItem: (group, groupIndex, rod, rodIndex) {
                     return BarTooltipItem(
                       "${rod.toY.toInt()} units",
-                      const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                      TextStyle(color: isDark ? Colors.white : const Color(0xFF1E293B), fontSize: 10, fontWeight: FontWeight.bold),
                     );
                   },
                 ),
@@ -1638,7 +1862,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                       if (idx >= 0 && idx < xLabels.length) {
                         return Padding(
                           padding: const EdgeInsets.only(top: 4.0),
-                          child: Text(xLabels[idx], style: const TextStyle(color: Colors.blueGrey, fontSize: 8, fontWeight: FontWeight.bold)),
+                          child: Text(xLabels[idx], style: TextStyle(color: isDark ? Colors.blueGrey : const Color(0xFF64748B), fontSize: 8, fontWeight: FontWeight.bold)),
                         );
                       }
                       return const SizedBox.shrink();
@@ -1651,7 +1875,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                     reservedSize: 22,
                     interval: effectiveMax / 2 > 0 ? effectiveMax / 2 : 10,
                     getTitlesWidget: (value, meta) {
-                      return Text(value.toInt().toString(), style: const TextStyle(color: Colors.blueGrey, fontSize: 8));
+                      return Text(value.toInt().toString(), style: TextStyle(color: isDark ? Colors.blueGrey : const Color(0xFF64748B), fontSize: 8));
                     },
                   ),
                 ),
@@ -1666,7 +1890,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
               gridData: FlGridData(
                 show: true,
                 drawVerticalLine: false,
-                getDrawingHorizontalLine: (value) => FlLine(color: Colors.white10, strokeWidth: 0.8),
+                getDrawingHorizontalLine: (value) => FlLine(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0), strokeWidth: 0.8),
               ),
               barGroups: List.generate(values.length, (i) {
                 return BarChartGroupData(
@@ -1689,7 +1913,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
         const SizedBox(height: 8),
         Text(
           label,
-          style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w600),
+          style: TextStyle(color: isDark ? Colors.white70 : const Color(0xFF64748B), fontSize: 11, fontWeight: FontWeight.w600),
           textAlign: TextAlign.center,
         ),
       ],
@@ -1768,6 +1992,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
   }
 
   Widget _buildStatCard(String title, String value, String subtitle, Color color, IconData icon, VoidCallback onTap) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Card(
       color: Colors.transparent,
       elevation: 0,
@@ -1783,7 +2008,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
         child: Ink(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: const Color(0xFF1E293B),
+            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: color.withOpacity(0.3)),
           ),
@@ -1796,7 +2021,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                   const SizedBox(width: 6),
                   Text(
                     title,
-                    style: const TextStyle(color: Colors.blueGrey, fontSize: 11, fontWeight: FontWeight.bold),
+                                      style: TextStyle(color: isDark ? Colors.blueGrey : const Color(0xFF64748B), fontSize: 11, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -1812,7 +2037,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
               const SizedBox(height: 2),
               Text(
                 subtitle,
-                style: const TextStyle(color: Colors.white38, fontSize: 11),
+                style: TextStyle(color: isDark ? Colors.white38 : const Color(0xFF94A3B8), fontSize: 11),
               ),
             ],
           ),
@@ -1822,10 +2047,11 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
   }
 
   void _showStockTrendPopup(String categoryName, Color categoryColor, bool Function(dynamic) filterFn) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final filteredList = smartInventory.where(filterFn).toList();
 
     final List<Color> lineColors = [
-      Colors.cyanAccent,
+      isDark ? Colors.cyanAccent : Colors.blueAccent,
       Colors.pinkAccent,
       Colors.amberAccent,
       Colors.lightGreenAccent,
@@ -1845,7 +2071,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return Dialog(
-              backgroundColor: const Color(0xFF0F172A),
+              backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
               insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(24),
@@ -1879,8 +2105,8 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                             children: [
                               Text(
                                 "$categoryName Medicines",
-                                style: const TextStyle(
-                                  color: Colors.white,
+                                style: TextStyle(
+                                  color: isDark ? Colors.white : const Color(0xFF1E293B),
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -1888,8 +2114,8 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                               const SizedBox(height: 2),
                               Text(
                                 "${filteredList.length} items total",
-                                style: const TextStyle(
-                                  color: Colors.blueGrey,
+                                style: TextStyle(
+                                  color: isDark ? Colors.blueGrey : const Color(0xFF64748B),
                                   fontSize: 12,
                                 ),
                               ),
@@ -1897,12 +2123,12 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.close_rounded, color: Colors.white54),
+                          icon: Icon(Icons.close_rounded, color: isDark ? Colors.white54 : const Color(0xFF94A3B8)),
                           onPressed: () => Navigator.pop(context),
                         ),
                       ],
                     ),
-                    const Divider(color: Colors.white12, height: 24),
+                    Divider(color: isDark ? Colors.white12 : const Color(0xFFE2E8F0), height: 24),
 
                     if (filteredList.isNotEmpty) ...[
                       Builder(
@@ -1923,7 +2149,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                                 children: [
                                   Row(
                                     children: [
-                                      const Icon(Icons.history_toggle_off_rounded, color: Colors.cyanAccent, size: 12),
+                                      Icon(Icons.history_toggle_off_rounded, color: isDark ? Colors.cyanAccent : Colors.blueAccent, size: 12),
                                       const SizedBox(width: 6),
                                       Text(
                                         "Consolidated 30-Day History",
@@ -1936,17 +2162,17 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFF1E293B),
+            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
                                         borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(color: Colors.cyanAccent.withOpacity(0.3), width: 1),
+                                        border: Border.all(color: (isDark ? Colors.cyanAccent : Colors.blueAccent).withOpacity(0.3), width: 1),
                                       ),
                                       child: DropdownButtonHideUnderline(
                                         child: DropdownButton<String>(
                                           value: selectedPopupMed,
                                           isDense: true,
-                                          dropdownColor: const Color(0xFF1E293B),
-                                          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.cyanAccent, size: 16),
-                                          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                                          dropdownColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                                          icon: Icon(Icons.keyboard_arrow_down_rounded, color: isDark ? Colors.cyanAccent : Colors.blueAccent, size: 16),
+                                          style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1E293B), fontSize: 11, fontWeight: FontWeight.w600),
                                           borderRadius: BorderRadius.circular(12),
                                           onChanged: (String? newValue) {
                                             setDialogState(() {
@@ -1968,7 +2194,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                                                 child: Text(
                                                   name,
                                                   overflow: TextOverflow.ellipsis,
-                                                  style: const TextStyle(fontSize: 11, color: Colors.white),
+                                                  style: TextStyle(fontSize: 11, color: isDark ? Colors.white : const Color(0xFF1E293B)),
                                                 ),
                                               ),
                                             );
@@ -1984,9 +2210,9 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                                 height: 300,
                                 padding: const EdgeInsets.fromLTRB(4, 12, 12, 4),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF0F172A),
+                                  color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: Colors.white10),
+                                  border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
                                 ),
                                 child: _buildPopupChartAll(filteredList, lineColors, selectedPopupMed),
                               ),
@@ -2036,7 +2262,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                                             Text(
                                               name,
                                               style: TextStyle(
-                                                color: isSelected ? Colors.white : Colors.white54,
+                                                color: isSelected ? (isDark ? Colors.white : const Color(0xFF1E293B)) : (isDark ? Colors.white54 : const Color(0xFF94A3B8)),
                                                 fontSize: 11,
                                                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                                               ),
@@ -2058,7 +2284,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                                     IconButton(
                                       padding: EdgeInsets.zero,
                                       constraints: const BoxConstraints(),
-                                      icon: const Icon(Icons.arrow_left_rounded, color: Colors.cyanAccent, size: 28),
+                                      icon: Icon(Icons.arrow_left_rounded, color: isDark ? Colors.cyanAccent : Colors.blueAccent, size: 28),
                                       onPressed: correctedLegendPage > 0
                                           ? () {
                                               setDialogState(() {
@@ -2070,13 +2296,13 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                                     const SizedBox(width: 8),
                                     Text(
                                       "Legend Page ${correctedLegendPage + 1} of $totalLegendPages",
-                                      style: const TextStyle(color: Colors.blueGrey, fontSize: 11, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: isDark ? Colors.blueGrey : const Color(0xFF64748B), fontSize: 11, fontWeight: FontWeight.bold),
                                     ),
                                     const SizedBox(width: 8),
                                     IconButton(
                                       padding: EdgeInsets.zero,
                                       constraints: const BoxConstraints(),
-                                      icon: const Icon(Icons.arrow_right_rounded, color: Colors.cyanAccent, size: 28),
+                                      icon: Icon(Icons.arrow_right_rounded, color: isDark ? Colors.cyanAccent : Colors.blueAccent, size: 28),
                                       onPressed: correctedLegendPage < totalLegendPages - 1
                                           ? () {
                                               setDialogState(() {
@@ -2104,6 +2330,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
   }
 
   Widget _buildPopupChartAll(List<dynamic> filteredList, List<Color> assignedColors, String? selectedPopupMed) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final List<LineChartBarData> fadedLines = [];
     LineChartBarData? highlightedLine;
     double overallMaxY = 10;
@@ -2143,7 +2370,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                 radius: showDot ? 2.5 : 0,
                 color: color,
                 strokeWidth: showDot ? 1.5 : 0,
-                strokeColor: const Color(0xFF1E293B),
+                strokeColor: isDark ? const Color(0xFF1E293B) : Colors.white,
               );
             },
           ),
@@ -2159,10 +2386,10 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
     }
 
     if (fadedLines.isEmpty && highlightedLine == null) {
-      return const Center(
+      return Center(
         child: Text(
           "Insufficient historical data to graph 30-day history.",
-          style: TextStyle(color: Colors.white54, fontSize: 12),
+          style: TextStyle(color: isDark ? Colors.white54 : const Color(0xFF94A3B8), fontSize: 12),
         ),
       );
     }
@@ -2180,7 +2407,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
-          getDrawingHorizontalLine: (v) => FlLine(color: Colors.white10, strokeWidth: 1, dashArray: [5, 5]),
+          getDrawingHorizontalLine: (v) => FlLine(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0), strokeWidth: 1, dashArray: [5, 5]),
         ),
         titlesData: FlTitlesData(
           show: true,
@@ -2202,12 +2429,12 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                   String formatted = "${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}";
                   return Padding(
                     padding: const EdgeInsets.only(top: 8.0),
-                    child: Text(formatted, style: const TextStyle(color: Colors.blueGrey, fontSize: 9)),
+                    child: Text(formatted, style: TextStyle(color: isDark ? Colors.blueGrey : const Color(0xFF64748B), fontSize: 9)),
                   );
                 } catch (_) {
                   return Padding(
                     padding: const EdgeInsets.only(top: 8.0),
-                    child: Text(rawDate.length > 5 ? rawDate.substring(5) : rawDate, style: const TextStyle(color: Colors.blueGrey, fontSize: 9)),
+                    child: Text(rawDate.length > 5 ? rawDate.substring(5) : rawDate, style: TextStyle(color: isDark ? Colors.blueGrey : const Color(0xFF64748B), fontSize: 9)),
                   );
                 }
               },
@@ -2218,7 +2445,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
               showTitles: true,
               interval: maxY / 4 > 0 ? maxY / 4 : 10,
               getTitlesWidget: (value, meta) {
-                return Text(value.toInt().toString(), style: const TextStyle(color: Colors.blueGrey, fontSize: 9));
+                return Text(value.toInt().toString(), style: TextStyle(color: isDark ? Colors.blueGrey : const Color(0xFF64748B), fontSize: 9));
               },
               reservedSize: 28,
             ),
@@ -2256,25 +2483,26 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
 
   // ---- TOP PRODUCTS ----
   Widget _buildTopProductsSection() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white12),
+        border: Border.all(color: isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.bar_chart_rounded, color: Colors.cyanAccent, size: 20),
+              Icon(Icons.bar_chart_rounded, color: isDark ? Colors.cyanAccent : Colors.blueAccent, size: 20),
               const SizedBox(width: 8),
-              const Text(
+              Text(
                 "Top Dispensed Products",
                 style: TextStyle(
-                  color: Colors.white,
+                  color: isDark ? Colors.white : const Color(0xFF1E293B),
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
@@ -2287,7 +2515,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
               padding: const EdgeInsets.symmetric(vertical: 16),
               child: Text(
                 "No usage data available yet.",
-                style: TextStyle(color: Colors.white38),
+                style: TextStyle(color: isDark ? Colors.white38 : const Color(0xFF94A3B8)),
               ),
             )
           else
@@ -2302,9 +2530,9 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                 margin: const EdgeInsets.only(bottom: 8),
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
-                  color: isTop ? Colors.cyanAccent.withOpacity(0.08) : Colors.transparent,
+                  color: isTop ? (isDark ? Colors.cyanAccent : Colors.blueAccent).withOpacity(0.08) : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
-                  border: isTop ? Border.all(color: Colors.cyanAccent.withOpacity(0.3)) : null,
+                  border: isTop ? Border.all(color: (isDark ? Colors.cyanAccent : Colors.blueAccent).withOpacity(0.3)) : null,
                 ),
                 child: Row(
                   children: [
@@ -2313,13 +2541,13 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                       height: 26,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: isTop ? Colors.cyanAccent : Colors.white12,
+                        color: isTop ? (isDark ? Colors.cyanAccent : Colors.blueAccent) : (isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         "#${i + 1}",
                         style: TextStyle(
-                          color: isTop ? Colors.black : Colors.white70,
+                          color: isTop ? Colors.black : (isDark ? Colors.white70 : const Color(0xFF64748B)),
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                         ),
@@ -2330,7 +2558,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                       child: Text(
                         name,
                         style: TextStyle(
-                          color: isTop ? Colors.cyanAccent : Colors.white,
+                          color: isTop ? (isDark ? Colors.cyanAccent : Colors.blueAccent) : (isDark ? Colors.white : const Color(0xFF1E293B)),
                           fontWeight: isTop ? FontWeight.bold : FontWeight.normal,
                           fontSize: 14,
                         ),
@@ -2339,7 +2567,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                     Text(
                       "$totalUsed used",
                       style: TextStyle(
-                        color: Colors.blueGrey,
+                        color: isDark ? Colors.blueGrey : const Color(0xFF64748B),
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                       ),
@@ -2355,20 +2583,21 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
 
   // ---- INSIGHT MESSAGE ----
   Widget _buildInsightMessageCard() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            Colors.cyanAccent.withOpacity(0.08),
-            const Color(0xFF1E293B),
+            (isDark ? Colors.cyanAccent : Colors.blueAccent).withOpacity(0.08),
+            isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.cyanAccent.withOpacity(0.2)),
+        border: Border.all(color: (isDark ? Colors.cyanAccent : Colors.blueAccent).withOpacity(0.2)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2376,20 +2605,20 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Colors.cyanAccent.withOpacity(0.12),
+              color: (isDark ? Colors.cyanAccent : Colors.blueAccent).withOpacity(0.12),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.auto_awesome_rounded, color: Colors.cyanAccent, size: 24),
+            child: Icon(Icons.auto_awesome_rounded, color: isDark ? Colors.cyanAccent : Colors.blueAccent, size: 24),
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   "AI Recommendation",
                   style: TextStyle(
-                    color: Colors.cyanAccent,
+                    color: isDark ? Colors.cyanAccent : Colors.blueAccent,
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),
@@ -2398,7 +2627,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                 Text(
                   insightMessage,
                   style: TextStyle(
-                    color: Colors.white70,
+                    color: isDark ? Colors.white70 : const Color(0xFF64748B),
                     fontSize: 14,
                     height: 1.5,
                   ),
@@ -2413,25 +2642,26 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
 
   // ---- SEARCH BAR ----
   Widget _buildSearchBar() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return TextField(
       onChanged: (v) => setState(() {
         searchQuery = v.trim();
         currentPage = 1;
       }),
-      style: const TextStyle(color: Colors.white),
+      style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1E293B)),
       decoration: InputDecoration(
         hintText: "Search medicine...",
-        hintStyle: TextStyle(color: Colors.blueGrey),
-        prefixIcon: const Icon(Icons.search_rounded, color: Colors.blueGrey),
+        hintStyle: TextStyle(color: isDark ? Colors.blueGrey : const Color(0xFF64748B)),
+        prefixIcon: Icon(Icons.search_rounded, color: isDark ? Colors.blueGrey : const Color(0xFF64748B)),
         filled: true,
-        fillColor: const Color(0xFF1E293B),
+        fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Colors.cyanAccent, width: 1.5),
+          borderSide: BorderSide(color: isDark ? Colors.cyanAccent : Colors.blueAccent, width: 1.5),
         ),
       ),
     );
@@ -2439,6 +2669,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
 
   // ---- MEDICINE LIST TILE ----
   Widget _buildMedicineTile(dynamic data) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final name = itemNameOf(data);
     final runOutDays = data['run_out_days'] ?? -1;
     final hasWarning = data['has_epidemic_warning'] ?? false;
@@ -2466,9 +2697,9 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF1E293B).withOpacity(0.5),
+          color: (isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9)).withOpacity(0.5),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white12),
+          border: Border.all(color: isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
         ),
         child: Row(
           children: [
@@ -2487,8 +2718,8 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
             Expanded(
               child: Text(
                 name,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: isDark ? Colors.white : const Color(0xFF1E293B),
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
                 ),
@@ -2499,7 +2730,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                 padding: EdgeInsets.only(right: 8),
                 child: Icon(Icons.bolt, color: Colors.yellowAccent, size: 18),
               ),
-            const Icon(Icons.chevron_right, color: Colors.white24, size: 20),
+            Icon(Icons.chevron_right, color: isDark ? Colors.white24 : const Color(0xFF94A3B8), size: 20),
           ],
         ),
       ),
@@ -2539,6 +2770,7 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final itemName = itemNameOf(data);
     final currentStock = data['current_stock'] ?? 0;
     final runOutDays = data['run_out_days'] ?? -1;
@@ -2566,11 +2798,11 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Text(itemName, style: const TextStyle(color: Colors.white)),
-        backgroundColor: const Color(0xFF0F172A),
-        iconTheme: const IconThemeData(color: Colors.white),
+        title: Text(itemName, style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1E293B))),
+        backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+        iconTheme: IconThemeData(color: isDark ? Colors.white : const Color(0xFF1E293B)),
         elevation: 0,
       ),
       body: SingleChildScrollView(
@@ -2588,16 +2820,16 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                     children: [
                       Text(
                         itemName,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: isDark ? Colors.white : const Color(0xFF1E293B),
                           fontSize: 26,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(height: 4),
-                      const Text(
+                      Text(
                         "AI Forecast & Depletion Analysis",
-                        style: TextStyle(color: Colors.cyanAccent, fontSize: 13),
+                        style: TextStyle(color: isDark ? Colors.cyanAccent : Colors.blueAccent, fontSize: 13),
                       ),
                     ],
                   ),
@@ -2649,9 +2881,9 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                 children: [
                   Expanded(child: _buildMetricCard("Run-Out Date", runOutDate, daysText, statusColor)),
                   const SizedBox(width: 12),
-                  Expanded(child: _buildMetricCard("Current Stock", "$currentStock Units", "In Inventory", Colors.white70)),
+                  Expanded(child: _buildMetricCard("Current Stock", "$currentStock Units", "In Inventory", isDark ? Colors.white70 : const Color(0xFF64748B))),
                   const SizedBox(width: 12),
-                  Expanded(child: _buildMetricCard("Recommended Order", "+$recommendQty", "30-day safety stock", Colors.cyanAccent)),
+                  Expanded(child: _buildMetricCard("Recommended Order", "+$recommendQty", "30-day safety stock", isDark ? Colors.cyanAccent : Colors.blueAccent)),
                 ],
               ),
             ),
@@ -2662,32 +2894,32 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
               height: 260,
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               decoration: BoxDecoration(
-                color: const Color(0xFF1E293B),
+                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.white12),
+                border: Border.all(color: isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.show_chart_rounded, color: Colors.cyanAccent, size: 18),
+                      Icon(Icons.show_chart_rounded, color: isDark ? Colors.cyanAccent : Colors.blueAccent, size: 18),
                       const SizedBox(width: 8),
-                      const Text(
+                      Text(
                         "7-Day Demand Trajectory",
-                        style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                        style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1E293B), fontSize: 15, fontWeight: FontWeight.bold),
                       ),
                       const Spacer(),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: Colors.cyanAccent.withOpacity(0.1),
+                          color: (isDark ? Colors.cyanAccent : Colors.blueAccent).withOpacity(0.1),
                           borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: Colors.cyanAccent.withOpacity(0.3)),
+                          border: Border.all(color: (isDark ? Colors.cyanAccent : Colors.blueAccent).withOpacity(0.3)),
                         ),
-                        child: const Text(
+                        child: Text(
                           "AI Forecast",
-                          style: TextStyle(color: Colors.cyanAccent, fontSize: 10, fontWeight: FontWeight.bold),
+                          style: TextStyle(color: isDark ? Colors.cyanAccent : Colors.blueAccent, fontSize: 10, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],
@@ -2705,9 +2937,9 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
               height: 260,
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               decoration: BoxDecoration(
-                color: const Color(0xFF1E293B),
+                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.white12),
+                border: Border.all(color: isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -2716,9 +2948,9 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                     children: [
                       const Icon(Icons.trending_down_rounded, color: Colors.redAccent, size: 18),
                       const SizedBox(width: 8),
-                      const Text(
+                      Text(
                         "7-Day Stock Depletion (Burn-Down)",
-                        style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                        style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1E293B), fontSize: 15, fontWeight: FontWeight.bold),
                       ),
                       const Spacer(),
                       Container(
@@ -2766,19 +2998,20 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
   }
 
   Widget _buildMetricCard(String title, String value, String subtitle, Color glowColor) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: glowColor.withOpacity(0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: TextStyle(color: Colors.blueGrey[400], fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.8)),
+          Text(title, style: TextStyle(color: isDark ? Colors.blueGrey[400] : const Color(0xFF64748B), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.8)),
           const SizedBox(height: 6),
-          Text(value, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+          Text(value, style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1E293B), fontSize: 22, fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
           Text(subtitle, style: TextStyle(color: glowColor, fontSize: 11, fontWeight: FontWeight.w600)),
         ],
@@ -2787,9 +3020,10 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
   }
 
   Widget _buildChart(List<int> forecastData) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     if (forecastData.isEmpty || forecastData.every((e) => e == 0)) {
       return Center(
-        child: Text("Insufficient historical data to graph.", style: TextStyle(color: Colors.white54)),
+        child: Text("Insufficient historical data to graph.", style: TextStyle(color: isDark ? Colors.white54 : const Color(0xFF94A3B8))),
       );
     }
 
@@ -2806,7 +3040,7 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
-          getDrawingHorizontalLine: (v) => FlLine(color: Colors.white10, strokeWidth: 1, dashArray: [5, 5]),
+          getDrawingHorizontalLine: (v) => FlLine(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0), strokeWidth: 1, dashArray: [5, 5]),
         ),
         titlesData: FlTitlesData(
           show: true,
@@ -2820,7 +3054,7 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
               getTitlesWidget: (value, meta) {
                 return Padding(
                   padding: const EdgeInsets.only(top: 8.0),
-                  child: Text("Day ${value.toInt() + 1}", style: const TextStyle(color: Colors.blueGrey, fontSize: 12)),
+                  child: Text("Day ${value.toInt() + 1}", style: TextStyle(color: isDark ? Colors.blueGrey : const Color(0xFF64748B), fontSize: 12)),
                 );
               },
             ),
@@ -2830,7 +3064,7 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
               showTitles: true,
               interval: maxY / 4,
               getTitlesWidget: (value, meta) {
-                return Text(value.toInt().toString(), style: const TextStyle(color: Colors.blueGrey, fontSize: 12));
+                return Text(value.toInt().toString(), style: TextStyle(color: isDark ? Colors.blueGrey : const Color(0xFF64748B), fontSize: 12));
               },
               reservedSize: 40,
             ),
@@ -2853,9 +3087,9 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
               show: true,
               getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
                 radius: 4,
-                color: Colors.cyanAccent,
+                color: isDark ? Colors.cyanAccent : Colors.blueAccent,
                 strokeWidth: 2,
-                strokeColor: const Color(0xFF1E293B),
+                strokeColor: isDark ? const Color(0xFF1E293B) : Colors.white,
               ),
             ),
             belowBarData: BarAreaData(
@@ -2873,9 +3107,10 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
   }
 
   Widget _buildBurnDownChart(int currentStock, List<int> forecastData) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     if (forecastData.isEmpty) {
-      return const Center(
-        child: Text("No forecast data to calculate depletion.", style: TextStyle(color: Colors.white54)),
+      return Center(
+        child: Text("No forecast data to calculate depletion.", style: TextStyle(color: isDark ? Colors.white54 : const Color(0xFF94A3B8))),
       );
     }
 
@@ -2904,7 +3139,7 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
-          getDrawingHorizontalLine: (v) => FlLine(color: Colors.white10, strokeWidth: 1, dashArray: [5, 5]),
+          getDrawingHorizontalLine: (v) => FlLine(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0), strokeWidth: 1, dashArray: [5, 5]),
         ),
         titlesData: FlTitlesData(
           show: true,
@@ -2917,14 +3152,14 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
               interval: 1,
               getTitlesWidget: (value, meta) {
                 if (value.toInt() == 0) {
-                  return const Padding(
-                    padding: EdgeInsets.only(top: 8.0),
-                    child: Text("Today", style: TextStyle(color: Colors.blueGrey, fontSize: 10, fontWeight: FontWeight.bold)),
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Text("Today", style: TextStyle(color: isDark ? Colors.blueGrey : const Color(0xFF64748B), fontSize: 10, fontWeight: FontWeight.bold)),
                   );
                 }
                 return Padding(
                   padding: const EdgeInsets.only(top: 8.0),
-                  child: Text("Day ${value.toInt()}", style: const TextStyle(color: Colors.blueGrey, fontSize: 10)),
+                  child: Text("Day ${value.toInt()}", style: TextStyle(color: isDark ? Colors.blueGrey : const Color(0xFF64748B), fontSize: 10)),
                 );
               },
             ),
@@ -2934,7 +3169,7 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
               showTitles: true,
               interval: maxY / 4,
               getTitlesWidget: (value, meta) {
-                return Text(value.toInt().toString(), style: const TextStyle(color: Colors.blueGrey, fontSize: 10));
+                return Text(value.toInt().toString(), style: TextStyle(color: isDark ? Colors.blueGrey : const Color(0xFF64748B), fontSize: 10));
               },
               reservedSize: 30,
             ),
@@ -2978,7 +3213,7 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                 radius: 4,
                 color: Colors.redAccent,
                 strokeWidth: 2,
-                strokeColor: const Color(0xFF1E293B),
+                strokeColor: isDark ? const Color(0xFF1E293B) : Colors.white,
               ),
             ),
             belowBarData: BarAreaData(
@@ -3038,6 +3273,7 @@ class _OrderPageState extends State<OrderPage> {
   final TextEditingController _qtyController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
   int _lowStockCount = 0;
+  bool _hasPendingOrderFromBackend = false;
   bool _suggestionsExpanded = true;
   bool _showAllItems = false;
   int _draftCount = 0;
@@ -3207,8 +3443,18 @@ class _OrderPageState extends State<OrderPage> {
         timeout: const Duration(seconds: 45),
       );
       if (mounted) {
+        final suggested = data['order_suggestions'] ?? [];
+        debugPrint("DEBUG[order]: fetchSuggestions response keys=${data.keys}");
+        debugPrint("DEBUG[order]: suggestions count=${suggested.length}");
+        if (suggested.isEmpty) {
+          debugPrint("DEBUG[order]: EMPTY suggestions - checking error/block");
+          debugPrint("DEBUG[order]: data has error? ${data.containsKey('error')}");
+        } else {
+          debugPrint("DEBUG[order]: first item keys=${suggested.first is Map ? (suggested.first as Map).keys : 'not-map'}");
+        }
         setState(() {
-          suggestions = data['order_suggestions'] ?? [];
+          suggestions = suggested;
+          _hasPendingOrderFromBackend = data['has_pending_order'] == true;
           _showAllItems = false;
           _editableQtys.clear();
           for (final item in suggestions) {
@@ -3218,7 +3464,7 @@ class _OrderPageState extends State<OrderPage> {
         });
       }
     } catch (e) {
-      debugPrint("DEBUG: fetchSuggestions failed: $e");
+      debugPrint("DEBUG[order]: fetchSuggestions failed: $e");
     }
   }
 
@@ -3908,6 +4154,7 @@ class _OrderPageState extends State<OrderPage> {
       final qty = (item['quantity'] ?? 0) as num;
       if (qty < 20) lowStock++;
     }
+    debugPrint("DEBUG[order]: _fetchInventoryItems total=${items.length} lowStock=$lowStock");
     setState(() {
       _inventoryItems = items;
       _lowStockCount = lowStock;
@@ -4050,6 +4297,7 @@ class _OrderPageState extends State<OrderPage> {
     Color accentColor;
 
     final highCount = routeSummary['high_priority_count'] ?? 0;
+    debugPrint("DEBUG[order]: banner pendingOrder=${pendingOrder != null} lowStock=$_lowStockCount lastSubmitted=${lastSubmittedOrder != null} highCount=$highCount suggestions=${suggestions.length}");
 
     if (pendingOrder != null) {
       severityLabel = "DRAFT";
@@ -4620,13 +4868,11 @@ class _OrderPageState extends State<OrderPage> {
             physics: const AlwaysScrollableScrollPhysics(),
             children: [
               // ================= SECTION 1: ORDER DASHBOARD =================
-              Text(
-                "Order Dashboard",
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+              PageHeader(
+                title: "Order Dashboard",
+                subtitle: "Manage stock orders, view recommendations, and track submissions",
+                icon: Icons.shopping_cart_rounded,
               ),
-              const SizedBox(height: 12),
 
               _buildDashboardGrid(),
 
@@ -4684,6 +4930,31 @@ class _OrderPageState extends State<OrderPage> {
                             ),
                           ),
                         ),
+
+                        if (_hasPendingOrderFromBackend)
+                          Container(
+                            width: double.infinity,
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.orange.shade200),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.info_outline_rounded, size: 16, color: Colors.orange.shade700),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    "A pending draft or submitted order exists. "
+                                    "Recommendations below are for reference only.",
+                                    style: TextStyle(fontSize: 12, color: Colors.orange.shade800, height: 1.3),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
 
                         const SizedBox(height: 16),
 

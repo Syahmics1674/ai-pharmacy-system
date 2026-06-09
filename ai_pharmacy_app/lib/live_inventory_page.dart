@@ -3,6 +3,9 @@ import 'main.dart';
 import 'services/live_inventory_service.dart';
 import 'services/sync_service.dart';
 import 'dispense_history_page.dart';
+import 'theme/app_colors.dart';
+import 'widgets/common/page_header.dart';
+import 'widgets/common/empty_state.dart';
 
 class LiveInventoryPage extends StatefulWidget {
   final String? clinicId;
@@ -184,52 +187,44 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final bgColor = isDark ? const Color(0xFF090D1A) : const Color(0xFFF8FAFC);
+    final cardColor = isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9);
+    final textPrimary = isDark ? Colors.white : const Color(0xFF1E293B);
+    final textSecondary = isDark ? Colors.white.withOpacity(0.6) : const Color(0xFF64748B);
+    final borderColor = isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFE2E8F0);
+    final accentColor = isDark ? Colors.cyanAccent : AppColors.primary;
+
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF090D1A), Color(0xFF151C2C)],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-      ),
+      color: bgColor,
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
-          title: const Text(
-            "Live Inventory Status",
-            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18),
-          ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.refresh_rounded, color: Colors.cyanAccent),
-              onPressed: () async {
-                await SyncService.fullSync(widget.clinicId ?? '');
-                _load();
-              },
-            ),
-          ],
+          title: const SizedBox.shrink(),
+          toolbarHeight: _isOffline ? 90 : 50,
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(50),
             child: Container(
               margin: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.04),
+                color: cardColor,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withOpacity(0.08)),
+                border: Border.all(color: borderColor),
               ),
               child: TabBar(
                 controller: _tabController,
                 dividerColor: Colors.transparent,
                 indicator: BoxDecoration(
-                  color: Colors.cyanAccent.withOpacity(0.15),
+                  color: accentColor.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.cyanAccent.withOpacity(0.3), width: 1.5),
+                  border: Border.all(color: accentColor.withOpacity(0.3), width: 1.5),
                 ),
                 indicatorSize: TabBarIndicatorSize.tab,
-                labelColor: Colors.cyanAccent,
-                unselectedLabelColor: Colors.white.withOpacity(0.6),
+                labelColor: accentColor,
+                unselectedLabelColor: textSecondary,
                 labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 0.3),
                 unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 0.3),
                 tabs: const [
@@ -288,20 +283,30 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
   }
 
   Widget _buildInventoryTab() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final surfaceColor = isDark ? const Color(0xFF0F172A) : Colors.white;
+    final cardColor = isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9);
+    final textPrimary = isDark ? Colors.white : const Color(0xFF1E293B);
+    final textSecondary = isDark ? Colors.white.withOpacity(0.6) : const Color(0xFF64748B);
+    final textMuted = isDark ? Colors.white.withOpacity(0.4) : const Color(0xFF94A3B8);
+    final borderColor = isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFE2E8F0);
+    final accentColor = isDark ? Colors.cyanAccent : AppColors.primary;
+
     if (_isLoading) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const CircularProgressIndicator(
+            CircularProgressIndicator(
               strokeWidth: 3,
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.cyanAccent),
+              valueColor: AlwaysStoppedAnimation<Color>(accentColor),
             ),
             const SizedBox(height: 16),
             Text(
               "Loading live stock counts...",
               style: TextStyle(
-                color: Colors.white.withOpacity(0.5),
+                color: textSecondary,
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),
@@ -343,25 +348,25 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
           child: TextField(
-            style: const TextStyle(color: Colors.white, fontSize: 14),
+            style: TextStyle(color: textPrimary, fontSize: 14),
             decoration: InputDecoration(
               hintText: "Search catalog or code...",
-              hintStyle: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 14),
-              prefixIcon: Icon(Icons.search_rounded, color: Colors.white.withOpacity(0.5), size: 20),
+              hintStyle: TextStyle(color: textSecondary, fontSize: 14),
+              prefixIcon: Icon(Icons.search_rounded, color: textSecondary, size: 20),
               filled: true,
-              fillColor: Colors.white.withOpacity(0.03),
+              fillColor: surfaceColor,
               contentPadding: const EdgeInsets.symmetric(vertical: 12),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: Colors.white.withOpacity(0.06)),
+                borderSide: BorderSide(color: borderColor),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: Colors.white.withOpacity(0.06)),
+                borderSide: BorderSide(color: borderColor),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(color: Colors.cyanAccent),
+                borderSide: BorderSide(color: accentColor),
               ),
             ),
             onChanged: (v) {
@@ -393,7 +398,7 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
                         : label;
                     return Text(
                       "Sync: $short",
-                      style: TextStyle(fontSize: 10, color: Colors.white.withOpacity(0.4)),
+                      style: TextStyle(fontSize: 10, color: textSecondary),
                     );
                   },
                 ),
@@ -423,8 +428,8 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
                         chipColor = const Color(0xFF2FBF71);
                         textColor = Colors.white;
                       } else {
-                        chipColor = Colors.cyanAccent;
-                        textColor = const Color(0xFF090D1A);
+                        chipColor = accentColor;
+                        textColor = textPrimary;
                       }
                       return Padding(
                         padding: const EdgeInsets.only(right: 6),
@@ -439,10 +444,10 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
                             duration: const Duration(milliseconds: 200),
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                             decoration: BoxDecoration(
-                              color: active ? chipColor : Colors.white.withOpacity(0.05),
+                              color: active ? chipColor : borderColor,
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
-                                color: active ? chipColor : Colors.white.withOpacity(0.12),
+                                color: active ? chipColor : borderColor,
                                 width: 1.5,
                               ),
                             ),
@@ -451,7 +456,7 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
-                                color: active ? textColor : Colors.white.withOpacity(0.8),
+                                color: active ? textColor : textPrimary,
                               ),
                             ),
                           ),
@@ -465,16 +470,16 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.03),
-                  border: Border.all(color: Colors.white.withOpacity(0.06)),
+                  color: cardColor,
+                  border: Border.all(color: borderColor),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     value: _sortOption,
                     isDense: true,
-                    dropdownColor: const Color(0xFF1E293B),
-                    icon: Icon(Icons.arrow_drop_down_rounded, color: Colors.white.withOpacity(0.6)),
+                    dropdownColor: cardColor,
+                    icon: Icon(Icons.arrow_drop_down_rounded, color: textSecondary),
                     items: _sortOptions.map((s) {
                       return DropdownMenuItem(
                         value: s,
@@ -482,7 +487,7 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
                           s,
                           style: TextStyle(
                             fontSize: 11,
-                            color: Colors.white.withOpacity(0.85),
+                            color: textPrimary,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -504,22 +509,19 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
         const SizedBox(height: 8),
         // Inventory list
         if (_filtered.isEmpty)
-          Expanded(
-            child: Center(
-              child: Text(
-                _search.isEmpty && _filterChip == "All"
-                    ? "No inventory data found"
-                    : "No matching medicines found",
-                style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 13),
-              ),
+          const Expanded(
+            child: EmptyState(
+              icon: Icons.medication_rounded,
+              title: "No medicines found",
+              subtitle: "Adjust search or filter to see results",
             ),
           )
         else
           Expanded(
             child: RefreshIndicator(
               onRefresh: _load,
-              backgroundColor: const Color(0xFF1E293B),
-              color: Colors.cyanAccent,
+              backgroundColor: cardColor,
+              color: accentColor,
               child: ListView.builder(
                 padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
                 itemCount: _filtered.length,
@@ -535,9 +537,9 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
                   return Container(
                     margin: const EdgeInsets.only(bottom: 12),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.02),
+                      color: cardColor,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.white.withOpacity(0.05)),
+                      border: Border.all(color: borderColor),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.1),
@@ -568,10 +570,10 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
                               children: [
                                 Text(
                                   displayName,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 15,
-                                    color: Colors.white,
+                                    color: textPrimary,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -581,7 +583,7 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
                                   Text(
                                     genericName,
                                     style: TextStyle(
-                                      color: Colors.white.withOpacity(0.5),
+                                      color: textSecondary,
                                       fontSize: 12,
                                       fontWeight: FontWeight.w400,
                                     ),
@@ -594,7 +596,7 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
                                   Text(
                                     dosageForm,
                                     style: TextStyle(
-                                      color: Colors.white.withOpacity(0.4),
+                                      color: textMuted,
                                       fontSize: 11,
                                     ),
                                   ),
@@ -606,7 +608,7 @@ class _LiveInventoryPageState extends State<LiveInventoryPage>
                                     height: 4,
                                     child: LinearProgressIndicator(
                                       value: ratio,
-                                      backgroundColor: Colors.white.withOpacity(0.04),
+                                      backgroundColor: cardColor,
                                       valueColor: AlwaysStoppedAnimation<Color>(color),
                                     ),
                                   ),

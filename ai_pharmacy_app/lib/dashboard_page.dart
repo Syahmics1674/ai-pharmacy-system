@@ -3,6 +3,11 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 import 'config/api_config.dart';
+import 'widgets/common/metric_card.dart';
+import 'widgets/common/status_chip.dart';
+import 'widgets/common/page_header.dart';
+import 'widgets/common/status_badge.dart';
+import 'widgets/common/empty_state.dart';
 
 String dashItemNameOf(dynamic item) {
   if (item is Map) {
@@ -23,7 +28,6 @@ Future<Map<String, dynamic>> apiGet(String url) async {
 
 class DashboardPage extends StatefulWidget {
   final String clinicId;
-  final VoidCallback? onLogout;
   final VoidCallback? onNavigateInventory;
   final VoidCallback? onNavigateOperations;
   final VoidCallback? onNavigateOrders;
@@ -32,7 +36,6 @@ class DashboardPage extends StatefulWidget {
   const DashboardPage({
     super.key,
     required this.clinicId,
-    this.onLogout,
     this.onNavigateInventory,
     this.onNavigateOperations,
     this.onNavigateOrders,
@@ -86,10 +89,15 @@ class DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final bgColor = isDark ? const Color(0xFF090D1A) : const Color(0xFFF8FAFC);
+    final cardColor = isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9);
+
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF090D1A), Color(0xFF151C2C)],
+          colors: [bgColor, bgColor],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ),
@@ -98,7 +106,7 @@ class DashboardPageState extends State<DashboardPage> {
         backgroundColor: Colors.transparent,
         body: RefreshIndicator(
           onRefresh: fetchDashboardData,
-          backgroundColor: const Color(0xFF1E293B),
+          backgroundColor: cardColor,
           color: Colors.cyanAccent,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -177,19 +185,31 @@ class DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _shimmerBox({double height = 100, Widget? child}) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final cardColor = isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9);
+    final borderColor = isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFE2E8F0);
+
     return Container(
       height: height,
       width: double.infinity,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.04),
+        color: cardColor,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: borderColor),
       ),
       child: child,
     );
   }
 
   Widget _buildGreetingHeader() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final textPrimary = isDark ? Colors.white : const Color(0xFF1E293B);
+    final textMuted = isDark ? Colors.white.withOpacity(0.4) : const Color(0xFF94A3B8);
+    final borderColor = isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFE2E8F0);
+    final dividerColor = isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFE2E8F0);
+
     final clinicName = summary['clinic_name'] ?? widget.clinicId;
     final greeting = summary['greeting'] ?? "Hello";
     final currentDate = summary['current_date'] ?? "";
@@ -197,195 +217,56 @@ class DashboardPageState extends State<DashboardPage> {
     final currentTime = summary['current_time'] ?? "";
     final district = summary['district'] ?? "";
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            const Color(0xFF1E1E38).withOpacity(0.8),
-            const Color(0xFF0F172A).withOpacity(0.8)
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        PageHeader(
+          title: "$greeting, $clinicName",
+          subtitle: district.isNotEmpty ? "$currentDay, $currentDate  •  $currentTime  •  District: $district" : "$currentDay, $currentDate  •  $currentTime",
+          icon: Icons.dashboard_rounded,
+          trailing: StatusBadge(
+            label: "Active Online",
+            style: BadgeStyle.success,
+          ),
         ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "$greeting,",
-                      style: TextStyle(
-                        color: Colors.cyanAccent.shade200,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      clinicName,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.2,
-                      ),
-                    ),
-                    if (district.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.cyanAccent.withOpacity(0.08),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.cyanAccent.withOpacity(0.2)),
-                        ),
-                        child: Text(
-                          "District: $district",
-                          style: TextStyle(
-                            color: Colors.cyanAccent.shade100,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF10B981).withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(30),
-                      border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.circle, size: 8, color: Color(0xFF10B981)),
-                        SizedBox(width: 6),
-                        Text(
-                          "Active Online",
-                          style: TextStyle(
-                            color: Color(0xFF34D399),
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Material(
-                    color: Colors.redAccent.withOpacity(0.08),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      side: BorderSide(color: Colors.redAccent.withOpacity(0.2)),
-                    ),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(14),
-                      onTap: () => _confirmLogout(context),
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.logout_rounded, color: Colors.redAccent, size: 14),
-                            SizedBox(width: 6),
-                            Text(
-                              "Logout",
-                              style: TextStyle(
-                                color: Colors.redAccent,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Divider(color: Colors.white.withOpacity(0.06), height: 1),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Icon(Icons.calendar_today_rounded, size: 14, color: Colors.white.withOpacity(0.4)),
-              const SizedBox(width: 8),
-              Text(
-                "$currentDay, $currentDate",
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.8),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const Spacer(),
-              Icon(Icons.access_time_filled_rounded, size: 14, color: Colors.white.withOpacity(0.4)),
-              const SizedBox(width: 8),
-              Text(
-                currentTime,
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.8),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+      ],
     );
   }
 
   Widget _buildSummaryCards() {
     final total = summary['total_medicines'] ?? 0;
     final lowStock = summary['low_stock_count'] ?? 0;
+    final moderate = summary['moderate_count'] ?? 0;
 
     return Row(
       children: [
         Expanded(
-          child: _summaryCard(
-            "Total Medicines",
-            "$total Items",
-            const Color(0xFF3B82F6),
-            Icons.medication_liquid_rounded,
-            widget.onNavigateInventory ?? () {},
+          child: MetricCard(
+            label: "Total Medicines",
+            value: "$total Items",
+            icon: Icons.medication_liquid_rounded,
+            color: const Color(0xFF3B82F6),
+            onTap: widget.onNavigateInventory,
           ),
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: 12),
         Expanded(
-          child: _summaryCard(
-            "Low Stock Alerts",
-            "$lowStock Items",
-            const Color(0xFFEF4444),
-            Icons.warning_amber_rounded,
-            widget.onNavigateInventory ?? () {},
+          child: MetricCard(
+            label: "Low Stock Alerts",
+            value: "$lowStock Items",
+            icon: Icons.warning_amber_rounded,
+            color: const Color(0xFFEF4444),
+            onTap: widget.onNavigateInventory,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: MetricCard(
+            label: "Moderate Stock",
+            value: "$moderate Items",
+            icon: Icons.remove_circle_outline_rounded,
+            color: const Color(0xFFF59E0B),
+            onTap: widget.onNavigateInventory,
           ),
         ),
       ],
@@ -393,11 +274,18 @@ class DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _summaryCard(String label, String value, Color color, IconData icon, VoidCallback onTap) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final cardColor = isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9);
+    final borderColor = isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFE2E8F0);
+    final textPrimary = isDark ? Colors.white : const Color(0xFF1E293B);
+    final textSecondary = isDark ? Colors.white.withOpacity(0.7) : const Color(0xFF64748B);
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.03),
+        color: cardColor,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
@@ -430,10 +318,10 @@ class DashboardPageState extends State<DashboardPage> {
                 const SizedBox(height: 16),
                 Text(
                   value,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: textPrimary,
                     letterSpacing: -0.5,
                   ),
                 ),
@@ -442,7 +330,7 @@ class DashboardPageState extends State<DashboardPage> {
                   label,
                   style: TextStyle(
                     fontSize: 13,
-                    color: Colors.white.withOpacity(0.5),
+                    color: textSecondary,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -455,6 +343,12 @@ class DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildAlertsPanel() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final surfaceColor = isDark ? const Color(0xFF0F172A) : Colors.white;
+    final borderColor = isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFE2E8F0);
+    final textPrimary = isDark ? Colors.white : const Color(0xFF1E293B);
+
     final lowStock = summary['low_stock_count'] ?? 0;
     final moderate = summary['moderate_count'] ?? 0;
     final adequate = summary['adequate_count'] ?? 0;
@@ -501,9 +395,9 @@ class DashboardPageState extends State<DashboardPage> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.02),
+        color: surfaceColor,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -512,12 +406,12 @@ class DashboardPageState extends State<DashboardPage> {
             children: [
               const Icon(Icons.notifications_active_rounded, size: 20, color: Colors.cyanAccent),
               const SizedBox(width: 10),
-              const Text(
+              Text(
                 "System Alerts & Notifications",
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: textPrimary,
                   letterSpacing: 0.2,
                 ),
               ),
@@ -538,23 +432,10 @@ class DashboardPageState extends State<DashboardPage> {
           ),
           const SizedBox(height: 16),
           if (alerts.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF10B981).withOpacity(0.06),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFF10B981).withOpacity(0.15)),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.check_circle_outline_rounded, color: Color(0xFF34D399), size: 18),
-                  SizedBox(width: 10),
-                  Text(
-                    "All inventory systems running within safe thresholds",
-                    style: TextStyle(color: Color(0xFF34D399), fontSize: 13, fontWeight: FontWeight.w500),
-                  ),
-                ],
-              ),
+            const EmptyState(
+              icon: Icons.check_circle_outline_rounded,
+              title: "All systems healthy",
+              subtitle: "All inventory systems running within safe thresholds",
             )
           else
             ListView.builder(
@@ -581,7 +462,7 @@ class DashboardPageState extends State<DashboardPage> {
                             a['label'],
                             style: TextStyle(
                               fontSize: 13,
-                              color: Colors.white.withOpacity(0.9),
+                              color: textPrimary,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -598,12 +479,20 @@ class DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildInsightPreview() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final surfaceColor = isDark ? const Color(0xFF0F172A) : Colors.white;
+    final cardColor = isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9);
+    final borderColor = isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFE2E8F0);
+    final textPrimary = isDark ? Colors.white : const Color(0xFF1E293B);
+    final textSecondary = isDark ? Colors.white.withOpacity(0.7) : const Color(0xFF64748B);
+
     if (insightMessage.isEmpty && topProducts.isEmpty) {
       return const SizedBox.shrink();
     }
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.02),
+        color: surfaceColor,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: Colors.purpleAccent.withOpacity(0.15)),
         boxShadow: [
@@ -622,12 +511,12 @@ class DashboardPageState extends State<DashboardPage> {
             children: [
               const Icon(Icons.auto_awesome_rounded, size: 20, color: Colors.purpleAccent),
               const SizedBox(width: 10),
-              const Text(
+              Text(
                 "AI Inventory Analytics",
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: textPrimary,
                   letterSpacing: 0.2,
                 ),
               ),
@@ -648,9 +537,9 @@ class DashboardPageState extends State<DashboardPage> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.03),
+                color: cardColor,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white.withOpacity(0.05)),
+                border: Border.all(color: borderColor),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -662,7 +551,7 @@ class DashboardPageState extends State<DashboardPage> {
                       insightMessage,
                       style: TextStyle(
                         fontSize: 13,
-                        color: Colors.white.withOpacity(0.85),
+                        color: textPrimary,
                         height: 1.5,
                         fontWeight: FontWeight.w400,
                       ),
@@ -677,7 +566,7 @@ class DashboardPageState extends State<DashboardPage> {
               "Top Dispensed Products (Last 3 Months)",
               style: TextStyle(
                 fontSize: 13,
-                color: Colors.white.withOpacity(0.5),
+                color: textSecondary,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -706,9 +595,9 @@ class DashboardPageState extends State<DashboardPage> {
                           Expanded(
                             child: Text(
                               name,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
-                                color: Colors.white,
+                                color: textPrimary,
                                 fontWeight: FontWeight.w500,
                               ),
                               maxLines: 1,
@@ -732,7 +621,7 @@ class DashboardPageState extends State<DashboardPage> {
                           height: 6,
                           child: LinearProgressIndicator(
                             value: ratio.clamp(0.05, 1.0),
-                            backgroundColor: Colors.white.withOpacity(0.04),
+                            backgroundColor: cardColor,
                             valueColor: const AlwaysStoppedAnimation<Color>(Colors.purpleAccent),
                           ),
                         ),
@@ -749,22 +638,28 @@ class DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildQuickActions() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final surfaceColor = isDark ? const Color(0xFF0F172A) : Colors.white;
+    final borderColor = isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFE2E8F0);
+    final textPrimary = isDark ? Colors.white : const Color(0xFF1E293B);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.02),
+        color: surfaceColor,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             "Quick Navigation Hub",
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: textPrimary,
               letterSpacing: 0.2,
             ),
           ),
@@ -814,9 +709,14 @@ class DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _actionButton(String label, IconData icon, Color color, VoidCallback onTap) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final cardColor = isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9);
+    final textPrimary = isDark ? Colors.white : const Color(0xFF1E293B);
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.03),
+        color: cardColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: color.withOpacity(0.15)),
       ),
@@ -838,7 +738,7 @@ class DashboardPageState extends State<DashboardPage> {
                   label,
                   style: TextStyle(
                     fontSize: 10,
-                    color: Colors.white.withOpacity(0.9),
+                    color: textPrimary,
                     fontWeight: FontWeight.w600,
                   ),
                   maxLines: 1,
@@ -853,6 +753,13 @@ class DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildInventoryHealth() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final surfaceColor = isDark ? const Color(0xFF0F172A) : Colors.white;
+    final borderColor = isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFE2E8F0);
+    final dividerColor = isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFE2E8F0);
+    final textPrimary = isDark ? Colors.white : const Color(0xFF1E293B);
+
     final health = summary['inventory_health'] as Map<String, dynamic>? ?? {};
     final low = health['low'] ?? 0;
     final moderate = health['moderate'] ?? 0;
@@ -866,19 +773,19 @@ class DashboardPageState extends State<DashboardPage> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.02),
+        color: surfaceColor,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             "Inventory Health Index",
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: textPrimary,
               letterSpacing: 0.2,
             ),
           ),
@@ -922,9 +829,9 @@ class DashboardPageState extends State<DashboardPage> {
           ),
           const SizedBox(height: 16),
           _healthLegend("Adequate Stock", adequate, const Color(0xFF10B981)),
-          Divider(color: Colors.white.withOpacity(0.04), height: 12),
+          Divider(color: dividerColor, height: 12),
           _healthLegend("Moderate Stock", moderate, const Color(0xFFF59E0B)),
-          Divider(color: Colors.white.withOpacity(0.04), height: 12),
+          Divider(color: dividerColor, height: 12),
           _healthLegend("Low Stock warning", low, const Color(0xFFEF4444)),
         ],
       ),
@@ -932,6 +839,10 @@ class DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _healthLegend(String label, int count, Color color) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final textSecondary = isDark ? Colors.white.withOpacity(0.7) : const Color(0xFF64748B);
+
     return Row(
       children: [
         Container(
@@ -950,7 +861,7 @@ class DashboardPageState extends State<DashboardPage> {
           label,
           style: TextStyle(
             fontSize: 13,
-            color: Colors.white.withOpacity(0.7),
+            color: textSecondary,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -976,12 +887,19 @@ class DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildRecentActivity() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final surfaceColor = isDark ? const Color(0xFF0F172A) : Colors.white;
+    final borderColor = isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFE2E8F0);
+    final textPrimary = isDark ? Colors.white : const Color(0xFF1E293B);
+    final textMuted = isDark ? Colors.white.withOpacity(0.4) : const Color(0xFF94A3B8);
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.02),
+        color: surfaceColor,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -990,12 +908,12 @@ class DashboardPageState extends State<DashboardPage> {
             children: [
               const Icon(Icons.history_toggle_off_rounded, size: 20, color: Colors.cyanAccent),
               const SizedBox(width: 10),
-              const Text(
+              Text(
                 "Recent Operation Logs",
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: textPrimary,
                   letterSpacing: 0.2,
                 ),
               ),
@@ -1003,20 +921,10 @@ class DashboardPageState extends State<DashboardPage> {
           ),
           const SizedBox(height: 20),
           if (recentActivity.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 32),
-              child: Center(
-                child: Column(
-                  children: [
-                    Icon(Icons.inbox_rounded, size: 48, color: Colors.white.withOpacity(0.1)),
-                    const SizedBox(height: 12),
-                    Text(
-                      "No operations logged in the past 24 hours",
-                      style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 13),
-                    ),
-                  ],
-                ),
-              ),
+            const EmptyState(
+              icon: Icons.inbox_rounded,
+              title: "No recent activity",
+              subtitle: "No operations logged in the past 24 hours",
             )
           else
             ListView.builder(
@@ -1035,6 +943,12 @@ class DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _activityTimelineTile(Map<String, dynamic> entry, bool isLast) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final dividerColor = isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFE2E8F0);
+    final textPrimary = isDark ? Colors.white : const Color(0xFF1E293B);
+    final textMuted = isDark ? Colors.white.withOpacity(0.4) : const Color(0xFF94A3B8);
+
     final type = entry['type'] ?? "";
     final itemName = dashItemNameOf(entry);
     final ts = entry['timestamp'] ?? "";
@@ -1081,7 +995,7 @@ class DashboardPageState extends State<DashboardPage> {
                 Expanded(
                   child: Container(
                     width: 2,
-                    color: Colors.white.withOpacity(0.06),
+                    color: dividerColor,
                   ),
                 ),
             ],
@@ -1095,9 +1009,9 @@ class DashboardPageState extends State<DashboardPage> {
                 children: [
                   Text(
                     description,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
-                      color: Colors.white,
+                      color: textPrimary,
                       fontWeight: FontWeight.w500,
                       height: 1.3,
                     ),
@@ -1108,42 +1022,12 @@ class DashboardPageState extends State<DashboardPage> {
                       _formatTimestamp(ts),
                       style: TextStyle(
                         fontSize: 11,
-                        color: Colors.white.withOpacity(0.4),
+                        color: textMuted,
                         fontWeight: FontWeight.w400,
                       ),
                     ),
                 ],
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _confirmLogout(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E293B),
-        title: const Text("Confirm Logout", style: TextStyle(color: Colors.white)),
-        content: Text(
-          "Are you sure you want to logout from ${summary['clinic_name'] ?? widget.clinicId}?",
-          style: TextStyle(color: Colors.white.withOpacity(0.7)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text("Cancel", style: TextStyle(color: Colors.white.withOpacity(0.6))),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              widget.onLogout?.call();
-            },
-            child: const Text(
-              "Logout",
-              style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
             ),
           ),
         ],

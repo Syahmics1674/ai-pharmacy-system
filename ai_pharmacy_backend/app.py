@@ -1249,16 +1249,17 @@ def get_order_suggestions():
         return jsonify({"error": "clinic_id is required"}), 400
     try:
         clinic_data = fetch_clinic(clinic_id)
-        if clinic_data.get("has_pending_order"):
-            return jsonify({"clinic_id": clinic_id, "order_suggestions": []})
-        
+        has_pending = clinic_data.get("has_pending_order", False)
+        logger.info(f"DEBUG[order]: clinic={clinic_id} has_pending_order={has_pending} AI_AVAIL={AI_FEATURES_AVAILABLE}")
+
         inv_items = get_inventory_for_clinic(clinic_id)
+        logger.info(f"DEBUG[order]: clinic={clinic_id} inv_items_count={len(inv_items)}")
         suggestions = []
 
         # If AI features are not available, do not return any suggestions (avoiding static fallbacks)
         if not AI_FEATURES_AVAILABLE or calculate_smart_inventory is None:
             logger.warning("AI features are unavailable. Returning empty order suggestions.")
-            return jsonify({"clinic_id": clinic_id, "order_suggestions": []})
+            return jsonify({"clinic_id": clinic_id, "order_suggestions": [], "has_pending_order": has_pending})
 
         # Load clinic transaction history to generate AI predictions
         weather_data = get_7_day_weather()
@@ -1312,6 +1313,15 @@ def get_order_suggestions():
                     "priority": priority,
                     "item_code": item.get("item_code", ""),
                 })
+            # Safety-net: if stock is critically low (< 20) but AI didn't trigger,
+            # still recommend so critical shortages are never ignored.
+            elif stock < 20:
+                suggestions.append({
+                    "item_name": item_name,
+                    "suggested_qty": int(max(20, 30 - stock)),
+                    "priority": "HIGH" if stock < 10 else "MEDIUM",
+                    "item_code": item.get("item_code", ""),
+                })
 
         logger.info(
             f"[order_suggestions] clinic={clinic_id} "
@@ -1322,7 +1332,7 @@ def get_order_suggestions():
             f"total_suggested={len(suggestions)}"
         )
 
-        return jsonify({"clinic_id": clinic_id, "order_suggestions": suggestions})
+        return jsonify({"clinic_id": clinic_id, "order_suggestions": suggestions, "has_pending_order": has_pending})
     except Exception as e:
         return jsonify({"error": f"Order suggestions failed: {str(e)}"}), 500
 
