@@ -1,6 +1,6 @@
 #!/bin/bash
 
-PROJECT_DIR="/Users/shehabsharearemolla/IDP/ai-pharmacy-system"
+PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BACKEND_DIR="$PROJECT_DIR/ai_pharmacy_backend"
 FRONTEND_DIR="$PROJECT_DIR/ai_pharmacy_app"
 

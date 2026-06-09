@@ -60,8 +60,6 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 CORS(app)
-app = Flask(__name__)
-CORS(app)
 
 @app.route("/start_mediscan", methods=["POST"])
 def start_mediscan():
