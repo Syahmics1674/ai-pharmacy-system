@@ -16,16 +16,17 @@ import 'live_inventory_page.dart';
 import 'settings_page.dart';
 import 'services/sync_service.dart';
 import 'services/live_inventory_service.dart';
+import 'services/time_service.dart';
 import 'config/api_config.dart';
 import 'theme/app_colors.dart';
+import 'theme/app_spacing.dart';
 import 'theme/app_theme.dart';
 import 'widgets/common/app_top_bar.dart';
 import 'widgets/common/app_sidebar.dart';
-import 'widgets/common/metric_card.dart';
-import 'widgets/common/status_chip.dart';
 import 'widgets/common/page_header.dart';
 import 'widgets/common/status_badge.dart';
-import 'widgets/common/empty_state.dart';
+import 'widgets/common/section_card.dart';
+import 'widgets/common/loading_state.dart';
 
 // Client-side API response cache
 final _apiCache = <String, _CacheEntry>{};
@@ -1015,38 +1016,84 @@ class _StockOperationsPageState extends State<StockOperationsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(16),
+      backgroundColor: Colors.transparent,
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl, vertical: AppSpacing.xxl),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 🔷 STOCK IN
-            ElevatedButton(
-              onPressed: () => showStockDialog("in"),
-              child: Text("Stock In"),
+            PageHeader(
+              title: "Stock Operations",
+              subtitle: "Manage inventory stock levels",
+              icon: Icons.swap_horiz_rounded,
             ),
-
-            SizedBox(height: 10),
-
-            // 🔷 STOCK OUT
-            ElevatedButton(
-              onPressed: () => showStockDialog("out"),
-              child: Text("Stock Out"),
+            SectionCard(
+              title: "Quick Actions",
+              icon: Icons.flash_on_rounded,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => showStockDialog("in"),
+                      icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
+                      label: const Text("Stock In"),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                        backgroundColor: AppColors.success,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => showStockDialog("out"),
+                      icon: const Icon(Icons.remove_circle_outline_rounded, size: 18),
+                      label: const Text("Stock Out"),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                        backgroundColor: AppColors.warning,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: showAddItemDialog,
+                      icon: const Icon(Icons.add_rounded, size: 18),
+                      label: const Text("Add New Medicine"),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                        foregroundColor: isDark ? AppColors.primaryLight : AppColors.primary,
+                        side: BorderSide(color: isDark ? AppColors.primaryLight : AppColors.primary),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-
-            SizedBox(height: 10),
-
-            // 🔷 ADD NEW MEDICINE
-            ElevatedButton(
-              onPressed: showAddItemDialog,
-              child: Text("➕ Add New Medicine"),
-            ),
-
-            SizedBox(height: 30),
-
-            // 🔄 LOADING INDICATOR
-            if (isLoading) Center(child: CircularProgressIndicator()),
+            if (isLoading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: AppSpacing.xxxl),
+                child: LoadingState(message: "Processing..."),
+              ),
           ],
         ),
       ),
@@ -1068,8 +1115,8 @@ class AIInsightsPage extends StatefulWidget {
 class _AIInsightsPageState extends State<AIInsightsPage> {
   final String baseUrl = ApiConfig.baseUrl;
   final List<Color> chartGradient = [
-    const Color(0xff23b6e6),
-    const Color(0xff02d39a),
+    AppColors.primary,
+    AppColors.success,
   ];
 
   bool isLoading = true;
@@ -1217,17 +1264,15 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     if (isLoading) {
       return Container(
-        color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-        child: Center(
-          child: CircularProgressIndicator(color: isDark ? Colors.cyanAccent : Colors.blueAccent),
-        ),
+        color: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+        child: const LoadingState(message: "Loading AI insights..."),
       );
     }
 
     return Container(
-      color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+      color: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1238,24 +1283,15 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
             ),
 
             // AI Status Card
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              margin: const EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: isDark ? AppColors.borderDark : AppColors.borderLight,
-                ),
-              ),
+            SectionCard(
+              padding: const EdgeInsets.all(AppSpacing.lg),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: AppColors.success.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
                     ),
                     child: const Icon(Icons.auto_awesome_rounded, color: AppColors.success, size: 22),
                   ),
@@ -1285,7 +1321,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          "Confidence: High  |  Last Updated: ${DateTime.now().toString().substring(0, 16)}  |  Model: Gradient Boosting v1",
+                          "Confidence: High  |  Last Updated: ${TimeService.formatDateTime(TimeService.nowMYT())}  |  Model: Gradient Boosting v1",
                           style: TextStyle(
                             fontSize: 12,
                             color: isDark ? AppColors.textDarkSecondary : AppColors.textSecondary,
@@ -1361,7 +1397,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
               builder: (context) {
                 final totalFilteredItems = _filteredInventory.length;
                 final totalPages = (totalFilteredItems / itemsPerPage).ceil() == 0 ? 1 : (totalFilteredItems / itemsPerPage).ceil();
-                final safePage = (currentPage ?? 1).clamp(1, totalPages);
+                final safePage = currentPage.clamp(1, totalPages);
                 final startIndex = (safePage - 1) * itemsPerPage;
                 final endIndex = startIndex + itemsPerPage > totalFilteredItems ? totalFilteredItems : startIndex + itemsPerPage;
                 final paginatedItems = _filteredInventory.isEmpty ? [] : _filteredInventory.sublist(startIndex, endIndex);
@@ -1434,18 +1470,18 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
   // ---- OVERALL USAGE SECTION ----
   Widget _buildOverallUsageSection() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final today = DateTime.now();
+    final today = TimeService.nowMYT();
 
     List<String> dailyLabels = List.generate(7, (i) {
       final date = today.subtract(Duration(days: 6 - i));
-      return _getDayOfWeekName(date.weekday);
+      return TimeService.getDayOfWeekName(date.weekday);
     });
 
     List<String> weeklyLabels = const ["3w ago", "2w ago", "1w ago", "This Week"];
 
     List<String> monthlyLabels = List.generate(3, (i) {
       final date = DateTime(today.year, today.month - (2 - i), 1);
-      return _getMonthName(date.month);
+      return TimeService.getMonthName(date.month);
     });
 
     // Calculate period totals
@@ -1453,79 +1489,58 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
     int total4w = weeklyUsage.isNotEmpty ? weeklyUsage.reduce((a, b) => a + b) : 0;
     int total3m = monthlyUsage.isNotEmpty ? monthlyUsage.reduce((a, b) => a + b) : 0;
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
-      ),
+    return SectionCard(
+      title: "Consolidated Medicine Usage",
+      icon: Icons.bar_chart_rounded,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(Icons.bar_chart_rounded, color: isDark ? Colors.cyanAccent : Colors.blueAccent, size: 22),
-              const SizedBox(width: 8),
-              Text(
-                "Consolidated Medicine Usage",
-                style: TextStyle(
-                  color: isDark ? Colors.white : const Color(0xFF1E293B),
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
           Text(
             "Total units of all medicines dispensed across the entire clinic.",
             style: TextStyle(
-              color: isDark ? Colors.blueGrey : const Color(0xFF64748B),
+              color: isDark ? AppColors.textDarkSecondary : AppColors.textSecondary,
               fontSize: 12,
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: AppSpacing.xl),
 
-          // Glassmorphic Metric Badges
           Row(
             children: [
               Expanded(
                 child: _buildMetricBadge(
                   "7-Day Total",
                   "$total7d units",
-                  isDark ? Colors.cyanAccent : Colors.blueAccent,
+                  AppColors.primary,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: _buildMetricBadge(
                   "4-Week Total",
                   "$total4w units",
-                  Colors.amberAccent,
+                  AppColors.warning,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: _buildMetricBadge(
                   "3-Month Total",
                   "$total3m units",
-                  Colors.greenAccent,
+                  AppColors.success,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.xxl),
 
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: _buildMiniChart("Daily (7 days)", dailyUsage, dailyLabels, isDark ? Colors.cyanAccent : Colors.blueAccent)),
-              const SizedBox(width: 12),
-              Expanded(child: _buildMiniChart("Weekly (4 weeks)", weeklyUsage, weeklyLabels, Colors.amberAccent)),
-              const SizedBox(width: 12),
-              Expanded(child: _buildMiniChart("Monthly (3 months)", monthlyUsage, monthlyLabels, Colors.greenAccent)),
+              Expanded(child: _buildMiniChart("Daily (7 days)", dailyUsage, dailyLabels, AppColors.primary)),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(child: _buildMiniChart("Weekly (4 weeks)", weeklyUsage, weeklyLabels, AppColors.warning)),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(child: _buildMiniChart("Monthly (3 months)", monthlyUsage, monthlyLabels, AppColors.success)),
             ],
           ),
         ],
@@ -1536,10 +1551,10 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
   Widget _buildMetricBadge(String label, String value, Color color) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 10),
       decoration: BoxDecoration(
         color: color.withOpacity(0.06),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: color.withOpacity(0.25), width: 1),
       ),
       child: Column(
@@ -1548,7 +1563,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
           Text(
             label,
             style: TextStyle(
-              color: isDark ? Colors.blueGrey : const Color(0xFF64748B),
+              color: isDark ? AppColors.textDarkSecondary : AppColors.textSecondary,
               fontSize: 10,
               fontWeight: FontWeight.w600,
             ),
@@ -1565,40 +1580,6 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
         ],
       ),
     );
-  }
-
-  String _getDayOfWeekName(int weekday) {
-    switch (weekday) {
-      case 1: return "Mon";
-      case 2: return "Tue";
-      case 3: return "Wed";
-      case 4: return "Thu";
-      case 5: return "Fri";
-      case 6: return "Sat";
-      case 7: return "Sun";
-      default: return "";
-    }
-  }
-
-  String _getMonthName(int month) {
-    int normalized = month;
-    while (normalized <= 0) normalized += 12;
-    while (normalized > 12) normalized -= 12;
-    switch (normalized) {
-      case 1: return "Jan";
-      case 2: return "Feb";
-      case 3: return "Mar";
-      case 4: return "Apr";
-      case 5: return "May";
-      case 6: return "Jun";
-      case 7: return "Jul";
-      case 8: return "Aug";
-      case 9: return "Sep";
-      case 10: return "Oct";
-      case 11: return "Nov";
-      case 12: return "Dec";
-      default: return "";
-    }
   }
 
   // ---- HISTORICAL TRENDS SECTION ----
@@ -1623,69 +1604,50 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
 
     const double safetyThreshold = 20.0;
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
+    final accentColor = isDark ? AppColors.primaryLight : AppColors.primary;
+
+    return SectionCard(
+      title: "30-Day Inventory History",
+      icon: Icons.history_toggle_off_rounded,
+      trailing: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: accentColor.withOpacity(0.3)),
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<String>(
+            value: selectedHistoryMedicine,
+            dropdownColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+            icon: Icon(Icons.keyboard_arrow_down_rounded, color: accentColor, size: 16),
+            style: TextStyle(color: isDark ? AppColors.textOnDark : AppColors.textPrimary, fontSize: 11, fontWeight: FontWeight.bold),
+            items: inventoryHistory.keys.map((String key) {
+              return DropdownMenuItem<String>(
+                value: key,
+                child: SizedBox(
+                  width: 130,
+                  child: Text(
+                    key,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              );
+            }).toList(),
+            onChanged: (String? val) {
+              if (val != null) {
+                setState(() {
+                  selectedHistoryMedicine = val;
+                });
+              }
+            },
+          ),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(Icons.history_toggle_off_rounded, color: isDark ? Colors.cyanAccent : Colors.blueAccent, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                "30-Day Inventory History",
-                style: TextStyle(
-                  color: isDark ? Colors.white : const Color(0xFF1E293B),
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const Spacer(),
-              // Styled Dropdown
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: (isDark ? Colors.cyanAccent : Colors.blueAccent).withOpacity(0.3)),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: selectedHistoryMedicine,
-                    dropdownColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-                    icon: Icon(Icons.keyboard_arrow_down_rounded, color: isDark ? Colors.cyanAccent : Colors.blueAccent, size: 16),
-                    style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1E293B), fontSize: 11, fontWeight: FontWeight.bold),
-                    items: inventoryHistory.keys.map((String key) {
-                      return DropdownMenuItem<String>(
-                        value: key,
-                        child: SizedBox(
-                          width: 130,
-                          child: Text(
-                            key,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: (String? val) {
-                      if (val != null) {
-                        setState(() {
-                          selectedHistoryMedicine = val;
-                        });
-                      }
-                    },
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.lg),
           if (spots.isEmpty)
             Container(
               height: 180,
@@ -1719,18 +1681,17 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                           if (idx < 0 || idx >= historyDates.length) {
                             return const SizedBox.shrink();
                           }
-                          String rawDate = historyDates[idx];
+                          final rawDate = historyDates[idx];
                           try {
-                            DateTime dt = DateTime.parse(rawDate);
-                            String formatted = "${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}";
+                            final formatted = TimeService.formatCustom(rawDate, 'dd/MM');
                             return Padding(
                               padding: const EdgeInsets.only(top: 8.0),
-                              child: Text(formatted, style: TextStyle(color: isDark ? Colors.blueGrey : const Color(0xFF64748B), fontSize: 9)),
+                              child: Text(formatted, style: TextStyle(color: isDark ? AppColors.textDarkSecondary : AppColors.textSecondary, fontSize: 9)),
                             );
                           } catch (_) {
                             return Padding(
                               padding: const EdgeInsets.only(top: 8.0),
-                              child: Text(rawDate.length > 5 ? rawDate.substring(5) : rawDate, style: TextStyle(color: isDark ? Colors.blueGrey : const Color(0xFF64748B), fontSize: 9)),
+                              child: Text(rawDate.length > 5 ? rawDate.substring(5) : rawDate, style: TextStyle(color: isDark ? AppColors.textDarkSecondary : AppColors.textSecondary, fontSize: 9)),
                             );
                           }
                         },
@@ -1816,11 +1777,11 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
       return Container(
         height: 140,
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-          borderRadius: BorderRadius.circular(12),
+          color: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+          borderRadius: BorderRadius.circular(AppRadius.md),
         ),
         child: Center(
-          child: Text("No data", style: TextStyle(color: isDark ? Colors.white38 : const Color(0xFF94A3B8), fontSize: 11)),
+          child: Text("No data", style: TextStyle(color: isDark ? AppColors.textDarkSecondary : AppColors.textSecondary, fontSize: 11)),
         ),
       );
     }
@@ -1839,14 +1800,14 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
               barTouchData: BarTouchData(
                 enabled: true,
                 touchTooltipData: BarTouchTooltipData(
-                  tooltipBgColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-                  tooltipBorder: BorderSide(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
-                  tooltipPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  tooltipBgColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                  tooltipBorder: BorderSide(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+                  tooltipPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 4),
                   tooltipMargin: 4,
                   getTooltipItem: (group, groupIndex, rod, rodIndex) {
                     return BarTooltipItem(
                       "${rod.toY.toInt()} units",
-                      TextStyle(color: isDark ? Colors.white : const Color(0xFF1E293B), fontSize: 10, fontWeight: FontWeight.bold),
+                      TextStyle(color: isDark ? AppColors.textOnDark : AppColors.textPrimary, fontSize: 10, fontWeight: FontWeight.bold),
                     );
                   },
                 ),
@@ -1862,7 +1823,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                       if (idx >= 0 && idx < xLabels.length) {
                         return Padding(
                           padding: const EdgeInsets.only(top: 4.0),
-                          child: Text(xLabels[idx], style: TextStyle(color: isDark ? Colors.blueGrey : const Color(0xFF64748B), fontSize: 8, fontWeight: FontWeight.bold)),
+                          child: Text(xLabels[idx], style: TextStyle(color: isDark ? AppColors.textDarkSecondary : AppColors.textSecondary, fontSize: 8, fontWeight: FontWeight.bold)),
                         );
                       }
                       return const SizedBox.shrink();
@@ -1875,7 +1836,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                     reservedSize: 22,
                     interval: effectiveMax / 2 > 0 ? effectiveMax / 2 : 10,
                     getTitlesWidget: (value, meta) {
-                      return Text(value.toInt().toString(), style: TextStyle(color: isDark ? Colors.blueGrey : const Color(0xFF64748B), fontSize: 8));
+                      return Text(value.toInt().toString(), style: TextStyle(color: isDark ? AppColors.textDarkSecondary : AppColors.textSecondary, fontSize: 8));
                     },
                   ),
                 ),
@@ -1890,7 +1851,7 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
               gridData: FlGridData(
                 show: true,
                 drawVerticalLine: false,
-                getDrawingHorizontalLine: (value) => FlLine(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0), strokeWidth: 0.8),
+                getDrawingHorizontalLine: (value) => FlLine(color: isDark ? AppColors.borderDark : AppColors.borderLight, strokeWidth: 0.8),
               ),
               barGroups: List.generate(values.length, (i) {
                 return BarChartGroupData(
@@ -1910,10 +1871,10 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
             ),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         Text(
           label,
-          style: TextStyle(color: isDark ? Colors.white70 : const Color(0xFF64748B), fontSize: 11, fontWeight: FontWeight.w600),
+          style: TextStyle(color: isDark ? AppColors.textOnDark : AppColors.textSecondary, fontSize: 11, fontWeight: FontWeight.w600),
           textAlign: TextAlign.center,
         ),
       ],
@@ -2423,18 +2384,17 @@ class _AIInsightsPageState extends State<AIInsightsPage> {
                 if (idx < 0 || idx >= historyDates.length) {
                   return const SizedBox.shrink();
                 }
-                String rawDate = historyDates[idx];
+                final rawDate = historyDates[idx];
                 try {
-                  DateTime dt = DateTime.parse(rawDate);
-                  String formatted = "${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}";
+                  final formatted = TimeService.formatCustom(rawDate, 'dd/MM');
                   return Padding(
                     padding: const EdgeInsets.only(top: 8.0),
-                    child: Text(formatted, style: TextStyle(color: isDark ? Colors.blueGrey : const Color(0xFF64748B), fontSize: 9)),
+                    child: Text(formatted, style: TextStyle(color: isDark ? AppColors.textDarkSecondary : AppColors.textSecondary, fontSize: 9)),
                   );
                 } catch (_) {
                   return Padding(
                     padding: const EdgeInsets.only(top: 8.0),
-                    child: Text(rawDate.length > 5 ? rawDate.substring(5) : rawDate, style: TextStyle(color: isDark ? Colors.blueGrey : const Color(0xFF64748B), fontSize: 9)),
+                    child: Text(rawDate.length > 5 ? rawDate.substring(5) : rawDate, style: TextStyle(color: isDark ? AppColors.textDarkSecondary : AppColors.textSecondary, fontSize: 9)),
                   );
                 }
               },
@@ -3302,7 +3262,7 @@ class _OrderPageState extends State<OrderPage> {
       if (mounted) {
         setState(() {
           generatedOrders = generatedItems;
-          generatedOrderDate = DateTime.now().toIso8601String().split('T').first;
+          generatedOrderDate = TimeService.formatDate(TimeService.nowMYT());
         });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Order generated successfully ✅")),
@@ -3638,8 +3598,10 @@ class _OrderPageState extends State<OrderPage> {
 
   DateTime _parseOrderDate(dynamic value) {
     if (value == null) return DateTime.fromMillisecondsSinceEpoch(0);
-    return DateTime.tryParse(value.toString()) ??
-        DateTime.fromMillisecondsSinceEpoch(0);
+    if (value is String && value.isNotEmpty) {
+      return TimeService.parseToMYT(value);
+    }
+    return DateTime.fromMillisecondsSinceEpoch(0);
   }
 
   Future<void> fetchLastSubmittedOrder() async {
@@ -3730,8 +3692,8 @@ class _OrderPageState extends State<OrderPage> {
     required int totalQty,
   }) {
     final totalItems = items.length;
-    final formattedDate = createdDate.length >= 10
-        ? createdDate.substring(0, 10)
+    final formattedDate = createdDate.isNotEmpty
+        ? TimeService.formatDate(createdDate)
         : createdDate;
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
@@ -3865,7 +3827,7 @@ class _OrderPageState extends State<OrderPage> {
   Future<Uint8List> buildOrderPdf() async {
     final pdf = pw.Document();
     final orderDate = generatedOrderDate.isEmpty
-        ? DateTime.now().toIso8601String().split('T').first
+        ? TimeService.formatDate(TimeService.nowMYT())
         : generatedOrderDate;
     final clinicLabel = clinicDisplayName.isEmpty
         ? widget.clinicId
@@ -3874,7 +3836,7 @@ class _OrderPageState extends State<OrderPage> {
     final totalItems = activeItems.length;
     final lowStockCount = _lowStockCount;
     final priority = basedOn.isEmpty ? "N/A" : basedOn;
-    final timestamp = DateTime.now().toIso8601String().split('T').first;
+    final timestamp = TimeService.formatDate(TimeService.nowMYT());
 
     pdf.addPage(
       pw.MultiPage(
@@ -4099,7 +4061,7 @@ class _OrderPageState extends State<OrderPage> {
     final activeItems = _activeOrderItems;
     if (activeItems.isEmpty) return;
 
-    final dateStr = DateTime.now().toIso8601String().split('T').first;
+    final dateStr = TimeService.formatDate(TimeService.nowMYT());
 
     await Navigator.push(
       context,
@@ -4123,7 +4085,7 @@ class _OrderPageState extends State<OrderPage> {
     final activeItems = _activeOrderItems;
     if (activeItems.isEmpty) return;
 
-    final dateStr = DateTime.now().toIso8601String().split('T').first;
+    final dateStr = TimeService.formatDate(TimeService.nowMYT());
     final buffer = StringBuffer();
     buffer.writeln("item_code,item_name,qty");
     for (final item in activeItems) {
@@ -4614,8 +4576,8 @@ class _OrderPageState extends State<OrderPage> {
 
     if (hasHistory) {
       lastDate = lastOrder!['created_at']?.toString() ?? '';
-      if (lastDate.length >= 10) {
-        lastDate = lastDate.substring(0, 10);
+      if (lastDate.isNotEmpty) {
+        lastDate = TimeService.formatDate(lastDate);
       }
       lastStatus = lastOrder!['status']?.toString() ?? '';
       final items = lastOrder!['items'] as List<dynamic>? ?? [];

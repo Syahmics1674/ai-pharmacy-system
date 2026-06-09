@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'theme/app_theme.dart';
 import 'theme/app_colors.dart';
 import 'widgets/common/app_card.dart';
 import 'widgets/common/app_section_header.dart';

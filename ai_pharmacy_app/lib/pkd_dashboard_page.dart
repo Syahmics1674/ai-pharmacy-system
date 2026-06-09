@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'config/api_config.dart';
 import 'main.dart';
 import 'services/live_inventory_service.dart';
+import 'services/time_service.dart';
 
 class PKDDashboardPage extends StatefulWidget {
   final String district;
@@ -1886,17 +1887,9 @@ class _PKDDashboardPageState extends State<PKDDashboardPage> {
 
   String _formatDate(dynamic rawValue) {
     if (rawValue == null) return "No update";
-
     final value = rawValue.toString();
     if (value.isEmpty) return "No update";
-
-    final date = DateTime.tryParse(value);
-    if (date == null) return value;
-
-    final year = date.year.toString().padLeft(4, '0');
-    final month = date.month.toString().padLeft(2, '0');
-    final day = date.day.toString().padLeft(2, '0');
-    return "$year-$month-$day";
+    return TimeService.formatDate(value);
   }
 
   List<_NavItem> get _navigationItems => const [
