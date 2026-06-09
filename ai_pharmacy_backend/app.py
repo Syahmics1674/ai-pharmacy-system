@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+import subprocess
 from consolidation import consolidate_order_date
 from firebase_config import db
 from services.supabase_service import (
@@ -59,6 +60,33 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 CORS(app)
+app = Flask(__name__)
+CORS(app)
+
+@app.route("/start_mediscan", methods=["POST"])
+def start_mediscan():
+    data = request.get_json(silent=True) or {}
+    mode = data.get("mode", "scan")
+
+    try:
+        subprocess.Popen(
+            ["/bin/bash", "/Users/shehabsharearemolla/IDP/run_mediscan_mac.sh", mode],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+
+        return jsonify({
+            "ok": True,
+            "message": f"MedScan started in {mode} mode"
+        })
+
+    except Exception as e:
+        return jsonify({
+            "ok": False,
+            "error": str(e)
+        }), 500
+
 app.register_blueprint(supabase_bp)
 
 # In-memory TTL cache
@@ -1206,7 +1234,7 @@ def dashboard_summary():
         }
         insight_message_data = build_insight_message_payload(stock_summary, top_products)
 
-        now = datetime.utcnow()
+        now = datetime.utcnow() + timedelta(hours=8)
         days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
         current_hour = now.hour
         if current_hour < 12:
@@ -1249,17 +1277,16 @@ def get_order_suggestions():
         return jsonify({"error": "clinic_id is required"}), 400
     try:
         clinic_data = fetch_clinic(clinic_id)
-        has_pending = clinic_data.get("has_pending_order", False)
-        logger.info(f"DEBUG[order]: clinic={clinic_id} has_pending_order={has_pending} AI_AVAIL={AI_FEATURES_AVAILABLE}")
-
+        if clinic_data.get("has_pending_order"):
+            return jsonify({"clinic_id": clinic_id, "order_suggestions": []})
+        
         inv_items = get_inventory_for_clinic(clinic_id)
-        logger.info(f"DEBUG[order]: clinic={clinic_id} inv_items_count={len(inv_items)}")
         suggestions = []
 
         # If AI features are not available, do not return any suggestions (avoiding static fallbacks)
         if not AI_FEATURES_AVAILABLE or calculate_smart_inventory is None:
             logger.warning("AI features are unavailable. Returning empty order suggestions.")
-            return jsonify({"clinic_id": clinic_id, "order_suggestions": [], "has_pending_order": has_pending})
+            return jsonify({"clinic_id": clinic_id, "order_suggestions": []})
 
         # Load clinic transaction history to generate AI predictions
         weather_data = get_7_day_weather()
@@ -1313,15 +1340,6 @@ def get_order_suggestions():
                     "priority": priority,
                     "item_code": item.get("item_code", ""),
                 })
-            # Safety-net: if stock is critically low (< 20) but AI didn't trigger,
-            # still recommend so critical shortages are never ignored.
-            elif stock < 20:
-                suggestions.append({
-                    "item_name": item_name,
-                    "suggested_qty": int(max(20, 30 - stock)),
-                    "priority": "HIGH" if stock < 10 else "MEDIUM",
-                    "item_code": item.get("item_code", ""),
-                })
 
         logger.info(
             f"[order_suggestions] clinic={clinic_id} "
@@ -1332,7 +1350,7 @@ def get_order_suggestions():
             f"total_suggested={len(suggestions)}"
         )
 
-        return jsonify({"clinic_id": clinic_id, "order_suggestions": suggestions, "has_pending_order": has_pending})
+        return jsonify({"clinic_id": clinic_id, "order_suggestions": suggestions})
     except Exception as e:
         return jsonify({"error": f"Order suggestions failed: {str(e)}"}), 500
 
